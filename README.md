@@ -13,7 +13,7 @@ The macro is defined by the following (pseudo) syntax:
 $(<$state_name $(:$state_trait_bound)?>)?
 ($($strict_mod_name::)? $strict_mod_trait)?
 [$($typestate),+]
-{$($struct_field),+}
+{$($struct_field:$struct_type),+}
 ```
 
 ## Usage Examples
