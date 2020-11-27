@@ -1,6 +1,6 @@
 [package]
 name = "typestate"
-version = "0.1.2-alpha"
+version = "0.1.3-alpha"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
 description = "macro_rules! to build typestates"
@@ -8,7 +8,7 @@ readme = "README.md"
 license-file = "LICENSE"
 keywords = ["typestate"]
 categories = ["development-tools"]
-homepage = "https://github.com/rustype/typestates-rs"
-repository = "https://github.com/rustype/typestates-rs"
+homepage = "https://github.com/rustype/typestate-rs"
+repository = "https://github.com/rustype/typestate-rs"
 
 [dependencies]
