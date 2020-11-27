@@ -182,7 +182,9 @@ macro_rules! typestate {
             {$($field:$field_ty),*}
         );
     };
-    (strict $vis:vis $struct_name:ident
+    (strict
+        $vis:vis
+        $struct_name:ident
         <$state_name:ident:$state_trait:ident>
         ($sealed_mod:ident::$sealed_trait:ident)
         [$($typestate:ident),+]
