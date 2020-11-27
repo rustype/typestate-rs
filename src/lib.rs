@@ -136,7 +136,13 @@ typestate!(
 */
 #[macro_export(local_inner_macros)]
 macro_rules! typestate {
-    ($vis:vis $struct_name:ident <$state_name:ident> [$($typestate:ident),+] {$($field:ident:$field_ty:ty),*}) => {
+    (
+        $vis:vis
+        $struct_name:ident
+        <$state_name:ident>
+        [$($typestate:ident),+]
+        {$($field:ident:$field_ty:ty),*}
+    ) => {
         __gen_typestate_structs!($vis $($typestate),+);
         __gen_struct!($vis $struct_name<$state_name> {$($field:$field_ty),*});
     };
