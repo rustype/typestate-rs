@@ -1,6 +1,8 @@
 /**
 The expansion of this macro generates a typestated `struct` with a `__state` field.
 */
+#[doc(hidden)]
+#[macro_export]
 macro_rules! __gen_struct {
     ($vis:vis $struct_name:ident <$state_name:ident> {$($field:ident:$field_type:ty),*}) => {
         $vis struct $struct_name<$state_name> {
@@ -22,6 +24,8 @@ macro_rules! __gen_struct {
 /**
 Generates the empty `struct`s which represent state on the typesystem.
 */
+#[doc(hidden)]
+#[macro_export]
 macro_rules! __gen_typestate_structs {
     ($vis:vis $($typestate:ident),+) => {
         $($vis struct $typestate;)+
@@ -31,6 +35,8 @@ macro_rules! __gen_typestate_structs {
 /**
 Generates the sealed trait implementation.
 */
+#[doc(hidden)]
+#[macro_export]
 macro_rules! __gen_sealed {
     ($mod:ident::$trait:ident [$($typestate:ident),+]) => {
         mod $mod {
@@ -49,6 +55,8 @@ macro_rules! __gen_sealed {
 /**
 Generates the traits for the `limited` and `strict` typestate variants.
 */
+#[doc(hidden)]
+#[macro_export(local_inner_macros)]
 macro_rules! __gen_state_trait {
     ($vis:vis $trait_name:ident [$($typestate:ident),+]) => {
         $vis trait $trait_name {}
