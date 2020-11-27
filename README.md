@@ -11,7 +11,7 @@ The macro is defined by the following (pseudo) syntax:
 ```
 (limited|strict)? $visibility? $struct_name
 $(<$state_name $(:$state_trait_bound)?>)?
-($($strict_mod_name::)? $strict_mod_trait?)?
+($($strict_mod_name::)? $strict_mod_trait)?
 [$($typestate),+]
 {$($struct_field),+}
 ```
