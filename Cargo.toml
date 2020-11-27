@@ -1,8 +1,15 @@
 [package]
 name = "typestates"
-version = "0.1.0"
+version = "0.1.0-alpha"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
+description = "macro_rules! to build typestates"
+readme = "README.md"
+license-file = "LICENSE"
+keywords = ["typestate"]
+categories = ["development-tools"]
+homepage = "https://github.com/rustype/typestates-rs"
+repository = "https://github.com/rustype/typestates-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
