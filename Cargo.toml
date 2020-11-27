@@ -1,5 +1,5 @@
 [package]
-name = "typestates"
+name = "typestate"
 version = "0.1.2-alpha"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
