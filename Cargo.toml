@@ -1,6 +1,6 @@
 [package]
 name = "typestates"
-version = "0.1.0-alpha"
+version = "0.1.1-alpha"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
 description = "macro_rules! to build typestates"
