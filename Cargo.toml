@@ -10,6 +10,7 @@ keywords = ["typestate"]
 categories = ["development-tools"]
 homepage = "https://github.com/rustype/typestate-rs"
 repository = "https://github.com/rustype/typestate-rs"
+autotests = false
 
 [lib]
 proc-macro = true

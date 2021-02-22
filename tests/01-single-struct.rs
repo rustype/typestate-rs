@@ -6,3 +6,5 @@ mod M {
         location: (i32, i32)
     }
 }
+
+fn main() {}

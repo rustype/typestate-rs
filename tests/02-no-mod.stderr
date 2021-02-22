@@ -1,0 +1,5 @@
+error: expected `mod`
+ --> $DIR/02-no-mod.rs:4:1
+  |
+4 | struct S;
+  | ^^^^^^
