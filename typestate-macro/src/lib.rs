@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, option};
+use std::{borrow::Borrow, convert::TryFrom, option};
 
 use quote::ToTokens;
 use syn::{
@@ -36,6 +36,8 @@ struct StateMachineVisitor<'a> {
     det_states: Vec<&'a ItemStruct>,
     /// Non-deterministic states (`enum`s)
     non_det_states: Vec<&'a ItemEnum>,
+    /// Errors found during expansion
+    errors: Vec<syn::Error>,
 }
 
 impl<'a> StateMachineVisitor<'a> {
@@ -44,21 +46,40 @@ impl<'a> StateMachineVisitor<'a> {
             main_struct: None,
             det_states: Vec::new(),
             non_det_states: Vec::new(),
+            errors: Vec::new(),
         }
     }
 }
 
-enum AutomataAttributes {
-    Automata,
-    State,
-}
+// /// This function finds valid attributes in the
+// fn get_struct_attribute()
 
-/// This function finds valid attributes in the
-fn get_struct_attribute()
+const AUTOMATA_ATTR_IDENT: &'static str = "automata";
+const STATE_ATTR_IDENT: &'static str = "state";
 
 impl<'a> visit_mut::VisitMut for StateMachineVisitor<'a> {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
-        println!("{:#?}", it_struct);
-
+        let attributes = &it_struct.attrs;
+        let mut remove_idx = vec![true; attributes.len()];
+        for (idx, attr) in attributes.iter().enumerate() {
+            if attr.path.is_ident(AUTOMATA_ATTR_IDENT) {
+                if let Some(_) = self.main_struct {
+                    // automata was previously defined
+                    self.errors.push(syn::Error::new_spanned(
+                        &attr,
+                        "`automata` redefinition is not allowed",
+                    ))
+                }
+                println!("{:#?}", it_struct);
+                remove_idx[idx] = false;
+            }
+            if attr.path.is_ident(STATE_ATTR_IDENT) {
+                println!("{:#?}", it_struct);
+                remove_idx[idx] = false;
+            }
+        }
+        let mut idx = 0;
+        (&mut it_struct.attrs).retain(|_| (remove_idx[idx], idx += 1).0);
+        println!("{:#?}", &it_struct.attrs);
     }
 }
