@@ -26,7 +26,7 @@ pub fn typestate(
     let mut visitor = StateMachineVisitor::new();
     visitor.visit_item_mut(module);
 
-    output
+    module.to_token_stream().into()
 }
 
 struct StateMachineVisitor<'a> {
