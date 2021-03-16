@@ -198,7 +198,7 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<()> {
             ));
         }
         syn::Fields::Unit => {
-            automata_item.fields = Fields::Named(parse_quote! (state: #type_param_ident));
+            automata_item.fields = Fields::Named(parse_quote!({state: #type_param_ident}));
         }
     };
 
