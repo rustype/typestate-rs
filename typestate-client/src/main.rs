@@ -3,17 +3,21 @@ use typestate::typestate;
 #[typestate]
 mod m {
     #[automata]
-    struct Drone {
-        location: (i32, i32)
+    pub struct TrafficLight {
+        cycles: u64
     }
-
-    #[automata]
-    struct DroneB {
-        location: (i32, i32)
-    }
-
     #[state]
-    struct Grounded;
+    pub struct Green;
+    #[state]
+    pub struct Yellow;
+    #[state]
+    pub struct Red;
+}
+
+#[typestate]
+mod error_mod {
+    #[automata]
+    pub struct T;
 }
 
 fn main() {}

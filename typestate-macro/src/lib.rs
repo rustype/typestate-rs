@@ -165,7 +165,7 @@ impl visit_mut::VisitMut for StateMachineVisitor {
                     Some(_) => self.push_multiple_automata_decl_error(it_struct),
                     None => self.main_struct = Some(it_struct.clone()),
                 };
-                if let Err(e) = dbg!(add_state_type_param(it_struct)) {
+                if let Err(e) = add_state_type_param(it_struct) {
                     self.errors.push(e);
                     return;
                 }
