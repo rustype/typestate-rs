@@ -16,7 +16,6 @@ pub fn typestate(
     _: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let output = input.clone();
     let ref mut module = parse_macro_input!(input as Item);
     // match parse_module_item(module) {
     //     Ok(tt) => tt,
@@ -59,8 +58,11 @@ const STATE_ATTR_IDENT: &'static str = "state";
 
 impl<'a> visit_mut::VisitMut for StateMachineVisitor<'a> {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
+        println!("{:#?}", it_struct);
+
         let attributes = &it_struct.attrs;
         let mut remove_idx = vec![true; attributes.len()];
+
         for (idx, attr) in attributes.iter().enumerate() {
             if attr.path.is_ident(AUTOMATA_ATTR_IDENT) {
                 if let Some(_) = self.main_struct {
@@ -70,16 +72,19 @@ impl<'a> visit_mut::VisitMut for StateMachineVisitor<'a> {
                         "`automata` redefinition is not allowed",
                     ))
                 }
-                println!("{:#?}", it_struct);
+                // self.main_struct = Some(it_struct);
                 remove_idx[idx] = false;
             }
             if attr.path.is_ident(STATE_ATTR_IDENT) {
-                println!("{:#?}", it_struct);
                 remove_idx[idx] = false;
             }
         }
-        let mut idx = 0;
-        (&mut it_struct.attrs).retain(|_| (remove_idx[idx], idx += 1).0);
-        println!("{:#?}", &it_struct.attrs);
+
+        remove_attrs(&mut it_struct.attrs, &remove_idx);
     }
+}
+
+fn remove_attrs(attrs: &mut Vec<Attribute>, indexes: &Vec<bool>) {
+    let mut idx = 0;
+    attrs.retain(|_| (indexes[idx], idx += 1).0)
 }

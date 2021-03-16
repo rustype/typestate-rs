@@ -1,9 +1,14 @@
 use typestate::typestate;
 
 #[typestate]
-mod M {
+mod m {
     #[automata]
     struct Drone {
+        location: (i32, i32)
+    }
+
+    #[automata]
+    struct DroneB {
         location: (i32, i32)
     }
 
