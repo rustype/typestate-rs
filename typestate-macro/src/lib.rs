@@ -1,13 +1,17 @@
-use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens, TokenStreamExt};
-use std::{collections::HashMap, iter::once};
-use syn::{
-    parse::Parser,
-    parse_macro_input, parse_quote,
-    spanned::Spanned,
-    visit_mut::{self, VisitMut},
-    Attribute, Error, Field, Fields, Item, ItemEnum, ItemMod, ItemStruct, Result, TypeParam,
-};
+use core::panic;
+use quote::{format_ident, quote, ToTokens};
+use std::collections::HashMap;
+use syn::{Attribute, Error, Field, Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, parse::Parser, parse_macro_input, parse_quote, visit_mut::{self, VisitMut}};
+
+macro_rules! parse_quote {(
+    $($code:tt)*
+) => ((|| {
+    fn type_of_some<T> (_: Option<T>) -> &'static str { ::core::any::type_name::<T>() }
+    let target_ty = None;
+    if false { return target_ty.unwrap(); }
+    eprintln!("[{}:{}:{}] parse_quote! {{ {} }} as {}", file!(), line!(), column!(), quote!( $($code)* ), type_of_some(target_ty));
+    ::syn::parse_quote!( $($code)* )
+})())}
 
 #[proc_macro_attribute]
 pub fn typestate(
@@ -23,6 +27,13 @@ pub fn typestate(
     // start visitor
     let mut visitor = StateMachineVisitor::new();
     visitor.visit_item_mod_mut(&mut module);
+
+    match &mut module.content {
+        Some((_, v)) => {
+            v.append(&mut visitor.sealed_trait.into());
+        }
+        None => {}
+    };
 
     let mut errors = visitor.errors;
     if errors.is_empty() {
@@ -44,13 +55,80 @@ pub fn typestate(
     .into()
 }
 
-struct StateMachineVisitor {
+struct StateMachineInfo {
     /// Main structure (aka Automata ?)
     main_struct: Option<ItemStruct>, // late init
     /// Deterministic states (`struct`s)
     det_states: Vec<ItemStruct>,
     /// Non-deterministic states (`enum`s)
     non_det_states: Vec<ItemEnum>,
+}
+
+impl StateMachineInfo {
+    fn new() -> Self {
+        Self {
+            main_struct: None,
+            det_states: Vec::new(),
+            non_det_states: Vec::new(),
+        }
+    }
+}
+
+struct SealedPattern {
+    /// Ident for the sealed pattern public trait
+    trait_ident: Option<Ident>, // late init
+    /// Idents for the sealed elements.
+    state_idents: Vec<Ident>,
+}
+
+impl SealedPattern {
+    fn new() -> Self {
+        Self {
+            trait_ident: None,
+            state_idents: Vec::new(),
+        }
+    }
+}
+
+impl Into<Vec<syn::Item>> for SealedPattern {
+    /// Convert the SealedTrait into a vector of Item.
+    /// This enables the addition of new items to the main module.
+    fn into(self) -> Vec<syn::Item> {
+        let private_mod_ident: Ident = parse_quote!(private);
+        let private_mod_trait: Ident = parse_quote!(Private);
+
+        let states = &self.state_idents;
+        let private_mod: ItemMod = parse_quote! {
+            mod #private_mod_ident {
+                #(use super::#states;)*
+                pub trait #private_mod_trait {}
+                #(impl #private_mod_trait for #states {})*
+            }
+        };
+
+        let trait_ident = self.trait_ident;
+        let state_trait: ItemTrait = parse_quote! {
+            pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
+        };
+
+        let trait_impls = self
+            .state_idents
+            .iter()
+            .map(|ident| -> ItemImpl { parse_quote!(impl #trait_ident for #ident {}) })
+            .map(|item_trait| Item::from(item_trait));
+
+        let mut res: Vec<Item> = vec![Item::from(private_mod), Item::from(state_trait)];
+        res.extend(trait_impls);
+        println!("out {:#?}", res);
+        res
+    }
+}
+
+struct StateMachineVisitor {
+    /// State machine required information
+    state_machine_info: StateMachineInfo,
+    /// Sealed trait information
+    sealed_trait: SealedPattern,
     /// Errors found during expansion
     errors: Vec<syn::Error>,
 }
@@ -58,18 +136,19 @@ struct StateMachineVisitor {
 impl StateMachineVisitor {
     fn new() -> Self {
         Self {
-            main_struct: None,
-            det_states: Vec::new(),
-            non_det_states: Vec::new(),
+            state_machine_info: StateMachineInfo::new(),
+            sealed_trait: SealedPattern::new(),
             errors: Vec::new(),
         }
     }
 
+    /// Add `multiple attributes` error to the error vector.
     fn push_multiple_attr_error(&mut self, attr: &Attribute) {
         self.errors
             .push(Error::new_spanned(attr, "multiple attributes are declared"));
     }
 
+    /// Add `multiple declarations` error to the error vector.
     fn push_multiple_decl_error(&mut self, attr: &Attribute, ident: &str) {
         self.errors.push(Error::new_spanned(
             attr,
@@ -77,6 +156,7 @@ impl StateMachineVisitor {
         ));
     }
 
+    /// Add `multiple automata` error to the error vector.
     fn push_multiple_automata_decl_error(&mut self, it: &ItemStruct) {
         self.errors
             .push(Error::new_spanned(it, "`automata` redefinition here"));
@@ -161,17 +241,26 @@ impl visit_mut::VisitMut for StateMachineVisitor {
         match attr_type.unwrap() {
             // check for multiple automata definitions
             AUTOMATA_ATTR_IDENT => {
-                match self.main_struct {
+                match self.state_machine_info.main_struct {
                     Some(_) => self.push_multiple_automata_decl_error(it_struct),
-                    None => self.main_struct = Some(it_struct.clone()),
+                    None => self.state_machine_info.main_struct = Some(it_struct.clone()),
                 };
-                if let Err(e) = add_state_type_param(it_struct) {
-                    self.errors.push(e);
-                    return;
+                match add_state_type_param(it_struct) {
+                    Ok(bound_ident) => match self.sealed_trait.trait_ident {
+                        Some(_) => unreachable!("this should have been checked previously"),
+                        None => self.sealed_trait.trait_ident = Some(bound_ident),
+                    },
+                    Err(e) => {
+                        self.errors.push(e);
+                        return;
+                    }
                 }
             }
             // add state
-            STATE_ATTR_IDENT => self.det_states.push(it_struct.clone()),
+            STATE_ATTR_IDENT => {
+                self.state_machine_info.det_states.push(it_struct.clone());
+                self.sealed_trait.state_idents.push(it_struct.ident.clone());
+            }
             _ => panic!("unknown attribute passed the filters!!!"),
         }
 
@@ -179,17 +268,15 @@ impl visit_mut::VisitMut for StateMachineVisitor {
     }
 }
 
-fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<()> {
+fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
     let struct_ident = &automata_item.ident;
     let type_param_ident = format_ident!("{}State", struct_ident);
 
     match &mut automata_item.fields {
         syn::Fields::Named(named) => {
-            named.named.push(
-                Field::parse_named
-                    .parse2(quote!(state: #type_param_ident))
-                    .unwrap(),
-            );
+            named
+                .named
+                .push(Field::parse_named.parse2(quote!(state: State)).unwrap());
         }
         syn::Fields::Unnamed(_) => {
             return syn::Result::Err(Error::new_spanned(
@@ -198,16 +285,27 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<()> {
             ));
         }
         syn::Fields::Unit => {
-            automata_item.fields = Fields::Named(parse_quote!({state: #type_param_ident}));
+            automata_item.fields = Fields::Named(parse_quote!({ state: State }));
         }
     };
 
     // add type parameter
-    automata_item
-        .generics
-        .params
-        .push(parse_quote!(#type_param_ident));
-    Ok(())
+    automata_item.generics.params.push(parse_quote!(State));
+
+    let where_clause = &mut automata_item.generics.where_clause;
+    match where_clause {
+        Some(clause) => clause
+            .predicates
+            .push(parse_quote!(State: #type_param_ident)),
+        None => {
+            let where_clause = automata_item.generics.make_where_clause();
+            where_clause
+                .predicates
+                .push(parse_quote!(State: #type_param_ident));
+        }
+    }
+
+    Ok(type_param_ident)
 }
 
 fn remove_attrs(attrs: &mut Vec<Attribute>, indexes: &Vec<bool>) {
