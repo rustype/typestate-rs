@@ -2,12 +2,11 @@ use core::panic;
 use quote::{format_ident, quote, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
-    ops::{Deref, DerefMut},
+    ops::DerefMut,
 };
 use syn::{
-    parse::Parser, parse2, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error,
-    Field, Fields, Ident, Item, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, ItemTrait,
-    TraitItemMethod, TypePath,
+    parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error, Field,
+    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, TraitItemMethod,
 };
 
 const AUTOMATA_ATTR_IDENT: &'static str = "automata";
