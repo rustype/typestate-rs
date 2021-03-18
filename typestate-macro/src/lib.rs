@@ -385,18 +385,6 @@ impl TransitionVisitor {
     //         None => {}
     //     }
     // }
-
-    // TODO convert det_state into HashSet<Ident>
-    // please this approach is SO BAD
-    fn is_valid_state_ident(&self, state_ident: &Ident) -> bool {
-        let t: HashSet<_> = self
-            .state_info
-            .det_states
-            .iter()
-            .map(|s| &s.ident)
-            .collect();
-        t.contains(state_ident)
-    }
 }
 
 impl VisitMut for TransitionVisitor {
