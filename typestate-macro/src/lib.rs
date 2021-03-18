@@ -2,11 +2,12 @@ use core::panic;
 use quote::{format_ident, quote, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
-    ops::DerefMut,
+    ops::{Deref, DerefMut},
 };
 use syn::{
     parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error, Field,
-    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, TraitItemMethod,
+    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, Signature,
+    TraitItemMethod,
 };
 
 const AUTOMATA_ATTR_IDENT: &'static str = "automata";
@@ -292,6 +293,32 @@ impl VisitMut for StateVisitor {
     }
 }
 
+enum FnKind {
+    /// Describes an initial state.
+    ///
+    /// For example:
+    /// ```no_run
+    /// fn initial() -> StateA {}
+    /// ```
+    Initial,
+    /// Describes a state transition.
+    ///
+    /// For example:
+    /// ```no_run
+    /// fn transition(self: StateA) -> StateB {}
+    /// ```
+    Transition,
+    /// Describes a final state.
+    ///
+    /// For example:
+    /// ```no_run
+    /// fn final(self: StateB) {}
+    /// ```
+    Final,
+    /// Any other kind of function.
+    Unknown,
+}
+
 struct TransitionVisitor {
     state_info: StateInfo,
 }
@@ -299,6 +326,56 @@ struct TransitionVisitor {
 impl TransitionVisitor {
     fn new(state_info: StateInfo) -> Self {
         Self { state_info }
+    }
+
+    // fn extract_fn_kind(&self, sig: &Signature) -> FnKind {
+    //     let receiver = sig.receiver();
+    //     let output = &sig.output;
+
+    //     match receiver {
+    //         // we have either transition or final
+    //         Some(_) => {
+    //             if let syn::ReturnType::Type(_, ty) = output {
+    //                 if let syn::Type::Path(ty_path) = ty.deref() {
+    //                     if let Some(ident) = ty_path.path.get_ident() {
+    //                         if self.is_valid_state_ident(ident) {
+    //                             return FnKind::Transition
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //             return FnKind::Unknown
+    //             // match output {
+    //             //     syn::ReturnType::Default => FnKind::Unknown,
+    //             //     syn::ReturnType::Type(_, ty) => {
+    //             //         match ty.deref() {
+    //             //             syn::Type::Path(ty_path) => {
+    //             //                 if let Some(ident) = ty_path.path.get_ident() {
+
+    //             //                 } else {
+    //             //                     FnKind::Unknown
+    //             //                 }
+    //             //             }
+    //             //             _ => FnKind::Unknown
+    //             //         }
+    //             //     }
+    //             // }
+    //         }
+    //         // we have either initial or unknown
+    //         None => {}
+    //     }
+    // }
+
+    // TODO convert det_state into HashSet<Ident>
+    // please this approach is SO BAD
+    fn is_valid_state_ident(&self, state_ident: &Ident) -> bool {
+        let t: HashSet<_> = self
+            .state_info
+            .det_states
+            .iter()
+            .map(|s| &s.ident)
+            .collect();
+        t.contains(state_ident)
     }
 }
 
@@ -321,19 +398,12 @@ impl VisitMut for TransitionVisitor {
         let return_type = &mut i.sig.output;
         match return_type {
             syn::ReturnType::Default => {} // ignore
-            syn::ReturnType::Type(_, b) => {
-                match b.deref_mut() {
+            syn::ReturnType::Type(_, ty) => {
+                match ty.deref_mut() {
                     syn::Type::Path(p) => {
                         if let Some(state_ident) = p.path.get_ident() {
-                            // TODO convert det_state into HashSet<Ident>
-                            let t: HashSet<_> = self
-                                .state_info
-                                .det_states
-                                .iter()
-                                .map(|s| &s.ident)
-                                .collect();
                             // check if it is a valid state
-                            if t.contains(state_ident) {
+                            if self.is_valid_state_ident(state_ident) {
                                 // if valid `State` -> `Main<State>`
                                 // TODO make this call less bad
                                 let automata_ident =
@@ -357,7 +427,7 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
         syn::Fields::Named(named) => {
             named
                 .named
-                .push(Field::parse_named.parse2(quote!(state: State)).unwrap());
+                .push(Field::parse_named.parse2(quote!(pub state: State)).unwrap());
         }
         syn::Fields::Unnamed(_) => {
             return syn::Result::Err(Error::new_spanned(
@@ -366,7 +436,7 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
             ));
         }
         syn::Fields::Unit => {
-            automata_item.fields = Fields::Named(parse_quote!({ state: State }));
+            automata_item.fields = Fields::Named(parse_quote!({ pub state: State }));
         }
     };
 
