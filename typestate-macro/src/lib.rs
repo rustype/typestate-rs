@@ -176,6 +176,12 @@ impl visit_mut::VisitMut for StateMachineVisitor {
         let attributes = &it_struct.attrs;
         let mut remove_idx = vec![true; attributes.len()];
 
+        // TODO
+        // filtering attribute duplicates can be done with a set
+        // the first decides which one is the "main"
+        // the following attributes will either already be present
+        // or make the size of the set go up by one
+
         // filter out relevant attributes
         let mut filtered = HashMap::new();
         for (idx, attr) in attributes.iter().enumerate() {
