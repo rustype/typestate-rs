@@ -313,6 +313,10 @@ impl VisitMut for TransitionVisitor {
         }
     }
 
+    // TODO check for the following kinds of function
+    // self, _ -> State
+    // _ -> State
+    // State -> _
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         println!("{:#?}", i);
         let return_type = &mut i.sig.output;
