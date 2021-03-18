@@ -1,17 +1,37 @@
 use core::panic;
 use quote::{format_ident, quote, ToTokens};
-use std::collections::HashMap;
-use syn::{Attribute, Error, Field, Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, parse::Parser, parse_macro_input, parse_quote, visit_mut::{self, VisitMut}};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::{Deref, DerefMut},
+};
+use syn::{
+    parse::Parser, parse2, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error,
+    Field, Fields, Ident, Item, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, ItemTrait,
+    TraitItemMethod, TypePath,
+};
 
-macro_rules! parse_quote {(
-    $($code:tt)*
-) => ((|| {
-    fn type_of_some<T> (_: Option<T>) -> &'static str { ::core::any::type_name::<T>() }
-    let target_ty = None;
-    if false { return target_ty.unwrap(); }
-    eprintln!("[{}:{}:{}] parse_quote! {{ {} }} as {}", file!(), line!(), column!(), quote!( $($code)* ), type_of_some(target_ty));
-    ::syn::parse_quote!( $($code)* )
-})())}
+const AUTOMATA_ATTR_IDENT: &'static str = "automata";
+const STATE_ATTR_IDENT: &'static str = "state";
+
+// macro_rules! parse_quote {(
+//     $($code:tt)*
+// ) => (
+//     (|| {
+//         fn type_of_some<T> (_: Option<T>)
+//           -> &'static str
+//         {
+//             ::core::any::type_name::<T>()
+//         }
+//         let target_ty = None; if false { return target_ty.unwrap(); }
+//         eprintln!(
+//             "[{}:{}:{}:parse_quote!]\n  - ty: `{ty}`\n  - code: `{code}`",
+//             file!(), line!(), column!(),
+//             code = ::quote::quote!( $($code)* ),
+//             ty = type_of_some(target_ty),
+//         );
+//         ::syn::parse_quote!( $($code)* )
+//     })()
+// )}
 
 #[proc_macro_attribute]
 pub fn typestate(
@@ -24,18 +44,22 @@ pub fn typestate(
     let _: syn::parse::Nothing = parse_macro_input!(attrs);
     // parse the input as a mod
     let mut module: ItemMod = parse_macro_input!(input);
+
     // start visitor
-    let mut visitor = StateMachineVisitor::new();
-    visitor.visit_item_mod_mut(&mut module);
+    let mut state_visitor = StateVisitor::new();
+    state_visitor.visit_item_mod_mut(&mut module);
+
+    let mut transition_visitor = TransitionVisitor::new(state_visitor.state_machine_info);
+    transition_visitor.visit_item_mod_mut(&mut module);
 
     match &mut module.content {
         Some((_, v)) => {
-            v.append(&mut visitor.sealed_trait.into());
+            v.append(&mut state_visitor.sealed_trait.into());
         }
         None => {}
     };
 
-    let mut errors = visitor.errors;
+    let mut errors = state_visitor.errors;
     if errors.is_empty() {
         // if errors do not exist, return the token stream
         let ret = module.into_token_stream();
@@ -55,20 +79,22 @@ pub fn typestate(
     .into()
 }
 
-struct StateMachineInfo {
+/// Extracted information from the states
+struct StateInfo {
     /// Main structure (aka Automata ?)
     main_struct: Option<ItemStruct>, // late init
     /// Deterministic states (`struct`s)
-    det_states: Vec<ItemStruct>,
+    // TODO convert det_state into HashSet<Ident>
+    det_states: HashSet<ItemStruct>,
     /// Non-deterministic states (`enum`s)
     non_det_states: Vec<ItemEnum>,
 }
 
-impl StateMachineInfo {
+impl StateInfo {
     fn new() -> Self {
         Self {
             main_struct: None,
-            det_states: Vec::new(),
+            det_states: HashSet::new(),
             non_det_states: Vec::new(),
         }
     }
@@ -119,24 +145,23 @@ impl Into<Vec<syn::Item>> for SealedPattern {
 
         let mut res: Vec<Item> = vec![Item::from(private_mod), Item::from(state_trait)];
         res.extend(trait_impls);
-        println!("out {:#?}", res);
         res
     }
 }
 
-struct StateMachineVisitor {
+struct StateVisitor {
     /// State machine required information
-    state_machine_info: StateMachineInfo,
+    state_machine_info: StateInfo,
     /// Sealed trait information
     sealed_trait: SealedPattern,
     /// Errors found during expansion
     errors: Vec<syn::Error>,
 }
 
-impl StateMachineVisitor {
+impl StateVisitor {
     fn new() -> Self {
         Self {
-            state_machine_info: StateMachineInfo::new(),
+            state_machine_info: StateInfo::new(),
             sealed_trait: SealedPattern::new(),
             errors: Vec::new(),
         }
@@ -163,15 +188,9 @@ impl StateMachineVisitor {
     }
 }
 
-// /// This function finds valid attributes in the
-// fn get_struct_attribute()
-
-const AUTOMATA_ATTR_IDENT: &'static str = "automata";
-const STATE_ATTR_IDENT: &'static str = "state";
-
-impl visit_mut::VisitMut for StateMachineVisitor {
+impl VisitMut for StateVisitor {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
-        println!("{:#?}", it_struct);
+        // println!("{:#?}", it_struct);
 
         let attributes = &it_struct.attrs;
         let mut remove_idx = vec![true; attributes.len()];
@@ -264,13 +283,66 @@ impl visit_mut::VisitMut for StateMachineVisitor {
             }
             // add state
             STATE_ATTR_IDENT => {
-                self.state_machine_info.det_states.push(it_struct.clone());
+                self.state_machine_info.det_states.insert(it_struct.clone());
                 self.sealed_trait.state_idents.push(it_struct.ident.clone());
             }
             _ => panic!("unknown attribute passed the filters!!!"),
         }
 
         remove_attrs(&mut it_struct.attrs, &remove_idx);
+    }
+}
+
+struct TransitionVisitor {
+    state_info: StateInfo,
+}
+
+impl TransitionVisitor {
+    fn new(state_info: StateInfo) -> Self {
+        Self { state_info }
+    }
+}
+
+impl VisitMut for TransitionVisitor {
+    fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
+        let ident = &i.ident;
+        i.ident = format_ident!("{}State", ident);
+        // go deeper
+        for item in i.items.iter_mut() {
+            self.visit_trait_item_mut(item);
+        }
+    }
+
+    fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
+        println!("{:#?}", i);
+        let return_type = &mut i.sig.output;
+        match return_type {
+            syn::ReturnType::Default => {} // ignore
+            syn::ReturnType::Type(_, b) => {
+                match b.deref_mut() {
+                    syn::Type::Path(p) => {
+                        if let Some(state_ident) = p.path.get_ident() {
+                            // TODO convert det_state into HashSet<Ident>
+                            let t: HashSet<_> = self
+                                .state_info
+                                .det_states
+                                .iter()
+                                .map(|s| &s.ident)
+                                .collect();
+                            // check if it is a valid state
+                            if t.contains(state_ident) {
+                                // if valid `State` -> `Main<State>`
+                                // TODO make this call less bad
+                                let automata_ident =
+                                    &self.state_info.main_struct.as_ref().unwrap().ident;
+                                p.path = parse_quote!(#automata_ident<#state_ident>);
+                            }
+                        }
+                    }
+                    _ => {} // ignore
+                }
+            }
+        }
     }
 }
 
