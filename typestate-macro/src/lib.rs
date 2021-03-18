@@ -84,10 +84,11 @@ struct StateInfo {
     /// Main structure (aka Automata ?)
     main_struct: Option<ItemStruct>, // late init
     /// Deterministic states (`struct`s)
-    // TODO convert det_state into HashSet<Ident>
     det_states: HashSet<ItemStruct>,
     /// Non-deterministic states (`enum`s)
-    non_det_states: Vec<ItemEnum>,
+    non_det_states: HashSet<ItemEnum>,
+    /// Set of extracted identifiers.
+    state_idents: HashSet<Ident>,
 }
 
 impl StateInfo {
@@ -95,8 +96,27 @@ impl StateInfo {
         Self {
             main_struct: None,
             det_states: HashSet::new(),
-            non_det_states: Vec::new(),
+            non_det_states: HashSet::new(),
+            state_idents: HashSet::new(),
         }
+    }
+
+    fn add_state(&mut self, state: Item) {
+        match state {
+            Item::Struct(item_struct) => {
+                self.state_idents.insert(item_struct.ident.clone());
+                self.det_states.insert(item_struct);
+            }
+            Item::Enum(item_enum) => {
+                self.state_idents.insert(item_enum.ident.clone());
+                self.non_det_states.insert(item_enum);
+            }
+            _ => panic!("invalid state"),
+        }
+    }
+
+    fn is_valid_state_ident(&self, ident: &Ident) -> bool {
+        self.state_idents.contains(ident)
     }
 }
 
@@ -283,7 +303,7 @@ impl VisitMut for StateVisitor {
             }
             // add state
             STATE_ATTR_IDENT => {
-                self.state_machine_info.det_states.insert(it_struct.clone());
+                self.state_machine_info.add_state(it_struct.clone().into());
                 self.sealed_trait.state_idents.push(it_struct.ident.clone());
             }
             _ => panic!("unknown attribute passed the filters!!!"),
@@ -403,7 +423,7 @@ impl VisitMut for TransitionVisitor {
                     syn::Type::Path(p) => {
                         if let Some(state_ident) = p.path.get_ident() {
                             // check if it is a valid state
-                            if self.is_valid_state_ident(state_ident) {
+                            if self.state_info.is_valid_state_ident(state_ident) {
                                 // if valid `State` -> `Main<State>`
                                 // TODO make this call less bad
                                 let automata_ident =
