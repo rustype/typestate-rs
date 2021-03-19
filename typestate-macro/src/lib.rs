@@ -3,10 +3,13 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
-    mem::take,
-    ops::{Deref, DerefMut},
+    ops::DerefMut,
 };
-use syn::{Attribute, Error, Field, Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, Signature, TraitItemMethod, Variant, parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut};
+use syn::{
+    parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error, Field,
+    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, TraitItemMethod,
+    Variant,
+};
 
 const AUTOMATA_ATTR_IDENT: &'static str = "automata";
 const STATE_ATTR_IDENT: &'static str = "state";
