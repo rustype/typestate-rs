@@ -1,14 +1,12 @@
 use core::panic;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
+    mem::take,
     ops::{Deref, DerefMut},
 };
-use syn::{
-    parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error, Field,
-    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, Signature,
-    TraitItemMethod,
-};
+use syn::{Attribute, Error, Field, Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, Signature, TraitItemMethod, Variant, parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut};
 
 const AUTOMATA_ATTR_IDENT: &'static str = "automata";
 const STATE_ATTR_IDENT: &'static str = "state";
@@ -45,42 +43,83 @@ pub fn typestate(
     // parse the input as a mod
     let mut module: ItemMod = parse_macro_input!(input);
 
+    let mut state_machine_info = StateMachineInfo::new();
+
     // start visitor
-    let mut state_visitor = StateVisitor::new();
+    let mut state_visitor = DeterministicStateVisitor::new(&mut state_machine_info);
     state_visitor.visit_item_mod_mut(&mut module);
 
-    let mut transition_visitor = TransitionVisitor::new(state_visitor.state_machine_info);
+    // take ownership of sealed_trait so we can stop using state_visitor
+    // after stopping using state_visitor we can
+    let sealed_trait = state_visitor.sealed_trait;
+
+    // report state_visitor errors and return
+    let mut errors = state_visitor.errors;
+    if !errors.is_empty() {
+        return errors.to_compile_error().into();
+    }
+
+    let mut non_det_state_visitor = NonDeterministicStateVisitor::new(&mut state_machine_info);
+    non_det_state_visitor.visit_item_mod_mut(&mut module);
+    // report non_det_state_visitor errors and return
+    errors = non_det_state_visitor.errors;
+    if !errors.is_empty() {
+        return errors.to_compile_error().into();
+    }
+
+    // Visit transitions
+    // TODO state_machine_info can be &mut and declared outside of all these visitors
+    let mut transition_visitor = TransitionVisitor::new(&mut state_machine_info);
     transition_visitor.visit_item_mod_mut(&mut module);
 
+    // report transition_visitor errors and return
+    errors = transition_visitor.errors;
+    if !errors.is_empty() {
+        return errors.to_compile_error().into();
+    }
+
+    // appending new code should happen after all other code is processed
+    // since this adds the sealed pattern traits and those aren't valid states
+    // if this is done before visiting transitions the generated code is flagged as invalid transitions
     match &mut module.content {
         Some((_, v)) => {
-            v.append(&mut state_visitor.sealed_trait.into());
+            v.append(&mut sealed_trait.into());
         }
         None => {}
     };
 
-    let mut errors = state_visitor.errors;
-    if errors.is_empty() {
-        // if errors do not exist, return the token stream
-        let ret = module.into_token_stream();
-        // println!("{}", ret);
-        ret
-    } else {
-        // if errors exist, return all errors
-        let fst_err = errors.swap_remove(0);
-        errors
-            .into_iter()
-            .fold(fst_err, |mut all, curr| {
-                all.combine(curr);
-                all
-            })
-            .to_compile_error()
+    // if errors do not exist, return the token stream
+    let ret = module.into_token_stream();
+    // println!("{}", ret);
+    ret.into()
+}
+
+/// A value to `proc_macro2::TokenStream` conversion.
+/// More precisely into
+trait IntoCompileError {
+    fn to_compile_error(self) -> TokenStream;
+}
+
+impl IntoCompileError for Vec<Error> {
+    fn to_compile_error(mut self) -> TokenStream {
+        if !self.is_empty() {
+            // if errors exist, return all errors
+            let fst_err = self.swap_remove(0);
+            return self
+                .into_iter()
+                .fold(fst_err, |mut all, curr| {
+                    all.combine(curr);
+                    all
+                })
+                .to_compile_error();
+        } else {
+            TokenStream::new()
+        }
     }
-    .into()
 }
 
 /// Extracted information from the states
-struct StateInfo {
+struct StateMachineInfo {
     /// Main structure (aka Automata ?)
     main_struct: Option<ItemStruct>, // late init
     /// Deterministic states (`struct`s)
@@ -91,7 +130,7 @@ struct StateInfo {
     state_idents: HashSet<Ident>,
 }
 
-impl StateInfo {
+impl StateMachineInfo {
     fn new() -> Self {
         Self {
             main_struct: None,
@@ -117,6 +156,17 @@ impl StateInfo {
 
     fn is_valid_state_ident(&self, ident: &Ident) -> bool {
         self.state_idents.contains(ident)
+    }
+}
+
+impl Default for StateMachineInfo {
+    fn default() -> Self {
+        Self {
+            main_struct: None,
+            det_states: HashSet::new(),
+            non_det_states: HashSet::new(),
+            state_idents: HashSet::new(),
+        }
     }
 }
 
@@ -169,19 +219,19 @@ impl Into<Vec<syn::Item>> for SealedPattern {
     }
 }
 
-struct StateVisitor {
+struct DeterministicStateVisitor<'sm> {
     /// State machine required information
-    state_machine_info: StateInfo,
+    state_machine_info: &'sm mut StateMachineInfo,
     /// Sealed trait information
     sealed_trait: SealedPattern,
     /// Errors found during expansion
     errors: Vec<syn::Error>,
 }
 
-impl StateVisitor {
-    fn new() -> Self {
+impl<'sm> DeterministicStateVisitor<'sm> {
+    fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
         Self {
-            state_machine_info: StateInfo::new(),
+            state_machine_info,
             sealed_trait: SealedPattern::new(),
             errors: Vec::new(),
         }
@@ -208,7 +258,7 @@ impl StateVisitor {
     }
 }
 
-impl VisitMut for StateVisitor {
+impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
         // println!("{:#?}", it_struct);
 
@@ -313,6 +363,54 @@ impl VisitMut for StateVisitor {
     }
 }
 
+struct NonDeterministicStateVisitor<'sm> {
+    state_machine_info: &'sm mut StateMachineInfo,
+    errors: Vec<Error>,
+}
+
+impl<'sm> NonDeterministicStateVisitor<'sm> {
+    fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
+        Self {
+            state_machine_info,
+            errors: Vec::new(),
+        }
+    }
+
+    /// Add `undeclared state` error to the error vector.
+    fn push_undeclared_state_error(&mut self, ident: &Ident) {
+        self.errors.push(Error::new_spanned(
+            ident,
+            "`enum` variant is not a valid state",
+        ));
+    }
+
+    /// Add `unsupported variant` error to the error vector.
+    fn push_unsupported_variant_error(&mut self, variant: &Variant) {
+        self.errors.push(Error::new_spanned(
+            variant,
+            "only unnamed `enum` variants are supported",
+        ));
+    }
+}
+
+impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
+    fn visit_item_enum_mut(&mut self, i: &mut ItemEnum) {
+        for variant in &mut i.variants {
+            let ident = &variant.ident;
+            if !self.state_machine_info.is_valid_state_ident(ident) {
+                self.push_undeclared_state_error(ident)
+            }
+            if let Fields::Unit = &variant.fields {
+                // TODO make this call less bad
+                let automata_ident = &self.state_machine_info.main_struct.as_ref().unwrap().ident;
+                variant.fields = Fields::Unnamed(parse_quote!((#automata_ident<#ident>)));
+            } else {
+                self.push_unsupported_variant_error(variant);
+            }
+        }
+    }
+}
+
 enum FnKind {
     /// Describes an initial state.
     ///
@@ -339,13 +437,25 @@ enum FnKind {
     Unknown,
 }
 
-struct TransitionVisitor {
-    state_info: StateInfo,
+struct TransitionVisitor<'sm> {
+    state_machine_info: &'sm mut StateMachineInfo,
+    errors: Vec<Error>,
 }
 
-impl TransitionVisitor {
-    fn new(state_info: StateInfo) -> Self {
-        Self { state_info }
+impl<'sm> TransitionVisitor<'sm> {
+    fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
+        Self {
+            state_machine_info,
+            errors: Vec::new(),
+        }
+    }
+
+    /// Add `unknown state` error to the error vector.
+    fn push_unknown_state_error(&mut self, ident: &Ident) {
+        self.errors.push(Error::new_spanned(
+            ident,
+            format!("`{}` is not a declared state", ident),
+        ));
     }
 
     // fn extract_fn_kind(&self, sig: &Signature) -> FnKind {
@@ -387,13 +497,18 @@ impl TransitionVisitor {
     // }
 }
 
-impl VisitMut for TransitionVisitor {
+impl<'sm> VisitMut for TransitionVisitor<'sm> {
     fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
         let ident = &i.ident;
-        i.ident = format_ident!("{}State", ident);
-        // go deeper
-        for item in i.items.iter_mut() {
-            self.visit_trait_item_mut(item);
+
+        if self.state_machine_info.state_idents.contains(ident) {
+            i.ident = format_ident!("{}State", ident);
+            // go deeper
+            for item in i.items.iter_mut() {
+                self.visit_trait_item_mut(item);
+            }
+        } else {
+            self.push_unknown_state_error(ident);
         }
     }
 
@@ -402,7 +517,7 @@ impl VisitMut for TransitionVisitor {
     // _ -> State
     // State -> _
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
-        println!("{:#?}", i);
+        // println!("{:#?}", i);
         let return_type = &mut i.sig.output;
         match return_type {
             syn::ReturnType::Default => {} // ignore
@@ -411,11 +526,11 @@ impl VisitMut for TransitionVisitor {
                     syn::Type::Path(p) => {
                         if let Some(state_ident) = p.path.get_ident() {
                             // check if it is a valid state
-                            if self.state_info.is_valid_state_ident(state_ident) {
+                            if self.state_machine_info.is_valid_state_ident(state_ident) {
                                 // if valid `State` -> `Main<State>`
                                 // TODO make this call less bad
                                 let automata_ident =
-                                    &self.state_info.main_struct.as_ref().unwrap().ident;
+                                    &self.state_machine_info.main_struct.as_ref().unwrap().ident;
                                 p.path = parse_quote!(#automata_ident<#state_ident>);
                             }
                         }
