@@ -3,11 +3,12 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryFrom,
     ops::DerefMut,
 };
 use syn::{
     parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error, Field,
-    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, TraitItemMethod,
+    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, Path, TraitItemMethod,
     Variant,
 };
 
@@ -33,6 +34,40 @@ const STATE_ATTR_IDENT: &'static str = "state";
 //         ::syn::parse_quote!( $($code)* )
 //     })()
 // )}
+
+#[derive(Debug, PartialEq)]
+enum TypestateAttr {
+    Automata,
+    State,
+}
+
+impl TryFrom<&Ident> for TypestateAttr {
+    type Error = ();
+
+    fn try_from(ident: &Ident) -> Result<Self, Self::Error> {
+        if ident == AUTOMATA_ATTR_IDENT {
+            Ok(Self::Automata)
+        } else if ident == STATE_ATTR_IDENT {
+            Ok(Self::State)
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl TryFrom<&Path> for TypestateAttr {
+    type Error = ();
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        if path.is_ident(AUTOMATA_ATTR_IDENT) {
+            Ok(Self::Automata)
+        } else if path.is_ident(STATE_ATTR_IDENT) {
+            Ok(Self::State)
+        } else {
+            Err(())
+        }
+    }
+}
 
 #[proc_macro_attribute]
 pub fn typestate(
@@ -246,12 +281,10 @@ impl<'sm> DeterministicStateVisitor<'sm> {
             .push(Error::new_spanned(attr, "multiple attributes are declared"));
     }
 
-    /// Add `multiple declarations` error to the error vector.
-    fn push_multiple_decl_error(&mut self, attr: &Attribute, ident: &str) {
-        self.errors.push(Error::new_spanned(
-            attr,
-            format!("`{}` can only be used once", ident),
-        ));
+    /// Add `duplicate attribute` error to the error vector.
+    fn push_multiple_decl_error(&mut self, attr: &Attribute) {
+        self.errors
+            .push(Error::new_spanned(attr, format!("duplicate attribute")));
     }
 
     /// Add `multiple automata` error to the error vector.
@@ -263,86 +296,48 @@ impl<'sm> DeterministicStateVisitor<'sm> {
 
 impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
-        // println!("{:#?}", it_struct);
-
-        let attributes = &it_struct.attrs;
-        let mut remove_idx = vec![true; attributes.len()];
-
-        // TODO
-        // filtering attribute duplicates can be done with a set
-        // the first decides which one is the "main"
-        // the following attributes will either already be present
-        // or make the size of the set go up by one
-
-        // filter out relevant attributes
-        let mut filtered = HashMap::new();
-        for (idx, attr) in attributes.iter().enumerate() {
-            if attr.path.is_ident(AUTOMATA_ATTR_IDENT) {
-                match filtered.get_mut(AUTOMATA_ATTR_IDENT) {
-                    None => {
-                        filtered.insert(AUTOMATA_ATTR_IDENT, vec![(idx, attr)]);
+        let attributes = &mut it_struct.attrs;
+        let mut main_attr = None;
+        attributes.retain(|attr| {
+            let ts_attr = TypestateAttr::try_from(&attr.path);
+            match ts_attr {
+                Ok(inner_ts_attr) => {
+                    eprintln!("{:#?}", main_attr);
+                    match &main_attr {
+                        Some(curr_attr) => {
+                            if *curr_attr == inner_ts_attr {
+                                self.push_multiple_decl_error(attr)
+                            } else {
+                                self.push_multiple_attr_error(attr)
+                            }
+                        }
+                        None => {
+                            // only if it wasnt previously assigned we can assign a new value
+                            main_attr = Some(inner_ts_attr)
+                        }
                     }
-                    Some(v) => {
-                        v.push((idx, attr));
-                    }
+                    false
                 }
-                // mark for removal
-                remove_idx[idx] = false;
-            } else if attr.path.is_ident(STATE_ATTR_IDENT) {
-                match filtered.get_mut(STATE_ATTR_IDENT) {
-                    None => {
-                        filtered.insert(STATE_ATTR_IDENT, vec![(idx, attr)]);
-                    }
-                    Some(v) => {
-                        v.push((idx, attr));
-                    }
-                }
-                // mark for removal
-                remove_idx[idx] = false;
+                Err(()) => true,
             }
-        }
-
-        // TODO consider the 0 case
-        let mut attr_type = Option::None;
-        match filtered.keys().len() {
-            1 => filtered.into_iter().for_each(|(k, v)| {
-                if v.len() > 1 {
-                    for (_, attr) in v {
-                        self.push_multiple_decl_error(attr, k);
-                    }
-                } else {
-                    attr_type = Option::Some(k);
-                }
-            }),
-            2 => filtered.into_iter().for_each(|(k, v)| {
-                if v.len() > 1 {
-                    for (_, attr) in v {
-                        self.push_multiple_decl_error(attr, k);
-                        self.push_multiple_attr_error(attr);
-                    }
-                } else {
-                    for (_, attr) in v {
-                        self.push_multiple_attr_error(attr);
-                    }
-                }
-            }),
-            _ => {
-                panic!("it was supposed to only be 1 or 2 keys")
-            }
-        }
+        });
 
         // if errors were reported stop processing
         if !self.errors.is_empty() {
             return;
         }
 
-        match attr_type.unwrap() {
-            // check for multiple automata definitions
-            AUTOMATA_ATTR_IDENT => {
+        match main_attr {
+            Some(TypestateAttr::Automata) => {
+                // check for multiple automata definitions
                 match self.state_machine_info.main_struct {
-                    Some(_) => self.push_multiple_automata_decl_error(it_struct),
+                    Some(_) => {
+                        self.push_multiple_automata_decl_error(it_struct);
+                        return;
+                    }
                     None => self.state_machine_info.main_struct = Some(it_struct.clone()),
                 };
+                // eprintln!("{:#?}", self.state_machine_info.main_struct);
                 match add_state_type_param(it_struct) {
                     Ok(bound_ident) => match self.sealed_trait.trait_ident {
                         Some(_) => unreachable!("this should have been checked previously"),
@@ -354,15 +349,17 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
                     }
                 }
             }
-            // add state
-            STATE_ATTR_IDENT => {
+            Some(TypestateAttr::State) => {
                 self.state_machine_info.add_state(it_struct.clone().into());
                 self.sealed_trait.state_idents.push(it_struct.ident.clone());
             }
-            _ => panic!("unknown attribute passed the filters!!!"),
+            None => {
+                // empty attribute list
+                // ignore
+                // TODO maybe do something?
+                return;
+            }
         }
-
-        remove_attrs(&mut it_struct.attrs, &remove_idx);
     }
 }
 
