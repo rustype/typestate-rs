@@ -75,6 +75,20 @@ fn check_a(self: &A) -> bool;
 fn mutate_b_field(self: &mut B);
 ```
 
+## Notes on functions
+
+Functions are tied to states through `trait`s,
+these need to share their name with an existing state, otherwise a compilation error is produced.
+
+For example:
+```rust
+#[typestate] mod m {
+    // since T was not declared as a state
+    // `trait T` will produce a compile time error
+    trait T {}
+}
+```
+
 ## Code Example
 
 Consider the traffic light example in <https://github.com/rustype/traffic-light>.
