@@ -89,12 +89,13 @@ mod traffic_light {
     #[state] struct Yellow;
     #[state] struct Red;
 
-    fn turn_on() -> Red;
-    fn turn_off(self: Red);
-
-    fn to_yellow(self: Green) -> Yellow;
-    fn to_red(self: Yellow) -> Red;
-    fn to_green(self: Red) -> Green;
+    trait Green { fn to_yellow(self: Green) -> Yellow; }
+    trait Yellow { fn to_red(self: Yellow) -> Red; }
+    trait Red {
+        fn turn_on() -> Red;
+        fn turn_off(self: Red);
+        fn to_green(self: Red) -> Green;
+    }
 }
 ```
 
@@ -106,7 +107,7 @@ where
     State: TrafficLightState,
 {
     cycles: u64,
-    state: PhantomData<State>,
+    state: State,
 }
 
 pub struct Green;
