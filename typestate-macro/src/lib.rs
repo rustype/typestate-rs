@@ -542,8 +542,9 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 }
 
 fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
-    let struct_ident = &automata_item.ident;
-    let type_param_ident = format_ident!("{}State", struct_ident);
+    println!("{:#?}", automata_item);
+    let type_param_ident = format_ident!("{}State", automata_item.ident);
+    automata_item.generics.params.push(parse_quote!(State: #type_param_ident));
 
     let field_to_add = quote!(
         pub state: State
@@ -565,22 +566,6 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
             automata_item.fields = Fields::Named(parse_quote!({ #field_to_add }));
         }
     };
-
-    // add type parameter
-    automata_item.generics.params.push(parse_quote!(State));
-
-    let where_clause = &mut automata_item.generics.where_clause;
-    match where_clause {
-        Some(clause) => clause
-            .predicates
-            .push(parse_quote!(State: #type_param_ident)),
-        None => {
-            let where_clause = automata_item.generics.make_where_clause();
-            where_clause
-                .predicates
-                .push(parse_quote!(State: #type_param_ident));
-        }
-    }
 
     Ok(type_param_ident)
 }
