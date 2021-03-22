@@ -1,5 +1,6 @@
 use core::panic;
-use proc_macro2::TokenStream;
+use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
 use std::{collections::HashSet, convert::TryFrom, ops::DerefMut};
 use syn::{parse::Parser, visit_mut::VisitMut, *};
@@ -31,9 +32,9 @@ const STATE_ATTR_IDENT: &'static str = "state";
 
 #[proc_macro_attribute]
 pub fn typestate(
-    attrs: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
+    attrs: TokenStream,
+    input: TokenStream,
+) -> TokenStream {
     macro_rules! bail_if_any {
         ( $errors:expr ) => {
             match $errors {
@@ -129,14 +130,14 @@ impl TryFrom<&Path> for TypestateAttr {
     }
 }
 
-/// A value to `proc_macro2::TokenStream` conversion.
+/// A value to `proc_macro2::TokenStream2` conversion.
 /// More precisely into
 trait IntoCompileError {
-    fn to_compile_error(self) -> TokenStream;
+    fn to_compile_error(self) -> TokenStream2;
 }
 
 impl IntoCompileError for Vec<Error> {
-    fn to_compile_error(mut self) -> TokenStream {
+    fn to_compile_error(mut self) -> TokenStream2 {
         if !self.is_empty() {
             // if errors exist, return all errors
             let fst_err = self.swap_remove(0);
@@ -148,7 +149,7 @@ impl IntoCompileError for Vec<Error> {
                 })
                 .to_compile_error();
         } else {
-            TokenStream::new()
+            TokenStream2::new()
         }
     }
 }
