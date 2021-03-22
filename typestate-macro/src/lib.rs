@@ -222,36 +222,48 @@ impl SealedPattern {
     }
 }
 
-impl Into<Vec<syn::Item>> for SealedPattern {
+impl Into<Vec<Item>> for SealedPattern {
     /// Convert the SealedTrait into a vector of Item.
     /// This enables the addition of new items to the main module.
-    fn into(self) -> Vec<syn::Item> {
-        let private_mod_ident: Ident = parse_quote!(private);
-        let private_mod_trait: Ident = parse_quote!(Private);
+    fn into(self) -> Vec<Item> {
+        let trait_ident = self.trait_ident.expect("missing `.trait_ident`");
+        let private_mod_ident = format_ident!("__private");
+        // or `Private` or `Sealed` or `format_ident!("{}Sealed", …)`
+        // take into account that `trait_ident` may have already been used
+        let private_mod_trait = &trait_ident;
 
         let states = &self.state_idents;
-        let private_mod: ItemMod = parse_quote! {
-            mod #private_mod_ident {
-                #(use super::#states;)*
+        let mut ret = vec![];
+
+        // Sealed trait
+        ret.push(parse_quote! {
+            /* private */ mod #private_mod_ident {
                 pub trait #private_mod_trait {}
-                #(impl #private_mod_trait for #states {})*
             }
-        };
+        });
 
-        let trait_ident = self.trait_ident;
-        let state_trait: ItemTrait = parse_quote! {
+        // Sealed trait impls
+        ret.extend(states.iter().map(|each_state| {
+            parse_quote! {
+                impl #private_mod_ident::#private_mod_trait for #each_state {}
+            }
+        }));
+
+        // State trait
+        ret.push(parse_quote! {
             pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
-        };
+        });
 
-        let trait_impls = self
-            .state_idents
-            .iter()
-            .map(|ident| -> ItemImpl { parse_quote!(impl #trait_ident for #ident {}) })
-            .map(|item_trait| Item::from(item_trait));
-
-        let mut res: Vec<Item> = vec![Item::from(private_mod), Item::from(state_trait)];
-        res.extend(trait_impls);
-        res
+        // Blanket impl of state trait from sealed implementors
+        // This frees us from having to provide concrete impls for each type.
+        ret.push(parse_quote! {
+            impl<__T : ?::core::marker::Sized> #trait_ident
+                for __T
+            where
+                __T : #private_mod_ident::#private_mod_trait,
+            {}
+        });
+        ret
     }
 }
 
@@ -261,7 +273,7 @@ struct DeterministicStateVisitor<'sm> {
     /// Sealed trait information
     sealed_trait: SealedPattern,
     /// Errors found during expansion
-    errors: Vec<syn::Error>,
+    errors: Vec<Error>,
 }
 
 impl<'sm> DeterministicStateVisitor<'sm> {
