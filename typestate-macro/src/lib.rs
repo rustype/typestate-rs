@@ -29,40 +29,6 @@ const STATE_ATTR_IDENT: &'static str = "state";
 //     })()
 // )}
 
-#[derive(Debug, PartialEq)]
-enum TypestateAttr {
-    Automata,
-    State,
-}
-
-impl TryFrom<&Ident> for TypestateAttr {
-    type Error = ();
-
-    fn try_from(ident: &Ident) -> Result<Self, Self::Error> {
-        if ident == AUTOMATA_ATTR_IDENT {
-            Ok(Self::Automata)
-        } else if ident == STATE_ATTR_IDENT {
-            Ok(Self::State)
-        } else {
-            Err(())
-        }
-    }
-}
-
-impl TryFrom<&Path> for TypestateAttr {
-    type Error = ();
-
-    fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        if path.is_ident(AUTOMATA_ATTR_IDENT) {
-            Ok(Self::Automata)
-        } else if path.is_ident(STATE_ATTR_IDENT) {
-            Ok(Self::State)
-        } else {
-            Err(())
-        }
-    }
-}
-
 #[proc_macro_attribute]
 pub fn typestate(
     attrs: proc_macro::TokenStream,
@@ -124,6 +90,40 @@ pub fn typestate(
     let ret = module.into_token_stream();
     // println!("{}", ret);
     ret.into()
+}
+
+#[derive(Debug, PartialEq)]
+enum TypestateAttr {
+    Automata,
+    State,
+}
+
+impl TryFrom<&Ident> for TypestateAttr {
+    type Error = ();
+
+    fn try_from(ident: &Ident) -> Result<Self, Self::Error> {
+        if ident == AUTOMATA_ATTR_IDENT {
+            Ok(Self::Automata)
+        } else if ident == STATE_ATTR_IDENT {
+            Ok(Self::State)
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl TryFrom<&Path> for TypestateAttr {
+    type Error = ();
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        if path.is_ident(AUTOMATA_ATTR_IDENT) {
+            Ok(Self::Automata)
+        } else if path.is_ident(STATE_ATTR_IDENT) {
+            Ok(Self::State)
+        } else {
+            Err(())
+        }
+    }
 }
 
 /// A value to `proc_macro2::TokenStream` conversion.
