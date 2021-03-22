@@ -292,31 +292,39 @@ impl<'sm> DeterministicStateVisitor<'sm> {
     }
 }
 
+#[derive(PartialEq)]
+enum Attr {
+    Retain,
+    Discard,
+}
+
 impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
         let attributes = &mut it_struct.attrs;
         let mut main_attr = None;
         attributes.retain(|attr| {
-            let ts_attr = TypestateAttr::try_from(&attr.path);
-            match ts_attr {
-                Ok(inner_ts_attr) => {
-                    // eprintln!("{:#?}", main_attr);
-                    match &main_attr {
-                        Some(curr_attr) => {
-                            if *curr_attr == inner_ts_attr {
-                                self.push_multiple_decl_error(attr)
-                            } else {
-                                self.push_multiple_attr_error(attr)
+            Attr::Retain == {
+                let ts_attr = TypestateAttr::try_from(&attr.path);
+                match ts_attr {
+                    Ok(inner_ts_attr) => {
+                        // eprintln!("{:#?}", main_attr);
+                        match main_attr {
+                            Some(ref prev_attr) => {
+                                if *prev_attr == inner_ts_attr {
+                                    self.push_multiple_decl_error(attr);
+                                } else {
+                                    self.push_multiple_attr_error(attr);
+                                }
+                            }
+                            ref mut at_none @ None => {
+                                // only if it wasnt previously assigned we can assign a new value
+                                *at_none = Some(inner_ts_attr)
                             }
                         }
-                        None => {
-                            // only if it wasnt previously assigned we can assign a new value
-                            main_attr = Some(inner_ts_attr)
-                        }
+                        Attr::Discard
                     }
-                    false
+                    Err(()) => Attr::Retain,
                 }
-                Err(()) => true,
             }
         });
 
