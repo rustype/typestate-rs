@@ -386,7 +386,7 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
     fn push_unsupported_variant_error(&mut self, variant: &Variant) {
         self.errors.push(Error::new_spanned(
             variant,
-            "only unnamed `enum` variants are supported",
+            "only unit (C-like) `enum` variants are supported",
         ));
     }
 }
