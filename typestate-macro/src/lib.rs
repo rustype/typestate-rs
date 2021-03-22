@@ -282,7 +282,7 @@ impl<'sm> DeterministicStateVisitor<'sm> {
     /// Add `duplicate attribute` error to the error vector.
     fn push_multiple_decl_error(&mut self, attr: &Attribute) {
         self.errors
-            .push(Error::new_spanned(attr, format!("duplicate attribute")));
+            .push(Error::new_spanned(attr, "duplicate attribute"));
     }
 
     /// Add `multiple automata` error to the error vector.
