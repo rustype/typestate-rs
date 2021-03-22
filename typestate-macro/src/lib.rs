@@ -150,6 +150,23 @@ impl IntoCompileError for Vec<Error> {
     }
 }
 
+// Nit(Daniel): the usage of `HashSet`s seems a bit "overkill" here, for
+// the `{not_,}det_states` I mean: the only real benefit I see is being able
+// to detect somebody feeding a duplicate definition inside the det_states
+// or inside the `non_det_states`.
+// That is, using `Vec`s could be an acceptable micro-optimization here, since
+// the sizes of each set are expected to be small.
+//
+// Another possibility, which I find interestring, is to define a
+// `HashMap<Ident ,/* -> */ Either<ItemStruct, ItemEnum>>` (feel free to
+// define a helper type for the value type, say:
+/*
+enum State {
+    Deterministic(ItemStruct),
+    NonDeterministic(ItemEnum),
+}
+*/
+
 /// Extracted information from the states
 struct StateMachineInfo {
     /// Main structure (aka Automata ?)
