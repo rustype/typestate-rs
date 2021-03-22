@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
-use std::{collections::HashSet, convert::TryFrom, ops::DerefMut};
+use std::{collections::HashSet, convert::TryFrom};
 use syn::{parse::Parser, visit_mut::VisitMut, *};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
