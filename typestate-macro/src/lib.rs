@@ -1,16 +1,10 @@
 use core::panic;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use std::{
-    collections::{HashMap, HashSet},
-    convert::TryFrom,
-    ops::DerefMut,
-};
-use syn::{
-    parse::Parser, parse_macro_input, parse_quote, visit_mut::VisitMut, Attribute, Error, Field,
-    Fields, Ident, Item, ItemEnum, ItemImpl, ItemMod, ItemStruct, ItemTrait, Path, TraitItemMethod,
-    Variant,
-};
+use std::{collections::HashSet, convert::TryFrom, ops::DerefMut};
+use syn::{parse::Parser, visit_mut::VisitMut, *};
+
+type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
 const AUTOMATA_ATTR_IDENT: &'static str = "automata";
 const STATE_ATTR_IDENT: &'static str = "state";
