@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
 use std::{collections::HashSet, convert::TryFrom};
 use syn::{parse::Parser, visit_mut::VisitMut, *};
@@ -55,13 +55,15 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // start visitor
     let mut state_visitor = DeterministicStateVisitor::new(&mut state_machine_info);
     state_visitor.visit_item_mod_mut(&mut module);
-
-    // take ownership of sealed_trait so we can stop using state_visitor
-    // after stopping using state_visitor we can
-    let sealed_trait = state_visitor.sealed_trait;
-
     // report state_visitor errors and return
     bail_if_any!(state_visitor.errors);
+
+    let sealed_trait = state_visitor.sealed_trait;
+    if sealed_trait.trait_ident.is_none() {
+        return Error::new(Span::call_site(), "Missing `#[automata]` struct")
+            .to_compile_error()
+            .into();
+    }
 
     let mut non_det_state_visitor = NonDeterministicStateVisitor::new(&mut state_machine_info);
     non_det_state_visitor.visit_item_mod_mut(&mut module);
@@ -207,6 +209,8 @@ impl StateMachineInfo {
         self.state_idents.contains(ident)
     }
 
+    // maybe the unwrap could be converted into a check
+    // if none -> comp time error
     fn main_state_name(&'_ self) -> &'_ Ident {
         &self.main_struct.as_ref().unwrap().ident
     }
