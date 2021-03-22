@@ -189,6 +189,10 @@ impl StateMachineInfo {
     fn is_valid_state_ident(&self, ident: &Ident) -> bool {
         self.state_idents.contains(ident)
     }
+
+    fn main_state_name(&'_ self) -> &'_ Ident {
+        &self.main_struct.as_ref().unwrap().ident
+    }
 }
 
 impl Default for StateMachineInfo {
@@ -395,9 +399,12 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
                 self.push_undeclared_state_error(ident)
             }
             if let Fields::Unit = &variant.fields {
-                // TODO make this call less bad
-                let automata_ident = &self.state_machine_info.main_struct.as_ref().unwrap().ident;
-                variant.fields = Fields::Unnamed(parse_quote!((#automata_ident<#ident>)));
+                let automata_ident = self.state_machine_info.main_state_name();
+                variant.fields = Fields::Unnamed(parse_quote!(
+                    /* Variant */ (
+                        #automata_ident<#ident>
+                    )
+                ));
             } else {
                 self.push_unsupported_variant_error(variant);
             }
@@ -522,9 +529,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                             // check if it is a valid state
                             if self.state_machine_info.is_valid_state_ident(state_ident) {
                                 // if valid `State` -> `Main<State>`
-                                // TODO make this call less bad
-                                let automata_ident =
-                                    &self.state_machine_info.main_struct.as_ref().unwrap().ident;
+                                let automata_ident = self.state_machine_info.main_state_name();
                                 p.path = parse_quote!(#automata_ident<#state_ident>);
                             }
                         }
