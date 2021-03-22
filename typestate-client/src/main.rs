@@ -39,7 +39,7 @@ mod m {
         fn turn_on() -> Red;
         fn turn_off(self);
     }
-    pub enum Chance {
+    pub enum _Chance {
         Red, Yellow
     }
 }

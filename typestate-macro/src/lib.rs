@@ -300,7 +300,7 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
             let ts_attr = TypestateAttr::try_from(&attr.path);
             match ts_attr {
                 Ok(inner_ts_attr) => {
-                    eprintln!("{:#?}", main_attr);
+                    // eprintln!("{:#?}", main_attr);
                     match &main_attr {
                         Some(curr_attr) => {
                             if *curr_attr == inner_ts_attr {
@@ -412,7 +412,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
     }
 }
 
-enum FnKind {
+enum _FnKind {
     /// Describes an initial state.
     ///
     /// For example:
@@ -579,9 +579,4 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
     }
 
     Ok(type_param_ident)
-}
-
-fn remove_attrs(attrs: &mut Vec<Attribute>, indexes: &Vec<bool>) {
-    let mut idx = 0;
-    attrs.retain(|_| (indexes[idx], idx += 1).0)
 }
