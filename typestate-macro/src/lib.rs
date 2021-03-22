@@ -30,10 +30,7 @@ const STATE_ATTR_IDENT: &'static str = "state";
 // )}
 
 #[proc_macro_attribute]
-pub fn typestate(
-    attrs: TokenStream,
-    input: TokenStream,
-) -> TokenStream {
+pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     macro_rules! bail_if_any {
         ( $errors:expr ) => {
             match $errors {
