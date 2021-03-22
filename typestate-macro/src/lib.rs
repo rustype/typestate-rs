@@ -545,20 +545,24 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
     let struct_ident = &automata_item.ident;
     let type_param_ident = format_ident!("{}State", struct_ident);
 
+    let field_to_add = quote!(
+        pub state: State
+    );
+
     match &mut automata_item.fields {
         syn::Fields::Named(named) => {
             named
                 .named
-                .push(Field::parse_named.parse2(quote!(pub state: State)).unwrap());
+                .push(Field::parse_named.parse2(field_to_add).unwrap());
         }
         syn::Fields::Unnamed(_) => {
             return syn::Result::Err(Error::new_spanned(
                 automata_item,
-                "unnamed field structures are not supported",
+                "tuple structures are not supported",
             ));
         }
         syn::Fields::Unit => {
-            automata_item.fields = Fields::Named(parse_quote!({ pub state: State }));
+            automata_item.fields = Fields::Named(parse_quote!({ #field_to_add }));
         }
     };
 
