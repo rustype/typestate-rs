@@ -197,12 +197,7 @@ impl StateMachineInfo {
 
 impl Default for StateMachineInfo {
     fn default() -> Self {
-        Self {
-            main_struct: None,
-            det_states: HashSet::new(),
-            non_det_states: HashSet::new(),
-            state_idents: HashSet::new(),
-        }
+        Self::new()
     }
 }
 
