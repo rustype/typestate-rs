@@ -1,4 +1,3 @@
-use core::panic;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
@@ -186,7 +185,7 @@ impl StateMachineInfo {
                 self.state_idents.insert(item_enum.ident.clone());
                 self.non_det_states.insert(item_enum);
             }
-            _ => panic!("invalid state"),
+            _ => unreachable!("invalid state"),
         }
     }
 
