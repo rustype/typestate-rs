@@ -217,7 +217,7 @@ impl SealedPattern {
     fn new() -> Self {
         Self {
             trait_ident: None,
-            state_idents: Vec::new(),
+            state_idents: vec![],
         }
     }
 }
@@ -269,7 +269,7 @@ impl<'sm> DeterministicStateVisitor<'sm> {
         Self {
             state_machine_info,
             sealed_trait: SealedPattern::new(),
-            errors: Vec::new(),
+            errors: vec![],
         }
     }
 
@@ -370,7 +370,7 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
     fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
         Self {
             state_machine_info,
-            errors: Vec::new(),
+            errors: vec![],
         }
     }
 
@@ -447,7 +447,7 @@ impl<'sm> TransitionVisitor<'sm> {
     fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
         Self {
             state_machine_info,
-            errors: Vec::new(),
+            errors: vec![],
         }
     }
 
@@ -544,7 +544,10 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
     println!("{:#?}", automata_item);
     let type_param_ident = format_ident!("{}State", automata_item.ident);
-    automata_item.generics.params.push(parse_quote!(State: #type_param_ident));
+    automata_item
+        .generics
+        .params
+        .push(parse_quote!(State: #type_param_ident));
 
     let field_to_add = quote!(
         pub state: State
