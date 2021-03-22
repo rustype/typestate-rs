@@ -34,7 +34,19 @@ pub fn typestate(
     attrs: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    // allow macro "misuses"
+    macro_rules! bail_if_any {
+        ( $errors:expr ) => {
+            match $errors {
+                errors => {
+                    if !errors.is_empty() {
+                        return errors.to_compile_error().into();
+                    }
+                }
+            }
+        };
+    }
+
+    // conservatively deny macro "misuses"
     // e.g. #[typestate(non_existent)]
     // this approach does not break future implementations
     let _: syn::parse::Nothing = parse_macro_input!(attrs);
@@ -52,18 +64,12 @@ pub fn typestate(
     let sealed_trait = state_visitor.sealed_trait;
 
     // report state_visitor errors and return
-    let mut errors = state_visitor.errors;
-    if !errors.is_empty() {
-        return errors.to_compile_error().into();
-    }
+    bail_if_any!(state_visitor.errors);
 
     let mut non_det_state_visitor = NonDeterministicStateVisitor::new(&mut state_machine_info);
     non_det_state_visitor.visit_item_mod_mut(&mut module);
     // report non_det_state_visitor errors and return
-    errors = non_det_state_visitor.errors;
-    if !errors.is_empty() {
-        return errors.to_compile_error().into();
-    }
+    bail_if_any!(non_det_state_visitor.errors);
 
     // Visit transitions
     // TODO state_machine_info can be &mut and declared outside of all these visitors
@@ -71,10 +77,7 @@ pub fn typestate(
     transition_visitor.visit_item_mod_mut(&mut module);
 
     // report transition_visitor errors and return
-    errors = transition_visitor.errors;
-    if !errors.is_empty() {
-        return errors.to_compile_error().into();
-    }
+    bail_if_any!(transition_visitor.errors);
 
     // appending new code should happen after all other code is processed
     // since this adds the sealed pattern traits and those aren't valid states
