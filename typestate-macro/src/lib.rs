@@ -416,21 +416,21 @@ enum _FnKind {
     /// Describes an initial state.
     ///
     /// For example:
-    /// ```no_run
+    /// ```ignore
     /// fn initial() -> StateA {}
     /// ```
     Initial,
     /// Describes a state transition.
     ///
     /// For example:
-    /// ```no_run
+    /// ```ignore
     /// fn transition(self: StateA) -> StateB {}
     /// ```
     Transition,
     /// Describes a final state.
     ///
     /// For example:
-    /// ```no_run
+    /// ```ignore
     /// fn final(self: StateB) {}
     /// ```
     Final,
