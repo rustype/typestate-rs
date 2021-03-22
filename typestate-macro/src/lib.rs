@@ -206,20 +206,12 @@ impl Default for StateMachineInfo {
     }
 }
 
+#[derive(Default)]
 struct SealedPattern {
     /// Ident for the sealed pattern public trait
     trait_ident: Option<Ident>, // late init
     /// Idents for the sealed elements.
     state_idents: Vec<Ident>,
-}
-
-impl SealedPattern {
-    fn new() -> Self {
-        Self {
-            trait_ident: None,
-            state_idents: vec![],
-        }
-    }
 }
 
 impl Into<Vec<Item>> for SealedPattern {
@@ -280,7 +272,7 @@ impl<'sm> DeterministicStateVisitor<'sm> {
     fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
         Self {
             state_machine_info,
-            sealed_trait: SealedPattern::new(),
+            sealed_trait: SealedPattern::default(),
             errors: vec![],
         }
     }
