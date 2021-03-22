@@ -523,8 +523,8 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         match return_type {
             syn::ReturnType::Default => {} // ignore
             syn::ReturnType::Type(_, ty) => {
-                match ty.deref_mut() {
-                    syn::Type::Path(p) => {
+                match **ty {
+                    syn::Type::Path(ref mut p) => {
                         if let Some(state_ident) = p.path.get_ident() {
                             // check if it is a valid state
                             if self.state_machine_info.is_valid_state_ident(state_ident) {
