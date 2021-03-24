@@ -1,4 +1,4 @@
-use m::*;
+use traffic_light::*;
 use typestate::typestate;
 
 
@@ -16,7 +16,7 @@ fn main() {
 }
 
 #[typestate]
-mod m {
+mod traffic_light {
     #[automata]
     pub struct TrafficLight {
         pub cycles: u64,
@@ -39,11 +39,8 @@ mod m {
         fn turn_on() -> Red;
         fn turn_off(self);
     }
-    pub enum _Chance {
-        Red, Yellow
-    }
-}
 
+}
 
 impl GreenState for TrafficLight<Green> {
     fn to_yellow(self) -> TrafficLight<Yellow> {

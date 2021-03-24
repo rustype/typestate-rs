@@ -570,7 +570,6 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 }
 
 fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
-    println!("{:#?}", automata_item);
     let type_param_ident = format_ident!("{}State", automata_item.ident);
     automata_item
         .generics
