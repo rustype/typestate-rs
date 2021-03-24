@@ -57,7 +57,11 @@ where
     T: Eq + Ord + Copy + Hash,
 {
     /// Construct a new instance of `Transition<'s, S, T>`
-    pub fn new(source: &'dfa State<S>, destination: &'dfa State<S>, symbol: &'dfa Symbol<T>) -> Self {
+    pub fn new(
+        source: &'dfa State<S>,
+        destination: &'dfa State<S>,
+        symbol: &'dfa Symbol<T>,
+    ) -> Self {
         Self {
             source,
             destination,
@@ -133,10 +137,7 @@ where
     }
 
     /// Generate the set of reachable states from a given state.
-    pub fn reachable(&mut self, state: &'dfa State<S>) -> HashSet<&'dfa State<S>>
-    where
-        S: Debug,
-    {
+    pub fn reachable(&mut self, state: &'dfa State<S>) -> HashSet<&'dfa State<S>> {
         let automata = &self.automata;
         let mut stack = VecDeque::new();
         let mut discovered = HashSet::new();
@@ -149,6 +150,22 @@ where
             }
         }
         discovered
+    }
+
+    /// Check if a state is productive.
+    ///
+    /// This function generates all reachable states from `state` and
+    /// intersects the resulting set with the final state set.
+    /// If the intersection has *at least* one element,
+    /// the state is considered to be productive.
+    pub fn is_productive(&mut self, state: &'dfa State<S>) -> bool {
+        let reachable_states = self.reachable(state);
+        let mut intersection = reachable_states.intersection(&self.final_states);
+        if let Some(_) = intersection.next() {
+            true
+        } else {
+            false
+        }
     }
 }
 
