@@ -70,8 +70,12 @@ where
     }
 }
 
+/// Alias for the `DeterministicFiniteAutomata` type.
 pub type DFA<'dfa, S, T> = DeterministicFiniteAutomata<'dfa, S, T>;
 
+/// A deterministic finitie automata representation.
+///
+/// The automata itself is implemented on top of `petgraph::graphmap::DiGraphMap`.
 pub struct DeterministicFiniteAutomata<'dfa, S, T>
 where
     S: Eq + Ord + Copy + Hash,
