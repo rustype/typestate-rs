@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "typestate-macro",
-    "typestate-client"
+    "typestate-client",
+    "typestate-automata"
 ]
