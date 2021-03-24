@@ -167,6 +167,24 @@ where
             false
         }
     }
+
+    /// Check if a state is useful.
+    /// (i.e. if a state is reachable from an initial state and a final state is reachable from it.)
+    ///
+    /// This function calls `is_productive`.
+    /// If the state is productive then it checks
+    /// if the given state is in the set of states reachable from the initial state.
+    pub fn is_useful(&self, state: &'dfa State<S>) -> bool {
+        if self.is_productive(state) {
+            for i in self.initial_states.iter() {
+                let reachable_from_i = self.reachable(i);
+                if reachable_from_i.contains(i) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 trait DiNeighbors<N>
