@@ -4,12 +4,11 @@ use std::hash::Hash;
 
 use petgraph::{
     graphmap::{DiGraphMap, NeighborsDirected, NodeTrait},
-    visit::Bfs,
     Directed, EdgeDirection,
 };
 /// An automata state.
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-struct State<T>(T)
+pub struct State<T>(T)
 where
     T: Eq + Ord + Copy + Hash;
 
@@ -24,7 +23,7 @@ where
 
 /// An automata transition symbol.
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-struct Symbol<T>(T)
+pub struct Symbol<T>(T)
 where
     T: Eq + Ord + Copy + Hash;
 
@@ -39,7 +38,7 @@ where
 
 /// A transition from `source` state to `destination` state through `symbol`.
 #[derive(Debug, PartialEq, Eq, Hash)]
-struct Transition<'dfa, S, T>
+pub struct Transition<'dfa, S, T>
 where
     S: Eq + Ord + Copy + Hash,
     T: Eq + Ord + Copy + Hash,
@@ -58,7 +57,7 @@ where
     T: Eq + Ord + Copy + Hash,
 {
     /// Construct a new instance of `Transition<'s, S, T>`
-    fn new(source: &'dfa State<S>, destination: &'dfa State<S>, symbol: &'dfa Symbol<T>) -> Self {
+    pub fn new(source: &'dfa State<S>, destination: &'dfa State<S>, symbol: &'dfa Symbol<T>) -> Self {
         Self {
             source,
             destination,
@@ -92,7 +91,7 @@ where
     T: Eq + Ord + Copy + Hash,
 {
     /// Construct a new deterministic finite automata.
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             states: HashSet::new(),
             initial_states: HashSet::new(),
@@ -104,27 +103,27 @@ where
 
     /// Add a new state to the automata.
     /// This function adds the state to the general state set and returns the added node.
-    fn add_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
+    pub fn add_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
         self.states.insert(state);
         self.automata.add_node(state)
     }
 
     /// Add a new initial state to the automata.
     /// This function also adds the state to the general state set if it was not already present and returns the added node.
-    fn add_initial_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
+    pub fn add_initial_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
         self.initial_states.insert(state);
         self.add_state(state)
     }
 
     /// Add a new final state to the automata.
     /// This function also adds the state to the general state set and returns the added node.
-    fn add_final_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
+    pub fn add_final_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
         self.final_states.insert(state);
         self.add_state(state)
     }
 
     /// Add a new transition to the automata.
-    fn add_transition(
+    pub fn add_transition(
         &mut self,
         transition: &'dfa Transition<'dfa, S, T>,
     ) -> Option<&'dfa Symbol<T>> {
@@ -134,7 +133,7 @@ where
     }
 
     /// Generate the set of reachable states from a given state.
-    fn reachable(&mut self, state: &'dfa State<S>) -> HashSet<&'dfa State<S>>
+    pub fn reachable(&mut self, state: &'dfa State<S>) -> HashSet<&'dfa State<S>>
     where
         S: Debug,
     {
