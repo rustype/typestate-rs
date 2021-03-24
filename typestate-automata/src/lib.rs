@@ -137,7 +137,7 @@ where
     }
 
     /// Generate the set of reachable states from a given state.
-    pub fn reachable(&mut self, state: &'dfa State<S>) -> HashSet<&'dfa State<S>> {
+    pub fn reachable(&self, state: &'dfa State<S>) -> HashSet<&'dfa State<S>> {
         let automata = &self.automata;
         let mut stack = VecDeque::new();
         let mut discovered = HashSet::new();
@@ -158,7 +158,7 @@ where
     /// intersects the resulting set with the final state set.
     /// If the intersection has *at least* one element,
     /// the state is considered to be productive.
-    pub fn is_productive(&mut self, state: &'dfa State<S>) -> bool {
+    pub fn is_productive(&self, state: &'dfa State<S>) -> bool {
         let reachable_states = self.reachable(state);
         let mut intersection = reachable_states.intersection(&self.final_states);
         if let Some(_) = intersection.next() {
