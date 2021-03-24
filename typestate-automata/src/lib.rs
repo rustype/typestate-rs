@@ -194,7 +194,7 @@ mod tests {
         let t2 = Transition::new(&s1, &s3, &sy2);
         let t3 = Transition::new(&s3, &s2, &sy3);
         let t4 = Transition::new(&s2, &s3, &sy4);
-        let t4 = Transition::new(&s2, &s4, &sy4);
+        let t5 = Transition::new(&s2, &s4, &sy4);
 
         dfa.add_initial_state(&s1);
         dfa.add_initial_state(&s2);
@@ -205,7 +205,12 @@ mod tests {
         dfa.add_transition(&t2);
         dfa.add_transition(&t3);
         dfa.add_transition(&t4);
+        dfa.add_transition(&t5);
 
-        eprintln!("{:#?}", dfa.reachable(&s1).into_iter().collect::<Vec<_>>());
+        assert!(dfa.reachable(&s1).contains(&s2));
+        assert!(dfa.reachable(&s1).contains(&s3));
+        assert!(dfa.reachable(&s1).contains(&s4));
+
+        // eprintln!("{:#?}", dfa.reachable(&s1).into_iter().collect::<Vec<_>>());
     }
 }
