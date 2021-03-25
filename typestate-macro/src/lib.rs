@@ -440,32 +440,6 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
     }
 }
 
-enum _FnKind {
-    /// Describes an initial state.
-    ///
-    /// For example:
-    /// ```ignore
-    /// fn initial() -> StateA {}
-    /// ```
-    Initial,
-    /// Describes a state transition.
-    ///
-    /// For example:
-    /// ```ignore
-    /// fn transition(self: StateA) -> StateB {}
-    /// ```
-    Transition,
-    /// Describes a final state.
-    ///
-    /// For example:
-    /// ```ignore
-    /// fn final(self: StateB) {}
-    /// ```
-    Final,
-    /// Any other kind of function.
-    Unknown,
-}
-
 struct TransitionVisitor<'sm> {
     state_machine_info: &'sm mut StateMachineInfo,
     errors: Vec<Error>,
@@ -487,43 +461,30 @@ impl<'sm> TransitionVisitor<'sm> {
         ));
     }
 
-    // fn extract_fn_kind(&self, sig: &Signature) -> FnKind {
-    //     let receiver = sig.receiver();
-    //     let output = &sig.output;
+    fn input_kind(&self, sig: &Signature) -> Option<()> {
+        let fn_in = &sig.inputs;
+        if let Some(FnArg::Receiver(_)) = fn_in.first() {
+            Some(())
+        } else {
+            None
+        }
+    }
 
-    //     match receiver {
-    //         // we have either transition or final
-    //         Some(_) => {
-    //             if let syn::ReturnType::Type(_, ty) = output {
-    //                 if let syn::Type::Path(ty_path) = ty.deref() {
-    //                     if let Some(ident) = ty_path.path.get_ident() {
-    //                         if self.is_valid_state_ident(ident) {
-    //                             return FnKind::Transition
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //             return FnKind::Unknown
-    //             // match output {
-    //             //     syn::ReturnType::Default => FnKind::Unknown,
-    //             //     syn::ReturnType::Type(_, ty) => {
-    //             //         match ty.deref() {
-    //             //             syn::Type::Path(ty_path) => {
-    //             //                 if let Some(ident) = ty_path.path.get_ident() {
-
-    //             //                 } else {
-    //             //                     FnKind::Unknown
-    //             //                 }
-    //             //             }
-    //             //             _ => FnKind::Unknown
-    //             //         }
-    //             //     }
-    //             // }
-    //         }
-    //         // we have either initial or unknown
-    //         None => {}
-    //     }
-    // }
+    fn output_kind(&self, sig: &mut Signature) -> Option<&Ident> {
+        let fn_out = &mut sig.output;
+        if let ReturnType::Type(_, ty) = fn_out {
+            if let Type::Path(ref mut ty_path) = **ty {
+                if let Some(ident) = ty_path.path.get_ident() {
+                    if self.state_machine_info.is_valid_state_ident(ident) {
+                        let automata_ident = self.state_machine_info.main_state_name();
+                        ty_path.path = parse_quote!(#automata_ident<#ident>);
+                        return Some(automata_ident);
+                    }
+                }
+            }
+        }
+        None
+    }
 }
 
 impl<'sm> VisitMut for TransitionVisitor<'sm> {
@@ -546,25 +507,15 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
     // _ -> State
     // State -> _
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
-        // println!("{:#?}", i);
-        let return_type = &mut i.sig.output;
-        match return_type {
-            syn::ReturnType::Default => {} // ignore
-            syn::ReturnType::Type(_, ty) => {
-                match **ty {
-                    syn::Type::Path(ref mut p) => {
-                        if let Some(state_ident) = p.path.get_ident() {
-                            // check if it is a valid state
-                            if self.state_machine_info.is_valid_state_ident(state_ident) {
-                                // if valid `State` -> `Main<State>`
-                                let automata_ident = self.state_machine_info.main_state_name();
-                                p.path = parse_quote!(#automata_ident<#state_ident>);
-                            }
-                        }
-                    }
-                    _ => {} // ignore
-                }
-            }
+        // TODO account for non-deterministic states
+        let sig = &mut i.sig;
+        let input = self.input_kind(sig);
+        let output = self.output_kind(sig);
+        match (input, output) {
+            (None, None) => {}
+            (None, Some(_)) => {}
+            (Some(_), None) => {}
+            (Some(_), Some(_)) => {}
         }
     }
 }
