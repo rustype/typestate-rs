@@ -135,10 +135,10 @@ where
         &mut self,
         source: State,
         destination: State,
-        symbol: Transition,
+        transition: Transition,
     ) -> Option<Transition> {
         // self.transitions.insert(transition);
-        self.automata.add_edge(source, destination, symbol)
+        self.automata.add_edge(source, destination, transition)
     }
 
     /// Generate the set of reachable states from a given state.
