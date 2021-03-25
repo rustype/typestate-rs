@@ -71,32 +71,32 @@ where
 }
 
 /// Alias for the `DeterministicFiniteAutomata` type.
-pub type DFA<'dfa, S, T> = DeterministicFiniteAutomata<'dfa, S, T>;
+pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
 /// A deterministic finitie automata representation.
 ///
 /// The automata itself is implemented on top of `petgraph::graphmap::DiGraphMap`.
-pub struct DeterministicFiniteAutomata<'dfa, S, T>
+pub struct DeterministicFiniteAutomata<State, Transition>
 where
-    S: Eq + Ord + Copy + Hash,
-    T: Eq + Ord + Copy + Hash,
+    State: Eq + Ord + Copy + Hash,
+    Transition: Eq + Ord + Copy + Hash,
 {
     /// The set of all automata states.
-    states: HashSet<&'dfa State<S>>,
+    states: HashSet<State>,
     /// The set of all initial states.
-    initial_states: HashSet<&'dfa State<S>>,
+    initial_states: HashSet<State>,
     /// The set of all final states.
-    final_states: HashSet<&'dfa State<S>>,
-    /// The set of state transitions.
-    transitions: HashSet<&'dfa Transition<'dfa, S, T>>,
+    final_states: HashSet<State>,
+    // /// The set of state transitions.
+    // transitions: HashSet<Transition<S, T>>,
     /// Automata graph.
-    automata: DiGraphMap<&'dfa State<S>, &'dfa Symbol<T>>,
+    automata: DiGraphMap<State, Transition>,
 }
 
-impl<'dfa, S, T> DeterministicFiniteAutomata<'dfa, S, T>
+impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
 where
-    S: Eq + Ord + Copy + Hash,
-    T: Eq + Ord + Copy + Hash,
+    State: Eq + Ord + Copy + Hash,
+    Transition: Eq + Ord + Copy + Hash,
 {
     /// Construct a new deterministic finite automata.
     pub fn new() -> Self {
@@ -104,28 +104,28 @@ where
             states: HashSet::new(),
             initial_states: HashSet::new(),
             final_states: HashSet::new(),
-            transitions: HashSet::new(),
+            // transitions: HashSet::new(),
             automata: DiGraphMap::new(),
         }
     }
 
     /// Add a new state to the automata.
     /// This function adds the state to the general state set and returns the added node.
-    pub fn add_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
+    pub fn add_state(&mut self, state: State) -> State {
         self.states.insert(state);
         self.automata.add_node(state)
     }
 
     /// Add a new initial state to the automata.
     /// This function also adds the state to the general state set if it was not already present and returns the added node.
-    pub fn add_initial_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
+    pub fn add_initial_state(&mut self, state: State) -> State {
         self.initial_states.insert(state);
         self.add_state(state)
     }
 
     /// Add a new final state to the automata.
     /// This function also adds the state to the general state set and returns the added node.
-    pub fn add_final_state(&mut self, state: &'dfa State<S>) -> &'dfa State<S> {
+    pub fn add_final_state(&mut self, state: State) -> State {
         self.final_states.insert(state);
         self.add_state(state)
     }
@@ -133,15 +133,16 @@ where
     /// Add a new transition to the automata.
     pub fn add_transition(
         &mut self,
-        transition: &'dfa Transition<'dfa, S, T>,
-    ) -> Option<&'dfa Symbol<T>> {
-        self.transitions.insert(transition);
-        self.automata
-            .add_edge(transition.source, transition.destination, transition.symbol)
+        source: State,
+        destination: State,
+        symbol: Transition,
+    ) -> Option<Transition> {
+        // self.transitions.insert(transition);
+        self.automata.add_edge(source, destination, symbol)
     }
 
     /// Generate the set of reachable states from a given state.
-    pub fn reachable(&self, state: &'dfa State<S>) -> HashSet<&'dfa State<S>> {
+    pub fn reachable(&self, state: State) -> HashSet<State> {
         let automata = &self.automata;
         let mut stack = VecDeque::new();
         let mut discovered = HashSet::new();
@@ -162,7 +163,7 @@ where
     /// intersects the resulting set with the final state set.
     /// If the intersection has *at least* one element,
     /// the state is considered to be productive.
-    pub fn is_productive(&self, state: &'dfa State<S>) -> bool {
+    pub fn is_productive(&self, state: State) -> bool {
         let reachable_states = self.reachable(state);
         let mut intersection = reachable_states.intersection(&self.final_states);
         if let Some(_) = intersection.next() {
@@ -178,10 +179,10 @@ where
     /// This function calls `is_productive`.
     /// If the state is productive then it checks
     /// if the given state is in the set of states reachable from the initial state.
-    pub fn is_useful(&self, state: &'dfa State<S>) -> bool {
+    pub fn is_useful(&self, state: State) -> bool {
         if self.is_productive(state) {
             for i in self.initial_states.iter() {
-                let reachable_from_i = self.reachable(i);
+                let reachable_from_i = self.reachable(*i);
                 if reachable_from_i.contains(i) {
                     return true;
                 }
@@ -228,22 +229,16 @@ mod tests {
         let sy3 = Symbol::from(3);
         let sy4 = Symbol::from(4);
 
-        let t1 = Transition::new(&s1, &s2, &sy1);
-        let t2 = Transition::new(&s1, &s3, &sy2);
-        let t3 = Transition::new(&s3, &s2, &sy3);
-        let t4 = Transition::new(&s2, &s3, &sy4);
-        let t5 = Transition::new(&s2, &s4, &sy4);
-
         dfa.add_initial_state(&s1);
         dfa.add_initial_state(&s2);
         dfa.add_initial_state(&s3);
         dfa.add_initial_state(&s4);
 
-        dfa.add_transition(&t1);
-        dfa.add_transition(&t2);
-        dfa.add_transition(&t3);
-        dfa.add_transition(&t4);
-        dfa.add_transition(&t5);
+        dfa.add_transition(&s1, &s2, &sy1);
+        dfa.add_transition(&s1, &s3, &sy2);
+        dfa.add_transition(&s3, &s2, &sy3);
+        dfa.add_transition(&s2, &s3, &sy4);
+        dfa.add_transition(&s2, &s4, &sy4);
 
         assert!(dfa.reachable(&s1).contains(&s2));
         assert!(dfa.reachable(&s1).contains(&s3));
