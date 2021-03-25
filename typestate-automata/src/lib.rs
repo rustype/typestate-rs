@@ -216,34 +216,60 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn setup_automata() -> DFA<i32, i32> {
+        let mut dfa = DFA::new();
+        dfa.add_initial_state(1);
+        dfa.add_initial_state(2);
+        dfa.add_initial_state(3);
+        dfa.add_initial_state(4);
+        dfa.add_transition(1, 2, 1);
+        dfa.add_transition(1, 3, 2);
+        dfa.add_transition(3, 2, 3);
+        dfa.add_transition(2, 3, 4);
+        dfa.add_transition(2, 4, 5);
+        dfa
+    }
+
     #[test]
     fn test_reachable() {
-        let mut dfa = DFA::new();
-        let s1 = State::from(1);
-        let s2 = State::from(2);
-        let s3 = State::from(3);
-        let s4 = State::from(4);
+        let dfa = setup_automata();
+        assert!(dfa.reachable(1).contains(&2));
+        assert!(dfa.reachable(1).contains(&3));
+        assert!(dfa.reachable(1).contains(&4));
+    }
 
-        let sy1 = Symbol::from(1);
-        let sy2 = Symbol::from(2);
-        let sy3 = Symbol::from(3);
-        let sy4 = Symbol::from(4);
+    #[test]
+    fn test_not_productive() {
+        let dfa = setup_automata();
+        assert!(!dfa.is_productive(1));
+        assert!(!dfa.is_productive(2));
+        assert!(!dfa.is_productive(3));
+    }
 
-        dfa.add_initial_state(&s1);
-        dfa.add_initial_state(&s2);
-        dfa.add_initial_state(&s3);
-        dfa.add_initial_state(&s4);
+    #[test]
+    fn test_productive() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(4);
+        assert!(dfa.is_productive(1));
+        assert!(dfa.is_productive(2));
+        assert!(dfa.is_productive(3));
+    }
 
-        dfa.add_transition(&s1, &s2, &sy1);
-        dfa.add_transition(&s1, &s3, &sy2);
-        dfa.add_transition(&s3, &s2, &sy3);
-        dfa.add_transition(&s2, &s3, &sy4);
-        dfa.add_transition(&s2, &s4, &sy4);
+    #[test]
+    fn test_not_useful() {
+        let dfa = setup_automata();
+        assert!(!dfa.is_useful(1));
+        assert!(!dfa.is_useful(2));
+        assert!(!dfa.is_useful(3));
+    }
 
-        assert!(dfa.reachable(&s1).contains(&s2));
-        assert!(dfa.reachable(&s1).contains(&s3));
-        assert!(dfa.reachable(&s1).contains(&s4));
-
-        // eprintln!("{:#?}", dfa.reachable(&s1).into_iter().collect::<Vec<_>>());
+    #[test]
+    fn test_useful() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(4);
+        assert!(dfa.is_useful(1));
+        assert!(dfa.is_useful(2));
+        assert!(dfa.is_useful(3));
     }
 }
