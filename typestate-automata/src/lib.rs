@@ -6,69 +6,69 @@ use petgraph::{
     graphmap::{DiGraphMap, NeighborsDirected, NodeTrait},
     Directed, EdgeDirection,
 };
-/// An automata state.
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-pub struct State<T>(T)
-where
-    T: Eq + Ord + Copy + Hash;
+// /// An automata state.
+// #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
+// pub struct State<T>(T)
+// where
+//     T: Eq + Ord + Copy + Hash;
 
-impl<T> From<T> for State<T>
-where
-    T: Eq + Ord + Copy + Hash,
-{
-    fn from(inner: T) -> Self {
-        Self(inner)
-    }
-}
+// impl<T> From<T> for State<T>
+// where
+//     T: Eq + Ord + Copy + Hash,
+// {
+//     fn from(inner: T) -> Self {
+//         Self(inner)
+//     }
+// }
 
-/// An automata transition symbol.
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-pub struct Symbol<T>(T)
-where
-    T: Eq + Ord + Copy + Hash;
+// /// An automata transition symbol.
+// #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
+// pub struct Symbol<T>(T)
+// where
+//     T: Eq + Ord + Copy + Hash;
 
-impl<T> From<T> for Symbol<T>
-where
-    T: Eq + Ord + Copy + Hash,
-{
-    fn from(inner: T) -> Self {
-        Self(inner)
-    }
-}
+// impl<T> From<T> for Symbol<T>
+// where
+//     T: Eq + Ord + Copy + Hash,
+// {
+//     fn from(inner: T) -> Self {
+//         Self(inner)
+//     }
+// }
 
-/// A transition from `source` state to `destination` state through `symbol`.
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Transition<'dfa, S, T>
-where
-    S: Eq + Ord + Copy + Hash,
-    T: Eq + Ord + Copy + Hash,
-{
-    /// The state from which the transition starts.
-    source: &'dfa State<S>,
-    /// The state on which the transition ends.
-    destination: &'dfa State<S>,
-    /// The transition symbol (or function).
-    symbol: &'dfa Symbol<T>,
-}
+// /// A transition from `source` state to `destination` state through `symbol`.
+// #[derive(Debug, PartialEq, Eq, Hash)]
+// pub struct Transition<'dfa, S, T>
+// where
+//     S: Eq + Ord + Copy + Hash,
+//     T: Eq + Ord + Copy + Hash,
+// {
+//     /// The state from which the transition starts.
+//     source: &'dfa State<S>,
+//     /// The state on which the transition ends.
+//     destination: &'dfa State<S>,
+//     /// The transition symbol (or function).
+//     symbol: &'dfa Symbol<T>,
+// }
 
-impl<'dfa, S, T> Transition<'dfa, S, T>
-where
-    S: Eq + Ord + Copy + Hash,
-    T: Eq + Ord + Copy + Hash,
-{
-    /// Construct a new instance of `Transition<'s, S, T>`
-    pub fn new(
-        source: &'dfa State<S>,
-        destination: &'dfa State<S>,
-        symbol: &'dfa Symbol<T>,
-    ) -> Self {
-        Self {
-            source,
-            destination,
-            symbol,
-        }
-    }
-}
+// impl<'dfa, S, T> Transition<'dfa, S, T>
+// where
+//     S: Eq + Ord + Copy + Hash,
+//     T: Eq + Ord + Copy + Hash,
+// {
+//     /// Construct a new instance of `Transition<'s, S, T>`
+//     pub fn new(
+//         source: &'dfa State<S>,
+//         destination: &'dfa State<S>,
+//         symbol: &'dfa Symbol<T>,
+//     ) -> Self {
+//         Self {
+//             source,
+//             destination,
+//             symbol,
+//         }
+//     }
+// }
 
 /// Alias for the `DeterministicFiniteAutomata` type.
 pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
