@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
+use typestate_automata::DFA;
 use std::{collections::HashSet, convert::TryFrom};
 use syn::{parse::Parser, visit_mut::VisitMut, *};
 
@@ -60,7 +61,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
     let sealed_trait = state_visitor.sealed_trait;
     if sealed_trait.trait_ident.is_none() {
-        return Error::new(Span::call_site(), "Missing `#[automata]` struct")
+        return Error::new(Span::call_site(), "Missing `#[automata]` struct.")
             .to_compile_error()
             .into();
     }
@@ -78,6 +79,8 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // report transition_visitor errors and return
     bail_if_any!(transition_visitor.errors);
 
+    let dfa = DFA::new();
+
     // appending new code should happen after all other code is processed
     // since this adds the sealed pattern traits and those aren't valid states
     // if this is done before visiting transitions the generated code is flagged as invalid transitions
@@ -92,6 +95,14 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let ret = module.into_token_stream();
     // println!("{}", ret);
     ret.into()
+}
+
+fn setup_dfa(info: StateMachineInfo) -> DFA<Ident, Ident> {
+    let dfa = DFA::new();
+    for state in info.det_states.iter().map(|i| i.ident) {
+        dfa.add_state(state);
+    }
+    dfa
 }
 
 #[derive(Debug, PartialEq)]
@@ -179,6 +190,8 @@ struct StateMachineInfo {
     non_det_states: HashSet<ItemEnum>,
     /// Set of extracted identifiers.
     state_idents: HashSet<Ident>,
+    /// TODO
+    transitions: HashSet<(Ident, Ident, Ident)>,
 }
 
 impl StateMachineInfo {
@@ -188,6 +201,7 @@ impl StateMachineInfo {
             det_states: HashSet::new(),
             non_det_states: HashSet::new(),
             state_idents: HashSet::new(),
+            transitions: HashSet::new(),
         }
     }
 
@@ -295,20 +309,22 @@ impl<'sm> DeterministicStateVisitor<'sm> {
 
     /// Add `multiple attributes` error to the error vector.
     fn push_multiple_attr_error(&mut self, attr: &Attribute) {
-        self.errors
-            .push(Error::new_spanned(attr, "multiple attributes are declared"));
+        self.errors.push(Error::new_spanned(
+            attr,
+            "Multiple attributes are declared.",
+        ));
     }
 
     /// Add `duplicate attribute` error to the error vector.
     fn push_multiple_decl_error(&mut self, attr: &Attribute) {
         self.errors
-            .push(Error::new_spanned(attr, "duplicate attribute"));
+            .push(Error::new_spanned(attr, "Duplicate attribute."));
     }
 
     /// Add `multiple automata` error to the error vector.
     fn push_multiple_automata_decl_error(&mut self, it: &ItemStruct) {
         self.errors
-            .push(Error::new_spanned(it, "`automata` redefinition here"));
+            .push(Error::new_spanned(it, "`automata` redefinition here."));
     }
 }
 
@@ -406,7 +422,7 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
     fn push_undeclared_state_error(&mut self, ident: &Ident) {
         self.errors.push(Error::new_spanned(
             ident,
-            "`enum` variant is not a valid state",
+            "`enum` variant is not a valid state.",
         ));
     }
 
@@ -414,7 +430,7 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
     fn push_unsupported_variant_error(&mut self, variant: &Variant) {
         self.errors.push(Error::new_spanned(
             variant,
-            "only unit (C-like) `enum` variants are supported",
+            "Only unit (C-like) `enum` variants are supported.",
         ));
     }
 }
@@ -441,6 +457,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
 }
 
 struct TransitionVisitor<'sm> {
+    current_state: Option<Ident>,
     state_machine_info: &'sm mut StateMachineInfo,
     errors: Vec<Error>,
 }
@@ -448,6 +465,7 @@ struct TransitionVisitor<'sm> {
 impl<'sm> TransitionVisitor<'sm> {
     fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
         Self {
+            current_state: None,
             state_machine_info,
             errors: vec![],
         }
@@ -457,7 +475,7 @@ impl<'sm> TransitionVisitor<'sm> {
     fn push_unknown_state_error(&mut self, ident: &Ident) {
         self.errors.push(Error::new_spanned(
             ident,
-            format!("`{}` is not a declared state", ident),
+            format!("`{}` is not a declared state.", ident),
         ));
     }
 
@@ -492,6 +510,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         let ident = &i.ident;
 
         if self.state_machine_info.state_idents.contains(ident) {
+            self.current_state = Some(ident.clone());
             i.ident = format_ident!("{}State", ident);
             // go deeper
             for item in i.items.iter_mut() {
@@ -502,21 +521,24 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         }
     }
 
-    // TODO check for the following kinds of function
-    // self, _ -> State
-    // _ -> State
-    // State -> _
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         // TODO account for non-deterministic states
         let sig = &mut i.sig;
         let input = self.input_kind(sig);
         let output = self.output_kind(sig);
         match (input, output) {
-            (None, None) => {}
-            (None, Some(_)) => {}
-            (Some(_), None) => {}
-            (Some(_), Some(_)) => {}
-        }
+            (None, None) => {}    // unknown
+            (None, Some(_)) => {} // initial
+            (Some(_), None) => {} // final
+            (Some(_), Some(ident)) => {
+                let transition = (
+                    self.current_state.as_ref().unwrap().clone(),
+                    i.sig.ident.clone(),
+                    ident.clone(),
+                );
+                self.state_machine_info.transitions.insert(transition);
+            } // transition
+        };
     }
 }
 
@@ -540,7 +562,7 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
         syn::Fields::Unnamed(_) => {
             return syn::Result::Err(Error::new_spanned(
                 automata_item,
-                "tuple structures are not supported",
+                "Tuple structures are not supported.",
             ));
         }
         syn::Fields::Unit => {
