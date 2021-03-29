@@ -196,18 +196,65 @@ pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>
 pub struct DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash,
-    // Transition: Eq + Hash,
+    Transition: Eq + Hash,
 {
-    /// The set of all automata states.
-    states: HashSet<State>,
     /// The set of all initial states.
-    initial_states: HashSet<State>,
+    initial_states: HashSet<Rc<State>>,
     /// The set of all final states.
-    final_states: HashSet<State>,
-    // /// The set of state transitions.
-    // transitions: HashSet<Transition<S, T>>,
+    final_states: HashSet<Rc<State>>,
     /// Automata graph.
     automata: DiGraph<State, Transition>,
 }
 
-impl<State, Transition> DeterministicFiniteAutomata<State, Transition> where State: Eq + Hash {}
+impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash,
+    Transition: Eq + Hash,
+{
+    /// Construct a new DFA.
+    pub fn new() -> Self {
+        Self {
+            initial_states: HashSet::new(),
+            final_states: HashSet::new(),
+            automata: DiGraph::new(),
+        }
+    }
+
+    /// Add a regular state to the DFA.
+    pub fn add_state(&mut self, state: State) {
+        self.automata.add_node(state);
+    }
+
+    /// Add an initial state to the DFA.
+    ///
+    /// If the state existed before, it is simply added to the initial states set.
+    pub fn add_initial_state(&mut self, state: State) {
+        let state = self.automata.add_node(state);
+        self.initial_states.insert(state);
+    }
+
+    /// Add an final state to the DFA.
+    ///
+    /// If the state existed before, it is simply added to the final states set.
+    pub fn add_final_state(&mut self, state: State) {
+        let state = self.automata.add_node(state);
+        self.final_states.insert(state);
+    }
+
+    /// Add a transition to the DFA.
+    pub fn add_transition(&mut self, src: State, dst: State, transition: Transition) {
+        self.automata.add_edge(src, dst, transition);
+    }
+
+    /// Compute the productive states.
+    ///
+    /// The taken approach starts by doing a BFS from all the final states,
+    /// following the incoming transitions, and gathering them in a data structure.
+    pub fn compute_productive(&self) -> HashSet<Rc<State>> {
+        let mut productive = HashSet::new();
+        self.final_states.iter().for_each(|state| {
+            productive.extend(self.automata.reachable_incoming(state.to_owned()))
+        });
+        productive
+    }
+}
