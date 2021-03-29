@@ -345,7 +345,7 @@ mod digraph_test {
         let reachable_three: HashSet<i32> = graph
             .reachable_outgoing(Rc::new(3))
             .iter()
-            .map(|rc_node| -> i32 { *rc_node.to_owned() }) // maybe this is kind weird
+            .map(|rc_node| *rc_node.to_owned()) // maybe this is kind weird
             .collect();
         assert_eq!(expected_reachable_three, reachable_three);
     }
