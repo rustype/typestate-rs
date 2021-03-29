@@ -162,6 +162,31 @@ where
         })
     }
 
+    /// Compute the set of nodes reachable in any direction from a given starting node.
+    // HACK deal with the `Rc`
+    // HACK the amount of shadowing is unreal, care with that
+    pub fn reachable(&self, node: Rc<Node>) -> HashSet<Rc<Node>> {
+        let mut stack = VecDeque::new();
+        let mut discovered = HashSet::new();
+        // should the starting node be added as discovered?
+        stack.push_front(node);
+        while let Some(node) = stack.pop_front() {
+            match self.neighbors(&node) {
+                Some(edge_iter) => {
+                    edge_iter
+                        .map(|edge| &edge.node) // we dont care for labels
+                        .for_each(|node| {
+                            if discovered.insert(node.clone()) {
+                                stack.push_back(node.clone())
+                            }
+                        })
+                }
+                None => {}
+            }
+        }
+        discovered
+    }
+
     /// Compute the set of nodes reachable in the incoming direction from a given starting node.
     // HACK deal with the `Rc`
     // HACK the amount of shadowing is unreal, care with that
