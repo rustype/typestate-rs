@@ -209,7 +209,7 @@ mod digraph_test {
     #[test]
     fn check_nodes_from_edges() {
         let graph = setup_graph_with_edges();
-        let expected_nodes = vec![1, 2, 3, 4, 5, 6, 7];
+        let expected_nodes = [1, 2, 3, 4, 5, 6, 7];
         expected_nodes.iter().for_each(|node| {
             assert!(graph.nodes.contains(node));
             assert_eq!(graph.nodes.contains(node), graph.contains_node(node));
@@ -219,6 +219,7 @@ mod digraph_test {
     #[test]
     fn check_nodes() {
         let mut graph: DiGraph<i32, ()> = DiGraph::new();
+        let expected_nodes = [1, 2, 3, 4, 5, 6, 7];
         expected_nodes.iter().for_each(|node| {
             graph.add_node(*node);
         });
