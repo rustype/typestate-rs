@@ -187,6 +187,50 @@ where
         discovered
     }
 }
+
+#[cfg(test)]
+mod digraph_test {
+    use super::DiGraph;
+
+    fn setup_graph_with_edges() -> DiGraph<i32, i32> {
+        let mut graph = DiGraph::new();
+        graph.add_edge(1, 2, 1);
+        graph.add_edge(1, 3, 1);
+        graph.add_edge(2, 6, 1);
+        graph.add_edge(3, 4, 1);
+        graph.add_edge(3, 5, 1);
+        graph.add_edge(3, 6, 1);
+        graph.add_edge(4, 5, 1);
+        graph.add_edge(5, 7, 1);
+        graph.add_edge(6, 7, 1);
+        graph
+    }
+
+    #[test]
+    fn check_nodes_from_edges() {
+        let graph = setup_graph_with_edges();
+        let expected_nodes = vec![1, 2, 3, 4, 5, 6, 7];
+        expected_nodes.iter().for_each(|node| {
+            assert!(graph.nodes.contains(node));
+            assert_eq!(graph.nodes.contains(node), graph.contains_node(node));
+        });
+    }
+
+    #[test]
+    fn check_nodes() {
+        // HACK ideally where the `bool` is, it should be a zero-sized type
+        let mut graph: DiGraph<i32, bool> = DiGraph::new();
+        let expected_nodes = vec![1, 2, 3, 4, 5, 6, 7];
+        expected_nodes.iter().for_each(|node| {
+            graph.add_node(*node);
+        });
+        expected_nodes.iter().for_each(|node| {
+            assert!(graph.nodes.contains(node));
+            assert_eq!(graph.nodes.contains(node), graph.contains_node(node));
+        });
+    }
+}
+
 /// Alias for the `DeterministicFiniteAutomata` type.
 pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
