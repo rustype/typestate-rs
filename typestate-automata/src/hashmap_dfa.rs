@@ -1,5 +1,4 @@
 use std::collections::{HashSet, VecDeque};
-use std::fmt::Debug;
 use std::hash::Hash;
 
 use petgraph::{
