@@ -258,7 +258,7 @@ mod digraph_test {
     }
 
     #[test]
-    fn check_nodes_from_edges() {
+    fn test_nodes_from_edges() {
         let graph = setup_graph_with_edges();
         let expected_nodes = [1, 2, 3, 4, 5, 6, 7];
         expected_nodes.iter().for_each(|node| {
@@ -268,7 +268,7 @@ mod digraph_test {
     }
 
     #[test]
-    fn check_nodes() {
+    fn test_nodes() {
         let mut graph: DiGraph<i32, ()> = DiGraph::new();
         let expected_nodes = [1, 2, 3, 4, 5, 6, 7];
         expected_nodes.iter().for_each(|node| {
@@ -281,7 +281,7 @@ mod digraph_test {
     }
 
     #[test]
-    fn check_neighbors() {
+    fn test_neighbors() {
         let graph = setup_graph_with_edges();
         let expected_neighbors_five: HashSet<i32> = [3, 4, 7].iter().map(|i| *i).collect();
         let neighbors_five: HashSet<i32> = graph.neighbors(&5).unwrap().map(|e| *e.node).collect();
@@ -289,7 +289,7 @@ mod digraph_test {
 }
 
     #[test]
-    fn check_neighbors_incoming() {
+    fn test_neighbors_incoming() {
         let graph = setup_graph_with_edges();
         let expected_neighbors_five: HashSet<i32> = [3, 4].iter().map(|i| *i).collect();
         let neighbors_five: HashSet<i32> = graph
@@ -301,7 +301,7 @@ mod digraph_test {
 }
 
     #[test]
-    fn check_neighbors_outgoing() {
+    fn test_neighbors_outgoing() {
         let graph = setup_graph_with_edges();
         let expected_neighbors_five: HashSet<i32> = [7].iter().map(|i| *i).collect();
         let neighbors_five: HashSet<i32> = graph
@@ -313,7 +313,7 @@ mod digraph_test {
     }
 
     #[test]
-    fn check_reachable() {
+    fn test_reachable() {
         let graph = setup_graph_with_edges();
         // `3` is included in the expected because it can "loop" back
         let expected_reachable_three: HashSet<i32> =
@@ -327,7 +327,7 @@ mod digraph_test {
 }
 
     #[test]
-    fn check_reachable_incoming() {
+    fn test_reachable_incoming() {
         let graph = setup_graph_with_edges();
         let expected_reachable_five: HashSet<i32> = [1, 3, 4].iter().map(|i| *i).collect();
         let reachable_five: HashSet<i32> = graph
@@ -339,7 +339,7 @@ mod digraph_test {
     }
 
     #[test]
-    fn check_reachable_outgoing() {
+    fn test_reachable_outgoing() {
         let graph = setup_graph_with_edges();
         let expected_reachable_three: HashSet<i32> = [4, 5, 6, 7].iter().map(|i| *i).collect();
         let reachable_three: HashSet<i32> = graph
