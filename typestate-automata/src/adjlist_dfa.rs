@@ -286,7 +286,7 @@ mod digraph_test {
         let expected_neighbors_five: HashSet<i32> = [3, 4, 7].iter().map(|i| *i).collect();
         let neighbors_five: HashSet<i32> = graph.neighbors(&5).unwrap().map(|e| *e.node).collect();
         assert_eq!(expected_neighbors_five, neighbors_five);
-}
+    }
 
     #[test]
     fn test_neighbors_incoming() {
@@ -298,7 +298,7 @@ mod digraph_test {
             .map(|e| *e.node)
             .collect();
         assert_eq!(expected_neighbors_five, neighbors_five);
-}
+    }
 
     #[test]
     fn test_neighbors_outgoing() {
@@ -324,7 +324,7 @@ mod digraph_test {
             .map(|rc_node| -> i32 { *rc_node.to_owned() }) // maybe this is kind weird
             .collect();
         assert_eq!(expected_reachable_three, reachable_three);
-}
+    }
 
     #[test]
     fn test_reachable_incoming() {
@@ -420,5 +420,135 @@ where
             productive.extend(self.automata.reachable_incoming(state.to_owned()))
         });
         productive
+    }
+}
+
+#[cfg(test)]
+mod dfa_test {
+    use super::*;
+
+    fn setup_automata() -> DFA<i32, i32> {
+        let mut dfa = DFA::new();
+        dfa.add_transition(1, 2, 1);
+        dfa.add_transition(1, 3, 1);
+        dfa.add_transition(2, 6, 1);
+        dfa.add_transition(3, 4, 1);
+        dfa.add_transition(3, 5, 1);
+        dfa.add_transition(3, 6, 1);
+        dfa.add_transition(4, 5, 1);
+        dfa.add_transition(5, 7, 1);
+        dfa.add_transition(6, 7, 1);
+        dfa
+    }
+
+    #[test]
+    fn test_add_state() {
+        let mut dfa: DFA<_, ()> = DFA::new();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        expected_states.iter().for_each(|i| dfa.add_state(*i));
+        let result_states: HashSet<i32> =
+            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_add_initial_state() {
+        let mut dfa: DFA<_, ()> = DFA::new();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        expected_states
+            .iter()
+            .for_each(|i| dfa.add_initial_state(*i));
+        let result_states: HashSet<i32> =
+            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
+        let initial_result_states: HashSet<i32> =
+            dfa.initial_states.iter().map(|i| *i.to_owned()).collect();
+        assert_eq!(expected_states, result_states);
+        assert_eq!(expected_states, initial_result_states);
+    }
+
+    #[test]
+    fn test_add_existing_initial_state() {
+        let mut dfa: DFA<_, ()> = DFA::new();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        expected_states.iter().for_each(|i| dfa.add_state(*i));
+        expected_states
+            .iter()
+            .for_each(|i| dfa.add_initial_state(*i));
+        let result_states: HashSet<i32> =
+            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
+        let initial_result_states: HashSet<i32> =
+            dfa.initial_states.iter().map(|i| *i.to_owned()).collect();
+        assert_eq!(expected_states, result_states);
+        assert_eq!(expected_states, initial_result_states);
+    }
+
+    #[test]
+    fn test_add_final_state() {
+        let mut dfa: DFA<_, ()> = DFA::new();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        expected_states.iter().for_each(|i| dfa.add_final_state(*i));
+        let result_states: HashSet<i32> =
+            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
+        let final_result_states: HashSet<i32> =
+            dfa.final_states.iter().map(|i| *i.to_owned()).collect();
+        assert_eq!(expected_states, result_states);
+        assert_eq!(expected_states, final_result_states);
+    }
+
+    #[test]
+    fn test_add_existing_final_state() {
+        let mut dfa: DFA<_, ()> = DFA::new();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        expected_states.iter().for_each(|i| dfa.add_state(*i));
+        expected_states.iter().for_each(|i| dfa.add_final_state(*i));
+        let result_states: HashSet<i32> =
+            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
+        let final_result_states: HashSet<i32> =
+            dfa.final_states.iter().map(|i| *i.to_owned()).collect();
+        assert_eq!(expected_states, result_states);
+        assert_eq!(expected_states, final_result_states);
+    }
+
+    #[test]
+    fn test_add_transition() {
+        let dfa = setup_automata();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6, 7].iter().map(|i| *i).collect();
+        let result_states: HashSet<i32> =
+            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_compute_productive_empty_final() {
+        let dfa = setup_automata();
+        let empty_set = HashSet::new();
+        assert_eq!(empty_set, dfa.compute_productive());
+    }
+
+    #[test]
+    fn test_compute_productive() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(7);
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6].iter().map(|i| *i).collect();
+        let result_states: HashSet<i32> = dfa
+            .compute_productive()
+            .iter()
+            .map(|i| *i.to_owned())
+            .collect();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_compute_productive_multiple_states() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(3);
+        dfa.add_final_state(5);
+        let expected_states: HashSet<i32> = [1, 3, 4].iter().map(|i| *i).collect();
+        let result_states: HashSet<i32> = dfa
+            .compute_productive()
+            .iter()
+            .map(|i| *i.to_owned())
+            .collect();
+        assert_eq!(expected_states, result_states);
     }
 }
