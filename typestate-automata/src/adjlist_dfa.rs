@@ -191,6 +191,7 @@ where
 #[cfg(test)]
 mod digraph_test {
     use super::DiGraph;
+    use std::collections::hash_set::HashSet;
 
     fn setup_graph_with_edges() -> DiGraph<i32, i32> {
         let mut graph = DiGraph::new();
@@ -228,6 +229,14 @@ mod digraph_test {
             assert_eq!(graph.nodes.contains(node), graph.contains_node(node));
         });
     }
+
+    #[test]
+    fn check_neighbors() {
+        let graph = setup_graph_with_edges();
+        let expected_neighbors_five: HashSet<i32> = [3, 4, 7].iter().map(|i| *i).collect();
+        let neighbors_five: HashSet<i32> = graph.neighbors(&5).unwrap().map(|e| *e.node).collect();
+        assert_eq!(expected_neighbors_five, neighbors_five);
+}
 }
 
 /// Alias for the `DeterministicFiniteAutomata` type.
