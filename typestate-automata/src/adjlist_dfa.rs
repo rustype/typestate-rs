@@ -218,9 +218,7 @@ mod digraph_test {
 
     #[test]
     fn check_nodes() {
-        // HACK ideally where the `bool` is, it should be a zero-sized type
-        let mut graph: DiGraph<i32, bool> = DiGraph::new();
-        let expected_nodes = vec![1, 2, 3, 4, 5, 6, 7];
+        let mut graph: DiGraph<i32, ()> = DiGraph::new();
         expected_nodes.iter().for_each(|node| {
             graph.add_node(*node);
         });
