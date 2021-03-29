@@ -237,6 +237,22 @@ mod digraph_test {
         let neighbors_five: HashSet<i32> = graph.neighbors(&5).unwrap().map(|e| *e.node).collect();
         assert_eq!(expected_neighbors_five, neighbors_five);
 }
+
+    #[test]
+    fn check_neighbors_incoming() {
+        let graph = setup_graph_with_edges();
+        let expected_neighbors_five: HashSet<i32> = [3, 4].iter().map(|i| *i).collect();
+        let neighbors_five: HashSet<i32> = graph.neighbors_incoming(&5).unwrap().map(|e| *e.node).collect();
+        assert_eq!(expected_neighbors_five, neighbors_five);
+}
+
+    #[test]
+    fn check_neighbors_outgoing() {
+        let graph = setup_graph_with_edges();
+        let expected_neighbors_five: HashSet<i32> = [7].iter().map(|i| *i).collect();
+        let neighbors_five: HashSet<i32> = graph.neighbors_outgoing(&5).unwrap().map(|e| *e.node).collect();
+        assert_eq!(expected_neighbors_five, neighbors_five);
+    }
 }
 
 /// Alias for the `DeterministicFiniteAutomata` type.
