@@ -241,7 +241,7 @@ where
 #[cfg(test)]
 mod digraph_test {
     use super::DiGraph;
-    use std::collections::hash_set::HashSet;
+    use std::{collections::hash_set::HashSet, rc::Rc};
 
     fn setup_graph_with_edges() -> DiGraph<i32, i32> {
         let mut graph = DiGraph::new();
@@ -292,7 +292,11 @@ mod digraph_test {
     fn check_neighbors_incoming() {
         let graph = setup_graph_with_edges();
         let expected_neighbors_five: HashSet<i32> = [3, 4].iter().map(|i| *i).collect();
-        let neighbors_five: HashSet<i32> = graph.neighbors_incoming(&5).unwrap().map(|e| *e.node).collect();
+        let neighbors_five: HashSet<i32> = graph
+            .neighbors_incoming(&5)
+            .unwrap()
+            .map(|e| *e.node)
+            .collect();
         assert_eq!(expected_neighbors_five, neighbors_five);
 }
 
@@ -300,8 +304,50 @@ mod digraph_test {
     fn check_neighbors_outgoing() {
         let graph = setup_graph_with_edges();
         let expected_neighbors_five: HashSet<i32> = [7].iter().map(|i| *i).collect();
-        let neighbors_five: HashSet<i32> = graph.neighbors_outgoing(&5).unwrap().map(|e| *e.node).collect();
+        let neighbors_five: HashSet<i32> = graph
+            .neighbors_outgoing(&5)
+            .unwrap()
+            .map(|e| *e.node)
+            .collect();
         assert_eq!(expected_neighbors_five, neighbors_five);
+    }
+
+    #[test]
+    fn check_reachable() {
+        let graph = setup_graph_with_edges();
+        // `3` is included in the expected because it can "loop" back
+        let expected_reachable_three: HashSet<i32> =
+            [1, 2, 3, 4, 5, 6, 7].iter().map(|i| *i).collect();
+        let reachable_three: HashSet<i32> = graph
+            .reachable(Rc::new(3))
+            .iter()
+            .map(|rc_node| -> i32 { *rc_node.to_owned() }) // maybe this is kind weird
+            .collect();
+        assert_eq!(expected_reachable_three, reachable_three);
+}
+
+    #[test]
+    fn check_reachable_incoming() {
+        let graph = setup_graph_with_edges();
+        let expected_reachable_five: HashSet<i32> = [1, 3, 4].iter().map(|i| *i).collect();
+        let reachable_five: HashSet<i32> = graph
+            .reachable_incoming(Rc::new(5))
+            .iter()
+            .map(|rc_node| -> i32 { *rc_node.to_owned() }) // maybe this is kind weird
+            .collect();
+        assert_eq!(expected_reachable_five, reachable_five);
+    }
+
+    #[test]
+    fn check_reachable_outgoing() {
+        let graph = setup_graph_with_edges();
+        let expected_reachable_three: HashSet<i32> = [4, 5, 6, 7].iter().map(|i| *i).collect();
+        let reachable_three: HashSet<i32> = graph
+            .reachable_outgoing(Rc::new(3))
+            .iter()
+            .map(|rc_node| -> i32 { *rc_node.to_owned() }) // maybe this is kind weird
+            .collect();
+        assert_eq!(expected_reachable_three, reachable_three);
     }
 }
 
