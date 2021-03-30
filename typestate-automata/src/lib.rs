@@ -240,7 +240,8 @@ where
 
 #[cfg(test)]
 mod digraph_test {
-    use super::DiGraph;
+    use super::test_traits::*;
+    use super::*;
     use std::{collections::hash_set::HashSet, rc::Rc};
 
     fn setup_graph_with_edges() -> DiGraph<i32, i32> {
@@ -283,7 +284,7 @@ mod digraph_test {
     #[test]
     fn test_neighbors() {
         let graph = setup_graph_with_edges();
-        let expected_neighbors_five: HashSet<i32> = [3, 4, 7].iter().map(|i| *i).collect();
+        let expected_neighbors_five: HashSet<i32> = [3, 4, 7].into_hash_set();
         let neighbors_five: HashSet<i32> = graph.neighbors(&5).unwrap().map(|e| *e.node).collect();
         assert_eq!(expected_neighbors_five, neighbors_five);
     }
@@ -291,7 +292,7 @@ mod digraph_test {
     #[test]
     fn test_neighbors_incoming() {
         let graph = setup_graph_with_edges();
-        let expected_neighbors_five: HashSet<i32> = [3, 4].iter().map(|i| *i).collect();
+        let expected_neighbors_five: HashSet<i32> = [3, 4].into_hash_set();
         let neighbors_five: HashSet<i32> = graph
             .neighbors_incoming(&5)
             .unwrap()
@@ -303,7 +304,7 @@ mod digraph_test {
     #[test]
     fn test_neighbors_outgoing() {
         let graph = setup_graph_with_edges();
-        let expected_neighbors_five: HashSet<i32> = [7].iter().map(|i| *i).collect();
+        let expected_neighbors_five: HashSet<i32> = [7].into_hash_set();
         let neighbors_five: HashSet<i32> = graph
             .neighbors_outgoing(&5)
             .unwrap()
@@ -316,8 +317,7 @@ mod digraph_test {
     fn test_reachable() {
         let graph = setup_graph_with_edges();
         // `3` is included in the expected because it can "loop" back
-        let expected_reachable_three: HashSet<i32> =
-            [1, 2, 3, 4, 5, 6, 7].iter().map(|i| *i).collect();
+        let expected_reachable_three: HashSet<i32> = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
         let reachable_three: HashSet<i32> = graph
             .reachable(Rc::new(3))
             .iter()
@@ -329,7 +329,7 @@ mod digraph_test {
     #[test]
     fn test_reachable_incoming() {
         let graph = setup_graph_with_edges();
-        let expected_reachable_five: HashSet<i32> = [1, 3, 4].iter().map(|i| *i).collect();
+        let expected_reachable_five: HashSet<i32> = [1, 3, 4].into_hash_set();
         let reachable_five: HashSet<i32> = graph
             .reachable_incoming(Rc::new(5))
             .iter()
@@ -341,7 +341,7 @@ mod digraph_test {
     #[test]
     fn test_reachable_outgoing() {
         let graph = setup_graph_with_edges();
-        let expected_reachable_three: HashSet<i32> = [4, 5, 6, 7].iter().map(|i| *i).collect();
+        let expected_reachable_three: HashSet<i32> = [4, 5, 6, 7].into_hash_set();
         let reachable_three: HashSet<i32> = graph
             .reachable_outgoing(Rc::new(3))
             .iter()
@@ -435,7 +435,6 @@ where
             .collect()
     }
 
-
     /// Extract the useful states from a given set of productive states.
     ///
     /// Currently the complexity on this is *bad*.
@@ -456,6 +455,7 @@ where
 
 #[cfg(test)]
 mod dfa_test {
+    use super::test_traits::*;
     use super::*;
 
     fn setup_automata() -> DFA<i32, i32> {
@@ -475,7 +475,7 @@ mod dfa_test {
     #[test]
     fn test_add_state() {
         let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
         expected_states.iter().for_each(|i| dfa.add_state(*i));
         let result_states: HashSet<i32> =
             dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
@@ -485,7 +485,7 @@ mod dfa_test {
     #[test]
     fn test_add_initial_state() {
         let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
         expected_states
             .iter()
             .for_each(|i| dfa.add_initial_state(*i));
@@ -500,7 +500,7 @@ mod dfa_test {
     #[test]
     fn test_add_existing_initial_state() {
         let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
         expected_states.iter().for_each(|i| dfa.add_state(*i));
         expected_states
             .iter()
@@ -516,7 +516,7 @@ mod dfa_test {
     #[test]
     fn test_add_final_state() {
         let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
         expected_states.iter().for_each(|i| dfa.add_final_state(*i));
         let result_states: HashSet<i32> =
             dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
@@ -529,7 +529,7 @@ mod dfa_test {
     #[test]
     fn test_add_existing_final_state() {
         let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
         expected_states.iter().for_each(|i| dfa.add_state(*i));
         expected_states.iter().for_each(|i| dfa.add_final_state(*i));
         let result_states: HashSet<i32> =
@@ -543,7 +543,7 @@ mod dfa_test {
     #[test]
     fn test_add_transition() {
         let dfa = setup_automata();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6, 7].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
         let result_states: HashSet<i32> =
             dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
         assert_eq!(expected_states, result_states);
@@ -560,7 +560,7 @@ mod dfa_test {
     fn test_compute_productive() {
         let mut dfa = setup_automata();
         dfa.add_final_state(7);
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6].into_hash_set();
         let result_states: HashSet<i32> = dfa
             .compute_productive()
             .iter()
@@ -574,12 +574,38 @@ mod dfa_test {
         let mut dfa = setup_automata();
         dfa.add_final_state(3);
         dfa.add_final_state(5);
-        let expected_states: HashSet<i32> = [1, 3, 4].iter().map(|i| *i).collect();
+        let expected_states: HashSet<i32> = [1, 3, 4].into_hash_set();
         let result_states: HashSet<i32> = dfa
             .compute_productive()
             .iter()
             .map(|i| *i.to_owned())
             .collect();
         assert_eq!(expected_states, result_states);
+    }
+
+#[cfg(test)] // should only be available for tests
+mod test_traits {
+    use std::{collections::HashSet, hash::Hash, rc::Rc};
+
+    /// A conversion to HashSet<T> trait.
+    pub(crate) trait IntoHashSet<T>
+    where
+        T: Eq + Hash,
+    {
+        fn into_hash_set(self) -> HashSet<T>;
+    }
+
+    /// Implementation of [IntoHashSet<T>] for a slice of `i32` integers.
+    impl<const N: usize> IntoHashSet<i32> for [i32; N] {
+        fn into_hash_set(self) -> HashSet<i32> {
+            self.iter().map(|t| t.to_owned()).collect()
+        }
+    }
+
+    /// Implementation of [IntoHashSet<T>] for an `HashSet<Rc<i32>>`.
+    impl IntoHashSet<i32> for HashSet<Rc<i32>> {
+        fn into_hash_set(self) -> HashSet<i32> {
+            self.iter().map(|i| *i.to_owned()).collect()
+        }
     }
 }
