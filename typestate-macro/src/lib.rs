@@ -1,13 +1,13 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
+use typestate_automata::DFA;
 use std::{
     collections::HashSet,
     convert::{TryFrom, TryInto},
     rc::Rc,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
-use typestate_automata::adjlist_dfa::DFA;
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
