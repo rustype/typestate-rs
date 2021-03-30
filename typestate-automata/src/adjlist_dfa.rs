@@ -421,6 +421,19 @@ where
         });
         productive
     }
+
+    /// Compute the non-productive states.
+    ///
+    /// This is done by calling [DeterministicFiniteAutomata::compute_productive].
+    // TODO add tests
+    pub fn compute_non_productive(&self) -> HashSet<Rc<State>> {
+        let productive = self.compute_productive();
+        self.automata
+            .nodes
+            .difference(&productive)
+            .map(|s| s.to_owned())
+            .collect()
+    }
 }
 
 #[cfg(test)]
