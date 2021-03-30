@@ -583,6 +583,17 @@ mod dfa_test {
         assert_eq!(expected_states, result_states);
     }
 
+    #[test]
+    fn test_compute_non_productive_no_final() {
+        let dfa = setup_automata();
+        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
+        assert_eq!(
+            expected_states,
+            dfa.compute_non_productive().into_hash_set()
+        );
+    }
+}
+
 #[cfg(test)] // should only be available for tests
 mod test_traits {
     use std::{collections::HashSet, hash::Hash, rc::Rc};
