@@ -240,9 +240,14 @@ struct StateMachineInfo {
     non_det_states: HashSet<ItemEnum>,
     /// Set of extracted identifiers.
     state_idents: HashSet<Ident>,
-    /// TODO
+    /// Set of transitions.
+    /// Extracted from functions with a signature like `(State) -> State`.
     transitions: HashSet<Transition>,
+    /// Set of initial states.
+    /// Extracted from functions with a signature like `() -> State`.
     initial_states: HashSet<Ident>,
+    /// Set of final states.
+    /// Extracted from functions with a signature like `(State) -> ()`.
     final_states: HashSet<Ident>,
 }
 
