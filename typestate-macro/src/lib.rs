@@ -1,9 +1,13 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
-use typestate_automata::DFA;
-use std::{collections::HashSet, convert::TryFrom};
+use std::{
+    collections::HashSet,
+    convert::{TryFrom, TryInto},
+    rc::Rc,
+};
 use syn::{parse::Parser, visit_mut::VisitMut, *};
+use typestate_automata::adjlist_dfa::DFA;
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -79,7 +83,44 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // report transition_visitor errors and return
     bail_if_any!(transition_visitor.errors);
 
-    let dfa = DFA::new();
+    let dfa: Result<DFA<Ident, Ident>, ()> = state_machine_info.try_into();
+    if let Ok(dfa) = dfa {
+        // TODO clean this mess
+
+        // compute productive
+        let productive = dfa.compute_productive();
+        // get non-productive to show errors
+        let non_productive: HashSet<Rc<Ident>> = dfa
+            .automata
+            .nodes
+            .difference(&productive)
+            .map(|s| s.to_owned())
+            .collect();
+        let errors: Vec<Error> = non_productive
+            .into_iter()
+            .map(|ident| Error::new_spanned(ident, "Non-productive state."))
+            .collect();
+        bail_if_any!(errors);
+
+        // compute useful
+        let useful = dfa.extract_useful(&productive);
+        // compute non-useful to show errors
+        let non_useful: HashSet<Rc<Ident>> = dfa
+            .automata
+            .nodes
+            .difference(&useful)
+            .map(|s| s.to_owned())
+            .collect();
+        let errors: Vec<Error> = non_useful
+            .into_iter()
+            .map(|ident| Error::new_spanned(ident, "Non-useful state."))
+            .collect();
+        bail_if_any!(errors);
+    } else {
+        return Error::new(Span::call_site(), "Unsupported automata.")
+            .to_compile_error()
+            .into();
+    }
 
     // appending new code should happen after all other code is processed
     // since this adds the sealed pattern traits and those aren't valid states
@@ -95,14 +136,6 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let ret = module.into_token_stream();
     // println!("{}", ret);
     ret.into()
-}
-
-fn setup_dfa(info: StateMachineInfo) -> DFA<Ident, Ident> {
-    let dfa = DFA::new();
-    for state in info.det_states.iter().map(|i| i.ident) {
-        dfa.add_state(state);
-    }
-    dfa
 }
 
 #[derive(Debug, PartialEq)]
@@ -181,6 +214,23 @@ enum State {
 }
 */
 
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct Transition {
+    source: Ident,
+    destination: Ident,
+    symbol: Ident,
+}
+
+impl Transition {
+    fn new(source: Ident, destination: Ident, symbol: Ident) -> Self {
+        Self {
+            source,
+            destination,
+            symbol,
+        }
+    }
+}
+
 /// Extracted information from the states
 struct StateMachineInfo {
     /// Main structure (aka Automata ?)
@@ -192,7 +242,9 @@ struct StateMachineInfo {
     /// Set of extracted identifiers.
     state_idents: HashSet<Ident>,
     /// TODO
-    transitions: HashSet<(Ident, Ident, Ident)>,
+    transitions: HashSet<Transition>,
+    initial_states: HashSet<Ident>,
+    final_states: HashSet<Ident>,
 }
 
 impl StateMachineInfo {
@@ -203,6 +255,8 @@ impl StateMachineInfo {
             non_det_states: HashSet::new(),
             state_idents: HashSet::new(),
             transitions: HashSet::new(),
+            initial_states: HashSet::new(),
+            final_states: HashSet::new(),
         }
     }
 
@@ -234,6 +288,33 @@ impl StateMachineInfo {
 impl Default for StateMachineInfo {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl TryInto<DFA<Ident, Ident>> for StateMachineInfo {
+    // TODO replace unit with a decent error type
+    type Error = ();
+
+    fn try_into(self) -> Result<DFA<Ident, Ident>, Self::Error> {
+        if self.non_det_states.is_empty() {
+            let mut dfa = DFA::new();
+            self.det_states
+                .into_iter()
+                .map(|it| it.ident)
+                .for_each(|ident| dfa.add_state(ident));
+            self.initial_states
+                .into_iter()
+                .for_each(|ident| dfa.add_initial_state(ident));
+            self.final_states
+                .into_iter()
+                .for_each(|ident| dfa.add_final_state(ident));
+            self.transitions
+                .into_iter()
+                .for_each(|t| dfa.add_transition(t.source, t.destination, t.symbol));
+            Ok(dfa)
+        } else {
+            Err(())
+        }
     }
 }
 
@@ -489,15 +570,16 @@ impl<'sm> TransitionVisitor<'sm> {
         }
     }
 
-    fn output_kind(&self, sig: &mut Signature) -> Option<&Ident> {
+    fn output_kind(&self, sig: &mut Signature) -> Option<Ident> {
         let fn_out = &mut sig.output;
         if let ReturnType::Type(_, ty) = fn_out {
             if let Type::Path(ref mut ty_path) = **ty {
                 if let Some(ident) = ty_path.path.get_ident() {
                     if self.state_machine_info.is_valid_state_ident(ident) {
+                        let res = ident.clone(); // HACK
                         let automata_ident = self.state_machine_info.main_state_name();
                         ty_path.path = parse_quote!(#automata_ident<#ident>);
-                        return Some(automata_ident);
+                        return Some(res);
                     }
                 }
             }
@@ -528,15 +610,24 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         let input = self.input_kind(sig);
         let output = self.output_kind(sig);
         match (input, output) {
-            (None, None) => {}    // unknown
-            (None, Some(_)) => {} // initial
-            (Some(_), None) => {} // final
-            (Some(_), Some(ident)) => {
-                let transition = (
+            (None, None) => {} // unknown
+            (None, Some(return_ty_ident)) => {
+                self.state_machine_info
+                    .initial_states
+                    .insert(return_ty_ident);
+            } // initial
+            (Some(_), None) => {
+                self.state_machine_info
+                    .final_states
+                    .insert(self.current_state.as_ref().unwrap().clone());
+            } // final
+            (Some(_), Some(return_ty_ident)) => {
+                let transition = Transition::new(
                     self.current_state.as_ref().unwrap().clone(),
+                    return_ty_ident,
                     i.sig.ident.clone(),
-                    ident.clone(),
                 );
+                println!("{:#?}", transition);
                 self.state_machine_info.transitions.insert(transition);
             } // transition
         };
