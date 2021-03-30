@@ -252,6 +252,7 @@ struct StateMachineInfo {
 }
 
 impl StateMachineInfo {
+    /// Construct a new [StateMachineInfo].
     fn new() -> Self {
         Self {
             main_struct: None,
@@ -264,6 +265,8 @@ impl StateMachineInfo {
         }
     }
 
+    /// Add a generic state to the [StateMachineInfo]
+    // TODO create specialized versions which also use this one.
     fn add_state(&mut self, state: Item) {
         match state {
             Item::Struct(item_struct) => {
@@ -278,10 +281,15 @@ impl StateMachineInfo {
         }
     }
 
+    /// Check if a given [syn::Ident] is a valid state.
+    ///
+    /// For an identifier to be considered a valid state it must have been previously added.
     fn is_valid_state_ident(&self, ident: &Ident) -> bool {
         self.state_idents.contains(ident)
     }
 
+    /// Return the main state identifier.
+    /// This is an utility function.
     // maybe the unwrap could be converted into a check
     // if none -> comp time error
     fn main_state_name(&self) -> &Ident {
