@@ -561,11 +561,7 @@ mod dfa_test {
         let mut dfa = setup_automata();
         dfa.add_final_state(7);
         let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6].into_hash_set();
-        let result_states: HashSet<i32> = dfa
-            .compute_productive()
-            .iter()
-            .map(|i| *i.to_owned())
-            .collect();
+        let result_states: HashSet<i32> = dfa.compute_productive().into_hash_set();
         assert_eq!(expected_states, result_states);
     }
 
@@ -575,11 +571,7 @@ mod dfa_test {
         dfa.add_final_state(3);
         dfa.add_final_state(5);
         let expected_states: HashSet<i32> = [1, 3, 4].into_hash_set();
-        let result_states: HashSet<i32> = dfa
-            .compute_productive()
-            .iter()
-            .map(|i| *i.to_owned())
-            .collect();
+        let result_states: HashSet<i32> = dfa.compute_productive().into_hash_set();
         assert_eq!(expected_states, result_states);
     }
 
