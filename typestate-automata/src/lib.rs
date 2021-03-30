@@ -584,6 +584,25 @@ mod dfa_test {
             dfa.compute_non_productive().into_hash_set()
         );
     }
+
+    #[test]
+    fn test_compute_non_productive() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(7);
+        let expected_states: HashSet<i32> = [7].into_hash_set();
+        let result_states: HashSet<i32> = dfa.compute_non_productive().into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_compute_non_productive_multiple_states() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(3);
+        dfa.add_final_state(5);
+        let expected_states: HashSet<i32> = [2, 5, 6, 7].into_hash_set();
+        let result_states: HashSet<i32> = dfa.compute_non_productive().into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
 }
 
 #[cfg(test)] // should only be available for tests
