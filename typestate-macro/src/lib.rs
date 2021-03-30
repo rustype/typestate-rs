@@ -76,7 +76,6 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     bail_if_any!(non_det_state_visitor.errors);
 
     // Visit transitions
-    // TODO state_machine_info can be &mut and declared outside of all these visitors
     let mut transition_visitor = TransitionVisitor::new(&mut state_machine_info);
     transition_visitor.visit_item_mod_mut(&mut module);
 
