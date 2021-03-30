@@ -284,7 +284,7 @@ impl StateMachineInfo {
 
     // maybe the unwrap could be converted into a check
     // if none -> comp time error
-    fn main_state_name(&'_ self) -> &'_ Ident {
+    fn main_state_name(&self) -> &Ident {
         &self.main_struct.as_ref().unwrap().ident
     }
 }
