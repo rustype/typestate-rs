@@ -603,6 +603,75 @@ mod dfa_test {
         let result_states: HashSet<i32> = dfa.compute_non_productive().into_hash_set();
         assert_eq!(expected_states, result_states);
     }
+
+    #[test]
+    fn test_useful_states_no_initial_no_final() {
+        let dfa = setup_automata();
+        let expected_states: HashSet<i32> = HashSet::new();
+        let productive = &dfa.compute_productive();
+        eprintln!("{:?}", productive);
+        let result_states = dfa.extract_useful(productive).into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_useful_states_no_initial() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(7);
+        let expected_states: HashSet<i32> = HashSet::new();
+        let productive = &dfa.compute_productive();
+        eprintln!("{:?}", productive);
+        let result_states = dfa.extract_useful(productive).into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_useful_states_no_initial_multiple_states() {
+        let mut dfa = setup_automata();
+        dfa.add_final_state(3);
+        dfa.add_final_state(5);
+        let expected_states: HashSet<i32> = HashSet::new();
+        let productive = &dfa.compute_productive();
+        eprintln!("{:?}", productive);
+        let result_states = dfa.extract_useful(productive).into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_useful_states_no_final() {
+        let mut dfa = setup_automata();
+        dfa.add_initial_state(1);
+        let expected_states: HashSet<i32> = HashSet::new();
+        let productive = &dfa.compute_productive();
+        eprintln!("{:?}", productive);
+        let result_states = dfa.extract_useful(productive).into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_useful_states() {
+        let mut dfa = setup_automata();
+        dfa.add_initial_state(1);
+        dfa.add_final_state(7);
+        let expected_states: HashSet<i32> = [2, 3, 4, 5, 6].into_hash_set();
+        let productive = &dfa.compute_productive();
+        eprintln!("{:?}", productive);
+        let result_states = dfa.extract_useful(productive).into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_useful_states_multiple_states() {
+        let mut dfa = setup_automata();
+        dfa.add_initial_state(1);
+        dfa.add_final_state(3);
+        dfa.add_final_state(5);
+        let expected_states: HashSet<i32> = [3, 4].into_hash_set();
+        let productive = &dfa.compute_productive();
+        eprintln!("{:?}", productive);
+        let result_states = dfa.extract_useful(productive).into_hash_set();
+        assert_eq!(expected_states, result_states);
+    }
 }
 
 #[cfg(test)] // should only be available for tests
