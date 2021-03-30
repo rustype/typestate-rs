@@ -112,6 +112,7 @@ enum TypestateAttr {
 }
 
 impl TryFrom<&Ident> for TypestateAttr {
+    // TODO take care of this error type
     type Error = ();
 
     fn try_from(ident: &Ident) -> Result<Self, Self::Error> {
