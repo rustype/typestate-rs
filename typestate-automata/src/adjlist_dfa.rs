@@ -51,8 +51,8 @@ where
     Node: Eq + Hash,
     Edge: Eq + Hash,
 {
-    nodes: HashSet<Rc<Node>>,
-    edges: HashMap<Rc<Node>, HashSet<DiEdge<Node, Edge>>>,
+    pub(crate) nodes: HashSet<Rc<Node>>,
+    pub(crate) edges: HashMap<Rc<Node>, HashSet<DiEdge<Node, Edge>>>,
 }
 
 impl<Node, Edge> DiGraph<Node, Edge>
@@ -363,11 +363,11 @@ where
     Transition: Eq + Hash,
 {
     /// The set of all initial states.
-    initial_states: HashSet<Rc<State>>,
+    pub(crate) initial_states: HashSet<Rc<State>>,
     /// The set of all final states.
-    final_states: HashSet<Rc<State>>,
+    pub(crate) final_states: HashSet<Rc<State>>,
     /// Automata graph.
-    automata: DiGraph<State, Transition>,
+    pub(crate) automata: DiGraph<State, Transition>,
 }
 
 impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
