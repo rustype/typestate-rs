@@ -434,6 +434,23 @@ where
             .map(|s| s.to_owned())
             .collect()
     }
+
+
+    /// Extract the useful states from a given set of productive states.
+    ///
+    /// Currently the complexity on this is *bad*.
+    // TODO fix the node iteration redundancy
+    // To fix it, we need to write a specialized iterator for the graph
+    // The iterator should start in a given node, iterate the immediate neighbors and upon a condition either:
+    // - Mark them and other nodes in their path as visited according to a condition
+    // - Ignore them and not iterate them further
+    pub fn extract_useful(&self, productive: &HashSet<Rc<State>>) -> HashSet<Rc<State>> {
+        self.initial_states
+            .iter()
+            .flat_map(|initial| self.automata.reachable_outgoing(Rc::clone(initial)))
+            .filter(|state| productive.contains(state))
+            .collect::<HashSet<Rc<State>>>()
+    }
 }
 
 #[cfg(test)]
