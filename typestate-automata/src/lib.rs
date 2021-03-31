@@ -425,7 +425,6 @@ where
     /// Compute the non-productive states.
     ///
     /// This is done by calling [DeterministicFiniteAutomata::compute_productive].
-    // TODO add tests
     pub fn compute_non_productive(&self) -> HashSet<Rc<State>> {
         let productive = self.compute_productive();
         self.automata
@@ -443,7 +442,6 @@ where
     // The iterator should start in a given node, iterate the immediate neighbors and upon a condition either:
     // - Mark them and other nodes in their path as visited according to a condition
     // - Ignore them and not iterate them further
-    // TODO add tests
     pub fn extract_useful(&self, productive: &HashSet<Rc<State>>) -> HashSet<Rc<State>> {
         self.initial_states
             .iter()
