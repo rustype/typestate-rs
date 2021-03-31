@@ -1,4 +1,4 @@
-mod automata;
+pub mod automata;
 
 use std::{
     collections::{HashMap, HashSet, VecDeque},
