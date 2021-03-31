@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
-use typestate_automata::DFA;
+use typestate_automata::automata::DFA;
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -87,11 +87,12 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
         // TODO clean this mess
 
         // compute productive
-        let productive = dfa.compute_productive();
+        let productive = dfa.productive_states();
+
         // get non-productive to show errors
-        let non_productive: HashSet<Rc<Ident>> = dfa
+        let non_productive: HashSet<Ident> = dfa
             .automata
-            .nodes
+            .states
             .difference(&productive)
             .map(|s| s.to_owned())
             .collect();
@@ -102,11 +103,11 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
         bail_if_any!(errors);
 
         // compute useful
-        let useful = dfa.extract_useful(&productive);
+        let useful = dfa.useful_states();
         // compute non-useful to show errors
-        let non_useful: HashSet<Rc<Ident>> = dfa
+        let non_useful: HashSet<Ident> = dfa
             .automata
-            .nodes
+            .states
             .difference(&useful)
             .map(|s| s.to_owned())
             .collect();
@@ -317,13 +318,13 @@ impl TryInto<DFA<Ident, Ident>> for StateMachineInfo {
                 .for_each(|ident| dfa.add_state(ident));
             self.initial_states
                 .into_iter()
-                .for_each(|ident| dfa.add_initial_state(ident));
+                .for_each(|ident| dfa.add_initial(ident));
             self.final_states
                 .into_iter()
-                .for_each(|ident| dfa.add_final_state(ident));
+                .for_each(|ident| dfa.add_final(ident));
             self.transitions
                 .into_iter()
-                .for_each(|t| dfa.add_transition(t.source, t.destination, t.symbol));
+                .for_each(|t| dfa.add_transition(t.source, t.symbol, t.destination));
             Ok(dfa)
         } else {
             Err(())

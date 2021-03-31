@@ -1,7 +1,6 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
-    ops::Deref,
 };
 
 pub type FA<State, Transition> = FiniteAutomata<State, Transition>;
@@ -12,13 +11,13 @@ where
     Transition: Eq + Hash + Clone,
 {
     /// Finite automata states.
-    states: HashSet<State>,
+    pub states: HashSet<State>,
     /// Finite automata transition symbols.
     sigma: HashSet<Transition>,
     /// Finite automata initial state-indexes.
-    initial_states: HashSet<State>,
+    pub initial_states: HashSet<State>,
     /// Finite automata final state-indexes.
-    final_states: HashSet<State>,
+    pub final_states: HashSet<State>,
     /// Finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
     delta: HashMap<State, HashMap<Transition, HashSet<State>>>,
@@ -78,14 +77,14 @@ where
     }
 }
 
-type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
+pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
-struct DeterministicFiniteAutomata<State, Transition>
+pub struct DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
-    automata: FiniteAutomata<State, Transition>,
+    pub automata: FiniteAutomata<State, Transition>,
 }
 
 impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
@@ -171,33 +170,36 @@ where
         // productive == visited
         let mut productive = HashSet::new();
         while let Some(state) = stack.pop_back() {
-            productive.insert(state.clone());
-            if let Some(states) = self
-                .automata
-                .idelta
-                .get(state)
-                .map(|transitions| transitions.values().flat_map(|states| states.iter()))
-            {
-                stack.extend(states)
+            if productive.insert(state.clone()) {
+                if let Some(states) = self
+                    .automata
+                    .idelta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
             }
         }
         productive
     }
 
     pub fn useful_states(&self) -> HashSet<State> {
+        // TODO this could benefit from some "caching" of results on productive
         let productive = self.productive_states();
         let mut stack: VecDeque<_> = self.automata.initial_states.iter().collect();
         // productive == visited
         let mut reachable = HashSet::new();
         while let Some(state) = stack.pop_back() {
-            reachable.insert(state.clone());
-            if let Some(states) = self
-                .automata
-                .delta
-                .get(state)
-                .map(|transitions| transitions.values().flat_map(|states| states.iter()))
-            {
-                stack.extend(states)
+            if reachable.insert(state.clone()) {
+                if let Some(states) = self
+                    .automata
+                    .delta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
             }
         }
         productive
@@ -205,67 +207,6 @@ where
             .map(|s| s.to_owned())
             .collect()
     }
-
-    // pub fn useful_states(&self) -> HashSet<State> {
-    //     // TODO this function could be cached
-    //     // Use an `Option` for late init/invalidations
-    //     // Invalidate on additions.
-    //     let initial_states = &self.automata.initial_states;
-    //     let mut useful: HashSet<State> = HashSet::new();
-    //     if initial_states.is_empty() {
-    //         return useful;
-    //     }
-    //     let mut stack = initial_states.iter().collect::<VecDeque<&State>>();
-    //     let mut preceding: HashMap<&State, Vec<&State>> =
-    //         stack.iter().map(|state| (*state, vec![])).collect();
-
-    //     while let Some(state) = stack.pop_back() {
-    //         if !self.automata.delta.contains_key(state) {
-    //             continue;
-    //         }
-    //         for (_, adjacent_state) in &self.automata.delta[state] {
-    //             let is_useful = useful.contains(adjacent_state);
-    //             if self.automata.final_states.contains(adjacent_state) || is_useful {
-    //                 useful.insert(state.clone());
-    //                 if !is_useful {
-    //                     useful.insert(adjacent_state.clone());
-    //                     if let Some(v) = preceding.get_mut(adjacent_state) {
-    //                         *v = vec![];
-    //                     }
-    //                 }
-    //                 let mut inpath_stack: VecDeque<&State> = preceding
-    //                     .get_mut(state)
-    //                     .unwrap()
-    //                     .iter()
-    //                     .filter(|s| !useful.contains(s))
-    //                     .map(|s| s.deref())
-    //                     .collect();
-    //                 if let Some(v) = preceding.get_mut(adjacent_state) {
-    //                     *v = vec![];
-    //                 }
-    //                 while !inpath_stack.is_empty() {
-    //                     let previous = inpath_stack.pop_back().unwrap();
-    //                     useful.insert(previous.clone());
-    //                     inpath_stack
-    //                         .extend(preceding[state].iter().filter(|s| !useful.contains(s)));
-    //                     if let Some(v) = preceding.get_mut(adjacent_state) {
-    //                         *v = vec![];
-    //                     }
-    //                 }
-    //                 continue;
-    //             }
-
-    //             if !preceding.contains_key(&adjacent_state) {
-    //                 preceding.insert(adjacent_state, vec![state]);
-    //                 stack.push_back(adjacent_state);
-    //             } else {
-    //                 let adj_vec = preceding.get_mut(&adjacent_state).unwrap();
-    //                 adj_vec.push(state);
-    //             }
-    //         }
-    //     }
-    //     useful
-    // }
 }
 
 /// Implementation of the [Default] trait for a [DeterministicFiniteAutomata].
@@ -306,11 +247,32 @@ mod dfa_tests {
         dfa.add_transition(6, (), 7);
         dfa
     }
+
+    fn setup_automata_loop() -> DFA<i32, ()> {
+        let mut dfa = DFA::new();
+        dfa.add_initial(1);
+        dfa.add_final(2);
+        dfa.add_transition(1, (), 2);
+        dfa.add_transition(2, (), 1);
+        dfa
+    }
+
     #[test]
     fn test_productive() {
         let dfa = setup_automata();
         let result = dfa.productive_states();
         let expected = [1, 2, 3, 4, 5, 6, 7]
+            .iter()
+            .map(|i| i.to_owned())
+            .collect::<HashSet<i32>>();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_productive_loop() {
+        let dfa = setup_automata_loop();
+        let result = dfa.productive_states();
+        let expected = [1, 2]
             .iter()
             .map(|i| i.to_owned())
             .collect::<HashSet<i32>>();
