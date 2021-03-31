@@ -1,13 +1,13 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
-use typestate_automata::DFA;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     rc::Rc,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
+use typestate_automata::DFA;
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -237,7 +237,7 @@ struct StateMachineInfo {
     /// Deterministic states (`struct`s)
     det_states: HashSet<ItemStruct>,
     /// Non-deterministic states (`enum`s)
-    non_det_states: HashSet<ItemEnum>,
+    non_det_states: HashMap<Ident, ItemEnum>,
     /// Set of extracted identifiers.
     state_idents: HashSet<Ident>,
     /// Set of transitions.
@@ -257,7 +257,7 @@ impl StateMachineInfo {
         Self {
             main_struct: None,
             det_states: HashSet::new(),
-            non_det_states: HashSet::new(),
+            non_det_states: HashMap::new(),
             state_idents: HashSet::new(),
             transitions: HashSet::new(),
             initial_states: HashSet::new(),
@@ -274,8 +274,9 @@ impl StateMachineInfo {
                 self.det_states.insert(item_struct);
             }
             Item::Enum(item_enum) => {
-                self.state_idents.insert(item_enum.ident.clone());
-                self.non_det_states.insert(item_enum);
+                let ident = &item_enum.ident;
+                self.state_idents.insert(ident.clone());
+                self.non_det_states.insert(ident.clone(), item_enum);
             }
             _ => unreachable!("invalid state"),
         }
@@ -610,6 +611,11 @@ impl<'sm> TransitionVisitor<'sm> {
 impl<'sm> VisitMut for TransitionVisitor<'sm> {
     fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
         let ident = &i.ident;
+
+        if self.state_machine_info.non_det_states.contains_key(ident) {
+            self.push_invalid_trait_error(i);
+            return;
+        }
 
         if self.state_machine_info.state_idents.contains(ident) {
             self.current_state = Some(ident.clone());
