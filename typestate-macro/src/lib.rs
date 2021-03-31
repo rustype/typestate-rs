@@ -573,6 +573,13 @@ impl<'sm> TransitionVisitor<'sm> {
         ));
     }
 
+    fn push_invalid_trait_error(&mut self, it: &ItemTrait) {
+        self.errors.push(Error::new_spanned(
+            it,
+            "Non-deterministic states cannot have associated functions",
+        ));
+    }
+
     fn input_kind(&self, sig: &Signature) -> Option<()> {
         let fn_in = &sig.inputs;
         if let Some(FnArg::Receiver(_)) = fn_in.first() {
