@@ -1,3 +1,5 @@
+mod automata;
+
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
