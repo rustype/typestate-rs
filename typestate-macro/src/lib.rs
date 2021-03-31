@@ -548,6 +548,11 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
                 self.push_unsupported_variant_error(variant);
             }
         }
+        if self.errors.is_empty() {
+            self.state_machine_info
+                .non_det_states
+                .insert(i.ident.clone(), i.clone());
+        }
     }
 }
 
