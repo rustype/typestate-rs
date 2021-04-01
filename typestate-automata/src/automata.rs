@@ -169,32 +169,34 @@ where
     }
 }
 
-
 /// Tests for [FiniteAutomata].
 #[cfg(test)]
 mod fa_tests {
+    use super::test_traits::*;
     use super::*;
 
     fn setup_automata() -> FA<i32, ()> {
         let mut fa = FA::new();
-        fa.add_state(1);
-        fa.add_state(2);
-        fa.add_state(3);
-        fa.add_state(4);
-        fa.add_state(5);
-        fa.add_state(6);
-        fa.add_state(7);
+        let state_list = [1, 2, 3, 4, 5, 6, 7];
+        for &state in state_list.iter() {
+            fa.add_state(state);
+        }
         fa.add_initial(1);
         fa.add_final(7);
-        fa.add_transition(1, (), 2);
-        fa.add_transition(1, (), 3);
-        fa.add_transition(2, (), 6);
-        fa.add_transition(3, (), 4);
-        fa.add_transition(3, (), 5);
-        fa.add_transition(3, (), 6);
-        fa.add_transition(4, (), 5);
-        fa.add_transition(5, (), 7);
-        fa.add_transition(6, (), 7);
+        let transition_list = [
+            (1, 2),
+            (1, 3),
+            (2, 6),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+        ];
+        for &(src, dst) in transition_list.iter() {
+            fa.add_transition(src, (), dst);
+        }
         fa
     }
 
@@ -205,6 +207,30 @@ mod fa_tests {
         fa.add_transition(1, (), 2);
         fa.add_transition(2, (), 1);
         fa
+    }
+
+    #[test]
+    fn test_add_state() {
+        let fa = setup_automata();
+        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
+        let result_states = fa.states;
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_add_initial_state() {
+        let fa = setup_automata();
+        let expected_states = [1].into_hash_set();
+        let result_states = fa.initial_states;
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_add_final_state() {
+        let fa = setup_automata();
+        let expected_states = [7].into_hash_set();
+        let result_states = fa.final_states;
+        assert_eq!(expected_states, result_states);
     }
 
     #[test]
@@ -315,74 +341,7 @@ where
 
 /// Tests for [DeterministicFiniteAutomata].
 #[cfg(test)]
-mod dfa_tests {
-    use super::*;
-
-    fn setup_automata() -> DFA<i32, ()> {
-        let mut dfa = DFA::new();
-        dfa.add_state(1);
-        dfa.add_state(2);
-        dfa.add_state(3);
-        dfa.add_state(4);
-        dfa.add_state(5);
-        dfa.add_state(6);
-        dfa.add_state(7);
-        dfa.add_initial(1);
-        dfa.add_final(7);
-        dfa.add_transition(1, (), 2);
-        dfa.add_transition(1, (), 3);
-        dfa.add_transition(2, (), 6);
-        dfa.add_transition(3, (), 4);
-        dfa.add_transition(3, (), 5);
-        dfa.add_transition(3, (), 6);
-        dfa.add_transition(4, (), 5);
-        dfa.add_transition(5, (), 7);
-        dfa.add_transition(6, (), 7);
-        dfa
-    }
-
-    fn setup_automata_loop() -> DFA<i32, ()> {
-        let mut dfa = DFA::new();
-        dfa.add_initial(1);
-        dfa.add_final(2);
-        dfa.add_transition(1, (), 2);
-        dfa.add_transition(2, (), 1);
-        dfa
-    }
-
-    #[test]
-    fn test_productive() {
-        let dfa = setup_automata();
-        let result = dfa.productive_states();
-        let expected = [1, 2, 3, 4, 5, 6, 7]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn test_productive_loop() {
-        let dfa = setup_automata_loop();
-        let result = dfa.productive_states();
-        let expected = [1, 2]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn test_useful() {
-        let dfa = setup_automata();
-        let result = dfa.useful_states();
-        let expected = [1, 2, 3, 4, 5, 6, 7]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-}
+mod dfa_tests {}
 
 /// Type alias for [NonDeterministicFiniteAutomata].
 pub type NFA<State, Transition> = NonDeterministicFiniteAutomata<State, Transition>;
@@ -483,71 +442,32 @@ where
 
 /// Tests for [NonDeterministicFiniteAutomata].
 #[cfg(test)]
-mod nfa_tests {
-    use super::*;
+mod nfa_tests {}
 
-    fn setup_automata() -> NFA<i32, ()> {
-        let mut nfa = NFA::new();
-        nfa.add_state(1);
-        nfa.add_state(2);
-        nfa.add_state(3);
-        nfa.add_state(4);
-        nfa.add_state(5);
-        nfa.add_state(6);
-        nfa.add_state(7);
-        nfa.add_initial(1);
-        nfa.add_final(7);
-        nfa.add_transition(1, (), 2);
-        nfa.add_transition(1, (), 3);
-        nfa.add_transition(2, (), 6);
-        nfa.add_transition(3, (), 4);
-        nfa.add_transition(3, (), 5);
-        nfa.add_transition(3, (), 6);
-        nfa.add_transition(4, (), 5);
-        nfa.add_transition(5, (), 7);
-        nfa.add_transition(6, (), 7);
-        nfa
+/// Module containing useful traits for tests.
+#[cfg(test)] // should only be available for tests
+mod test_traits {
+    use std::{collections::HashSet, hash::Hash, rc::Rc};
+
+    /// A conversion to HashSet<T> trait.
+    pub(crate) trait IntoHashSet<T>
+    where
+        T: Eq + Hash,
+    {
+        fn into_hash_set(self) -> HashSet<T>;
     }
 
-    fn setup_automata_loop() -> NFA<i32, ()> {
-        let mut nfa = NFA::new();
-        nfa.add_initial(1);
-        nfa.add_final(2);
-        nfa.add_transition(1, (), 2);
-        nfa.add_transition(2, (), 1);
-        nfa
+    /// Implementation of [IntoHashSet<T>] for a slice of `i32` integers.
+    impl<const N: usize> IntoHashSet<i32> for [i32; N] {
+        fn into_hash_set(self) -> HashSet<i32> {
+            self.iter().map(|t| t.to_owned()).collect()
+        }
     }
 
-    #[test]
-    fn test_productive() {
-        let nfa = setup_automata();
-        let result = nfa.productive_states();
-        let expected = [1, 2, 3, 4, 5, 6, 7]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn test_productive_loop() {
-        let nfa = setup_automata_loop();
-        let result = nfa.productive_states();
-        let expected = [1, 2]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn test_useful() {
-        let nfa = setup_automata();
-        let result = nfa.useful_states();
-        let expected = [1, 2, 3, 4, 5, 6, 7]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
+    /// Implementation of [IntoHashSet<T>] for an `HashSet<Rc<i32>>`.
+    impl IntoHashSet<i32> for HashSet<Rc<i32>> {
+        fn into_hash_set(self) -> HashSet<i32> {
+            self.iter().map(|i| *i.to_owned()).collect()
+        }
     }
 }
