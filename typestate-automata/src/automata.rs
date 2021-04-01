@@ -5,6 +5,11 @@ use std::{
 
 type Deltas<State, Transition> = HashMap<State, HashMap<Transition, HashSet<State>>>;
 
+enum Delta {
+    Delta,
+    IDelta,
+}
+
 pub type FA<State, Transition> = FiniteAutomata<State, Transition>;
 
 pub struct FiniteAutomata<State, Transition>
@@ -65,6 +70,35 @@ where
     pub fn add_sigma(&mut self, sigma: Transition) {
         self.sigma.insert(sigma);
     }
+
+    fn add_delta(&mut self, source: State, symbol: Transition, destination: State, delta: Delta) {
+        let delta = match delta {
+            Delta::Delta => &mut self.delta,
+            Delta::IDelta => &mut self.idelta,
+        };
+        if let Some(transitions) = delta.get_mut(&source) {
+            if let Some(destinations) = transitions.get_mut(&symbol) {
+                destinations.insert(destination);
+            } else {
+                let mut destinations = HashSet::new();
+                destinations.insert(destination);
+                transitions.insert(symbol, destinations);
+            }
+        } else {
+            let mut transitions = HashMap::new();
+            let mut destinations = HashSet::new();
+            destinations.insert(destination);
+            transitions.insert(symbol, destinations);
+            delta.insert(source, transitions);
+        }
+    }
+
+    pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
+        // TODO check for state existence or add regardless
+        self.add_sigma(symbol.clone());
+        self.add_delta(source.clone(), symbol.clone(), destination.clone(), Delta::Delta);
+        self.add_delta(source, symbol, destination, Delta::IDelta);
+    }
 }
 
 /// Implementation of the [Default] trait for a [FiniteAutomata].
@@ -120,51 +154,8 @@ where
         self.automata.add_sigma(sigma);
     }
 
-    // TODO there has got to be a way to reduce this code duplication, without macros
-    fn add_delta(&mut self, source: State, symbol: Transition, destination: State) {
-        let delta = &mut self.automata.delta;
-        if let Some(transitions) = delta.get_mut(&source) {
-            if let Some(destinations) = transitions.get_mut(&symbol) {
-                destinations.insert(destination);
-            } else {
-                let mut destinations = HashSet::new();
-                destinations.insert(destination);
-                transitions.insert(symbol, destinations);
-            }
-        } else {
-            let mut transitions = HashMap::new();
-            let mut destinations = HashSet::new();
-            destinations.insert(destination);
-            transitions.insert(symbol, destinations);
-            delta.insert(source, transitions);
-        }
-    }
-
-    // TODO there has got to be a way to reduce this code duplication, without macros
-    fn add_idelta(&mut self, source: State, symbol: Transition, destination: State) {
-        let idelta = &mut self.automata.idelta;
-        if let Some(transitions) = idelta.get_mut(&destination) {
-            if let Some(sources) = transitions.get_mut(&symbol) {
-                sources.insert(source);
-            } else {
-                let mut sources = HashSet::new();
-                sources.insert(source);
-                transitions.insert(symbol, sources);
-            }
-        } else {
-            let mut transitions = HashMap::new();
-            let mut sources = HashSet::new();
-            sources.insert(source);
-            transitions.insert(symbol, sources);
-            idelta.insert(destination, transitions);
-        }
-    }
-
     pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
-        // TODO check for state existence or add regardless
-        self.automata.add_sigma(symbol.clone());
-        self.add_delta(source.clone(), symbol.clone(), destination.clone());
-        self.add_idelta(source, symbol, destination);
+        self.automata.add_transition(source, symbol, destination);
     }
 
     pub fn productive_states(&self) -> HashSet<State> {
@@ -334,51 +325,8 @@ where
         self.automata.add_sigma(sigma);
     }
 
-    // TODO there has got to be a way to reduce this code duplication, without macros
-    fn add_delta(&mut self, source: State, symbol: Transition, destination: State) {
-        let delta = &mut self.automata.delta;
-        if let Some(transitions) = delta.get_mut(&source) {
-            if let Some(destinations) = transitions.get_mut(&symbol) {
-                destinations.insert(destination);
-            } else {
-                let mut destinations = HashSet::new();
-                destinations.insert(destination);
-                transitions.insert(symbol, destinations);
-            }
-        } else {
-            let mut transitions = HashMap::new();
-            let mut destinations = HashSet::new();
-            destinations.insert(destination);
-            transitions.insert(symbol, destinations);
-            delta.insert(source, transitions);
-        }
-    }
-
-    // TODO there has got to be a way to reduce this code duplication, without macros
-    fn add_idelta(&mut self, source: State, symbol: Transition, destination: State) {
-        let idelta = &mut self.automata.idelta;
-        if let Some(transitions) = idelta.get_mut(&destination) {
-            if let Some(sources) = transitions.get_mut(&symbol) {
-                sources.insert(source);
-            } else {
-                let mut sources = HashSet::new();
-                sources.insert(source);
-                transitions.insert(symbol, sources);
-            }
-        } else {
-            let mut transitions = HashMap::new();
-            let mut sources = HashSet::new();
-            sources.insert(source);
-            transitions.insert(symbol, sources);
-            idelta.insert(destination, transitions);
-        }
-    }
-
     pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
-        // TODO check for state existence or add regardless
-        self.automata.add_sigma(symbol.clone());
-        self.add_delta(source.clone(), symbol.clone(), destination.clone());
-        self.add_idelta(source, symbol, destination);
+        self.automata.add_transition(source, symbol, destination);
     }
 
     pub fn add_non_deterministic_transitions(
@@ -390,8 +338,8 @@ where
         // TODO check for state existence or add regardless
         self.automata.add_sigma(symbol.clone());
         for destination in destinations {
-            self.add_delta(source.clone(), symbol.clone(), destination.clone());
-            self.add_idelta(source.clone(), symbol.clone(), destination);
+            self.automata.add_delta(source.clone(), symbol.clone(), destination.clone(), Delta::Delta);
+            self.automata.add_delta(source.clone(), symbol.clone(), destination.clone(), Delta::IDelta);
         }
     }
 

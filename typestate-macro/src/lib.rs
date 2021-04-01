@@ -703,9 +703,9 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         // TODO account for non-deterministic states
-        let sig = dbg!(&mut i.sig);
+        let sig = &mut i.sig;
         let input = self.input_kind(sig);
-        let output = dbg!(self.output_kind(sig));
+        let output = self.output_kind(sig);
 
         match (input, output) {
             (None, None) => {} // unknown
