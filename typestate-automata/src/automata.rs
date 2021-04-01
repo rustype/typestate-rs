@@ -230,12 +230,12 @@ where
 }
 
 /// Implementation of the [Default] trait for a [DeterministicFiniteAutomata].
-/// This function is equivalent to [DeterministicFiniteAutomata::new].
 impl<State, Transition> Default for DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
+    /// This function is equivalent to [DeterministicFiniteAutomata::new].
     fn default() -> Self {
         Self::new()
     }
