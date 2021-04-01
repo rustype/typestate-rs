@@ -391,7 +391,6 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
             self.non_det_states
                 .into_iter()
                 .for_each(|(ident, _)| nfa.add_state(ident));
-            eprintln!("{:#?}", nfa.automata.delta);
             FiniteAutomata::NonDeterministic(nfa)
         }
     }
