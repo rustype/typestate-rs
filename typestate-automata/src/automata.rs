@@ -3,15 +3,21 @@ use std::{
     hash::Hash,
 };
 
+/// Type alias for the transition "minigraph".
 type Deltas<State, Transition> = HashMap<State, HashMap<Transition, HashSet<State>>>;
 
+/// Delta kind enumeration.
+/// Distinguishes between `Delta` (forward transitions) and
+/// `IDelta` (backward transitions) which are the inverse of `Delta`.
 enum Delta {
     Delta,
     IDelta,
 }
 
+/// Type alias for [FiniteAutomata].
 pub type FA<State, Transition> = FiniteAutomata<State, Transition>;
 
+/// A representation for finite automata.
 pub struct FiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
@@ -27,7 +33,7 @@ where
     pub final_states: HashSet<State>,
     /// Finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
-    pub delta: Deltas<State, Transition>,
+    delta: Deltas<State, Transition>,
     /// The inverse paths of delta.
     /// This structure helps algorithms requiring interation in the "inverse" order.
     idelta: Deltas<State, Transition>,
@@ -38,6 +44,7 @@ where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
+    /// Construct a new finite automata.
     pub fn new() -> Self {
         Self {
             states: HashSet::new(),
@@ -93,28 +100,79 @@ where
         }
     }
 
+    // Add a transition from `source` to `destination`, consuming `symbol`.
     pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
         // TODO check for state existence or add regardless
         self.add_sigma(symbol.clone());
-        self.add_delta(source.clone(), symbol.clone(), destination.clone(), Delta::Delta);
+        self.add_delta(
+            source.clone(),
+            symbol.clone(),
+            destination.clone(),
+            Delta::Delta,
+        );
         self.add_delta(source, symbol, destination, Delta::IDelta);
+    }
+
+    /// Compute the automata productive states.
+    pub fn productive_states(&self) -> HashSet<State> {
+        let mut stack: VecDeque<_> = self.final_states.iter().collect();
+        // productive == visited
+        let mut productive = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if productive.insert(state.clone()) {
+                if let Some(states) = self
+                    .idelta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+    }
+
+    /// Compute the automata useful states.
+    pub fn useful_states(&self) -> HashSet<State> {
+        // TODO this could benefit from some "caching" of results on productive
+        let productive = self.productive_states();
+        let mut stack: VecDeque<_> = self.initial_states.iter().collect();
+        // productive == visited
+        let mut reachable = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if reachable.insert(state.clone()) {
+                if let Some(states) = self
+                    .delta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+            .intersection(&reachable)
+            .map(|s| s.to_owned())
+            .collect()
     }
 }
 
 /// Implementation of the [Default] trait for a [FiniteAutomata].
-/// This function is equivalent to [FiniteAutomata::new].
 impl<State, Transition> Default for FiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
+    /// This function is equivalent to [FiniteAutomata::new].
     fn default() -> Self {
         Self::new()
     }
 }
 
+/// Type alias for [DeterministicFiniteAutomata].
 pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
+/// A representation for a deterministic finite automata.
 pub struct DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
@@ -128,6 +186,7 @@ where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
+    /// Construct a new deterministic finite automata.
     pub fn new() -> Self {
         Self {
             automata: FiniteAutomata::new(),
@@ -154,51 +213,19 @@ where
         self.automata.add_sigma(sigma);
     }
 
+    // Add a transition from `source` to `destination`, consuming `symbol`.
     pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
         self.automata.add_transition(source, symbol, destination);
     }
 
+    /// Compute the automata productive states.
     pub fn productive_states(&self) -> HashSet<State> {
-        let mut stack: VecDeque<_> = self.automata.final_states.iter().collect();
-        // productive == visited
-        let mut productive = HashSet::new();
-        while let Some(state) = stack.pop_back() {
-            if productive.insert(state.clone()) {
-                if let Some(states) = self
-                    .automata
-                    .idelta
-                    .get(state)
-                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
-                {
-                    stack.extend(states)
-                }
-            }
-        }
-        productive
+        self.automata.productive_states()
     }
 
+    /// Compute the automata useful states.
     pub fn useful_states(&self) -> HashSet<State> {
-        // TODO this could benefit from some "caching" of results on productive
-        let productive = self.productive_states();
-        let mut stack: VecDeque<_> = self.automata.initial_states.iter().collect();
-        // productive == visited
-        let mut reachable = HashSet::new();
-        while let Some(state) = stack.pop_back() {
-            if reachable.insert(state.clone()) {
-                if let Some(states) = self
-                    .automata
-                    .delta
-                    .get(state)
-                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
-                {
-                    stack.extend(states)
-                }
-            }
-        }
-        productive
-            .intersection(&reachable)
-            .map(|s| s.to_owned())
-            .collect()
+        self.automata.useful_states()
     }
 }
 
@@ -284,8 +311,10 @@ mod dfa_tests {
     }
 }
 
+/// Type alias for [NonDeterministicFiniteAutomata].
 pub type NFA<State, Transition> = NonDeterministicFiniteAutomata<State, Transition>;
 
+/// A representation for non-deterministic finite automata.
 pub struct NonDeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
@@ -299,6 +328,7 @@ where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
+    /// Construct a new deterministic finite automata.
     pub fn new() -> Self {
         Self {
             automata: FiniteAutomata::new(),
@@ -325,10 +355,12 @@ where
         self.automata.add_sigma(sigma);
     }
 
+    // Add a transition from `source` to `destination`, consuming `symbol`.
     pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
         self.automata.add_transition(source, symbol, destination);
     }
 
+    // Add a transition from `source` to `destinations`, consuming `symbol`.
     pub fn add_non_deterministic_transitions(
         &mut self,
         source: State,
@@ -338,62 +370,39 @@ where
         // TODO check for state existence or add regardless
         self.automata.add_sigma(symbol.clone());
         for destination in destinations {
-            self.automata.add_delta(source.clone(), symbol.clone(), destination.clone(), Delta::Delta);
-            self.automata.add_delta(source.clone(), symbol.clone(), destination.clone(), Delta::IDelta);
+            self.automata.add_delta(
+                source.clone(),
+                symbol.clone(),
+                destination.clone(),
+                Delta::Delta,
+            );
+            self.automata.add_delta(
+                source.clone(),
+                symbol.clone(),
+                destination.clone(),
+                Delta::IDelta,
+            );
         }
     }
 
+    /// Compute the automata productive states.
     pub fn productive_states(&self) -> HashSet<State> {
-        let mut stack: VecDeque<_> = self.automata.final_states.iter().collect();
-        // productive == visited
-        let mut productive = HashSet::new();
-        while let Some(state) = stack.pop_back() {
-            if productive.insert(state.clone()) {
-                if let Some(states) = self
-                    .automata
-                    .idelta
-                    .get(state)
-                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
-                {
-                    stack.extend(states)
-                }
-            }
-        }
-        productive
+        self.automata.productive_states()
     }
 
+    /// Compute the automata useful states.
     pub fn useful_states(&self) -> HashSet<State> {
-        // TODO this could benefit from some "caching" of results on productive
-        let productive = self.productive_states();
-        let mut stack: VecDeque<_> = self.automata.initial_states.iter().collect();
-        // productive == visited
-        let mut reachable = HashSet::new();
-        while let Some(state) = stack.pop_back() {
-            if reachable.insert(state.clone()) {
-                if let Some(states) = self
-                    .automata
-                    .delta
-                    .get(state)
-                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
-                {
-                    stack.extend(states)
-                }
-            }
-        }
-        productive
-            .intersection(&reachable)
-            .map(|s| s.to_owned())
-            .collect()
+        self.automata.useful_states()
     }
 }
 
 /// Implementation of the [Default] trait for a [NonDeterministicFiniteAutomata].
-/// This function is equivalent to [NonDeterministicFiniteAutomata::new].
 impl<State, Transition> Default for NonDeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
+    /// This function is equivalent to [NonDeterministicFiniteAutomata::new].
     fn default() -> Self {
         Self::new()
     }
