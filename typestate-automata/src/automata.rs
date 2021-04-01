@@ -20,7 +20,7 @@ where
     pub final_states: HashSet<State>,
     /// Finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
-    delta: HashMap<State, HashMap<Transition, HashSet<State>>>,
+    pub delta: HashMap<State, HashMap<Transition, HashSet<State>>>,
     /// The inverse paths of delta.
     /// This structure helps algorithms requiring interation in the "inverse" order.
     idelta: HashMap<State, HashMap<Transition, HashSet<State>>>,
@@ -288,5 +288,163 @@ mod dfa_tests {
             .map(|i| i.to_owned())
             .collect::<HashSet<i32>>();
         assert_eq!(expected, result);
+    }
+}
+
+pub type NFA<State, Transition> = NonDeterministicFiniteAutomata<State, Transition>;
+
+pub struct NonDeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    pub automata: FiniteAutomata<State, Transition>,
+}
+
+impl<State, Transition> NonDeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    pub fn new() -> Self {
+        Self {
+            automata: FiniteAutomata::new(),
+        }
+    }
+
+    /// Add a state to the automata.
+    pub fn add_state(&mut self, state: State) {
+        self.automata.add_state(state);
+    }
+
+    /// Add an initial state to the automata.
+    pub fn add_initial(&mut self, state: State) {
+        self.automata.add_initial(state);
+    }
+
+    /// Add a final state to the automata.
+    pub fn add_final(&mut self, state: State) {
+        self.automata.add_final(state);
+    }
+
+    /// Add a new symbol to the automata alphabet.
+    pub fn add_sigma(&mut self, sigma: Transition) {
+        self.automata.add_sigma(sigma);
+    }
+
+    // TODO there has got to be a way to reduce this code duplication, without macros
+    fn add_delta(&mut self, source: State, symbol: Transition, destination: State) {
+        let delta = &mut self.automata.delta;
+        if let Some(transitions) = delta.get_mut(&source) {
+            if let Some(destinations) = transitions.get_mut(&symbol) {
+                destinations.insert(destination);
+            } else {
+                let mut destinations = HashSet::new();
+                destinations.insert(destination);
+                transitions.insert(symbol, destinations);
+            }
+        } else {
+            let mut transitions = HashMap::new();
+            let mut destinations = HashSet::new();
+            destinations.insert(destination);
+            transitions.insert(symbol, destinations);
+            delta.insert(source, transitions);
+        }
+    }
+
+    // TODO there has got to be a way to reduce this code duplication, without macros
+    fn add_idelta(&mut self, source: State, symbol: Transition, destination: State) {
+        let idelta = &mut self.automata.idelta;
+        if let Some(transitions) = idelta.get_mut(&destination) {
+            if let Some(sources) = transitions.get_mut(&symbol) {
+                sources.insert(source);
+            } else {
+                let mut sources = HashSet::new();
+                sources.insert(source);
+                transitions.insert(symbol, sources);
+            }
+        } else {
+            let mut transitions = HashMap::new();
+            let mut sources = HashSet::new();
+            sources.insert(source);
+            transitions.insert(symbol, sources);
+            idelta.insert(destination, transitions);
+        }
+    }
+
+    pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
+        // TODO check for state existence or add regardless
+        self.automata.add_sigma(symbol.clone());
+        self.add_delta(source.clone(), symbol.clone(), destination.clone());
+        self.add_idelta(source, symbol, destination);
+    }
+
+    pub fn add_non_deterministic_transitions(
+        &mut self,
+        source: State,
+        symbol: Transition,
+        destinations: impl Iterator<Item = State>,
+    ) {
+        // TODO check for state existence or add regardless
+        self.automata.add_sigma(symbol.clone());
+        for destination in destinations {
+            self.add_delta(source.clone(), symbol.clone(), destination.clone());
+            self.add_idelta(source.clone(), symbol.clone(), destination);
+        }
+    }
+
+    pub fn productive_states(&self) -> HashSet<State> {
+        let mut stack: VecDeque<_> = self.automata.final_states.iter().collect();
+        // productive == visited
+        let mut productive = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if productive.insert(state.clone()) {
+                if let Some(states) = self
+                    .automata
+                    .idelta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+    }
+
+    pub fn useful_states(&self) -> HashSet<State> {
+        // TODO this could benefit from some "caching" of results on productive
+        let productive = self.productive_states();
+        let mut stack: VecDeque<_> = self.automata.initial_states.iter().collect();
+        // productive == visited
+        let mut reachable = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if reachable.insert(state.clone()) {
+                if let Some(states) = self
+                    .automata
+                    .delta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+            .intersection(&reachable)
+            .map(|s| s.to_owned())
+            .collect()
+    }
+}
+
+/// Implementation of the [Default] trait for a [NonDeterministicFiniteAutomata].
+/// This function is equivalent to [NonDeterministicFiniteAutomata::new].
+impl<State, Transition> Default for NonDeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -356,7 +356,7 @@ mod digraph_test {
 /// Alias for the `DeterministicFiniteAutomata` type.
 pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
-/// A deterministic finitie automata representation.
+/// A deterministic finite automata representation.
 ///
 /// The automata itself is implemented on top of `petgraph::graphmap::DiGraphMap`.
 pub struct DeterministicFiniteAutomata<State, Transition>

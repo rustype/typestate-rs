@@ -4,10 +4,10 @@ use quote::{format_ident, quote, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
-    rc::Rc,
+    hash::Hash,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
-use typestate_automata::automata::DFA;
+use typestate_automata::automata::{DFA, NFA};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -82,44 +82,76 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // report transition_visitor errors and return
     bail_if_any!(transition_visitor.errors);
 
-    let dfa: Result<DFA<Ident, Ident>, ()> = state_machine_info.try_into();
-    if let Ok(dfa) = dfa {
-        // TODO clean this mess
+    let fa: FiniteAutomata<_, _> = state_machine_info.into();
+    match fa {
+        FiniteAutomata::Deterministic(dfa) => {
+            // TODO clean this mess
 
-        // compute productive
-        let productive = dfa.productive_states();
+            // compute productive
+            let productive = dfa.productive_states();
 
-        // get non-productive to show errors
-        let non_productive: HashSet<Ident> = dfa
-            .automata
-            .states
-            .difference(&productive)
-            .map(|s| s.to_owned())
-            .collect();
-        let errors: Vec<Error> = non_productive
-            .into_iter()
-            .map(|ident| Error::new_spanned(ident, "Non-productive state."))
-            .collect();
-        bail_if_any!(errors);
+            // get non-productive to show errors
+            let non_productive: HashSet<Ident> = dfa
+                .automata
+                .states
+                .difference(&productive)
+                .map(|s| s.to_owned())
+                .collect();
+            let errors: Vec<Error> = non_productive
+                .into_iter()
+                .map(|ident| Error::new_spanned(ident, "Non-productive state."))
+                .collect();
+            bail_if_any!(errors);
 
-        // compute useful
-        let useful = dfa.useful_states();
-        // compute non-useful to show errors
-        let non_useful: HashSet<Ident> = dfa
-            .automata
-            .states
-            .difference(&useful)
-            .map(|s| s.to_owned())
-            .collect();
-        let errors: Vec<Error> = non_useful
-            .into_iter()
-            .map(|ident| Error::new_spanned(ident, "Non-useful state."))
-            .collect();
-        bail_if_any!(errors);
-    } else {
-        return Error::new(Span::call_site(), "Unsupported automata.")
-            .to_compile_error()
-            .into();
+            // compute useful
+            let useful = dfa.useful_states();
+            // compute non-useful to show errors
+            let non_useful: HashSet<Ident> = dfa
+                .automata
+                .states
+                .difference(&useful)
+                .map(|s| s.to_owned())
+                .collect();
+            let errors: Vec<Error> = non_useful
+                .into_iter()
+                .map(|ident| Error::new_spanned(ident, "Non-useful state."))
+                .collect();
+            bail_if_any!(errors);
+        }
+        FiniteAutomata::NonDeterministic(nfa) => {
+            // TODO clean this mess
+
+            // compute productive
+            let productive = nfa.productive_states();
+
+            // get non-productive to show errors
+            let non_productive: HashSet<Ident> = nfa
+                .automata
+                .states
+                .difference(&productive)
+                .map(|s| s.to_owned())
+                .collect();
+            let errors: Vec<Error> = non_productive
+                .into_iter()
+                .map(|ident| Error::new_spanned(ident, "Non-productive state."))
+                .collect();
+            bail_if_any!(errors);
+
+            // compute useful
+            let useful = nfa.useful_states();
+            // compute non-useful to show errors
+            let non_useful: HashSet<Ident> = nfa
+                .automata
+                .states
+                .difference(&useful)
+                .map(|s| s.to_owned())
+                .collect();
+            let errors: Vec<Error> = non_useful
+                .into_iter()
+                .map(|ident| Error::new_spanned(ident, "Non-useful state."))
+                .collect();
+            bail_if_any!(errors);
+        }
     }
 
     // appending new code should happen after all other code is processed
@@ -305,11 +337,17 @@ impl Default for StateMachineInfo {
     }
 }
 
-impl TryInto<DFA<Ident, Ident>> for StateMachineInfo {
-    // TODO replace unit with a decent error type
-    type Error = ();
+enum FiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    Deterministic(DFA<State, Transition>),
+    NonDeterministic(NFA<State, Transition>),
+}
 
-    fn try_into(self) -> Result<DFA<Ident, Ident>, Self::Error> {
+impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
+    fn into(self) -> FiniteAutomata<Ident, Ident> {
         if self.non_det_states.is_empty() {
             let mut dfa = DFA::new();
             self.det_states
@@ -325,9 +363,36 @@ impl TryInto<DFA<Ident, Ident>> for StateMachineInfo {
             self.transitions
                 .into_iter()
                 .for_each(|t| dfa.add_transition(t.source, t.symbol, t.destination));
-            Ok(dfa)
+            FiniteAutomata::Deterministic(dfa)
         } else {
-            Err(())
+            let mut nfa = NFA::new();
+            self.det_states
+                .into_iter()
+                .map(|it| it.ident)
+                .for_each(|ident| nfa.add_state(ident));
+            self.initial_states
+                .into_iter()
+                .for_each(|ident| nfa.add_initial(ident));
+            self.final_states
+                .into_iter()
+                .for_each(|ident| nfa.add_final(ident));
+            for t in self.transitions {
+                if let Some(state) = self.non_det_states.get(&t.destination) {
+                    nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
+                    nfa.add_non_deterministic_transitions(
+                        t.destination,
+                        t.symbol,
+                        state.variants.iter().map(|v| v.ident.clone()),
+                    )
+                } else {
+                    nfa.add_transition(t.source, t.symbol, t.destination)
+                }
+            }
+            self.non_det_states
+                .into_iter()
+                .for_each(|(ident, _)| nfa.add_state(ident));
+            eprintln!("{:#?}", nfa.automata.delta);
+            FiniteAutomata::NonDeterministic(nfa)
         }
     }
 }
@@ -550,6 +615,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             }
         }
         if self.errors.is_empty() {
+            self.state_machine_info.add_state(i.clone().into());
             self.state_machine_info
                 .non_det_states
                 .insert(i.ident.clone(), i.clone());
@@ -637,9 +703,10 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         // TODO account for non-deterministic states
-        let sig = &mut i.sig;
+        let sig = dbg!(&mut i.sig);
         let input = self.input_kind(sig);
-        let output = self.output_kind(sig);
+        let output = dbg!(self.output_kind(sig));
+
         match (input, output) {
             (None, None) => {} // unknown
             (None, Some(return_ty_ident)) => {
@@ -658,7 +725,6 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                     return_ty_ident,
                     i.sig.ident.clone(),
                 );
-                println!("{:#?}", transition);
                 self.state_machine_info.transitions.insert(transition);
             } // transition
         };
