@@ -110,7 +110,7 @@ where
             destination.clone(),
             Delta::Delta,
         );
-        self.add_delta(source, symbol, destination, Delta::IDelta);
+        self.add_delta(destination, symbol, source, Delta::IDelta);
     }
 
     /// Compute the automata productive states.
@@ -231,6 +231,48 @@ mod fa_tests {
         let expected_states = [7].into_hash_set();
         let result_states = fa.final_states;
         assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_add_transition() {
+        let fa = setup_automata();
+        let expected_deltas = [
+            (1, 2),
+            (1, 3),
+            (2, 6),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+        ]
+        .iter()
+        .map(|t| t.to_owned())
+        .collect::<HashSet<_>>();
+        let expected_ideltas = expected_deltas
+            .iter()
+            .map(|(fst, snd)| (*snd, *fst))
+            .map(|t| t.to_owned())
+            .collect::<HashSet<_>>();
+        let mut result_deltas = HashSet::new();
+        for (src, transitions) in fa.delta {
+            for destinations in transitions.values() {
+                for &dst in destinations {
+                    result_deltas.insert((src, dst));
+                }
+            }
+        }
+        let mut result_ideltas = HashSet::new();
+        for (src, transitions) in fa.idelta {
+            for destinations in transitions.values() {
+                for &dst in destinations {
+                    result_ideltas.insert((src, dst));
+                }
+            }
+        }
+        assert_eq!(expected_deltas, result_deltas);
+        assert_eq!(expected_ideltas, result_ideltas);
     }
 
     #[test]
