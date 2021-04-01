@@ -3,6 +3,8 @@ use std::{
     hash::Hash,
 };
 
+type Deltas<State, Transition> = HashMap<State, HashMap<Transition, HashSet<State>>>;
+
 pub type FA<State, Transition> = FiniteAutomata<State, Transition>;
 
 pub struct FiniteAutomata<State, Transition>
@@ -20,10 +22,10 @@ where
     pub final_states: HashSet<State>,
     /// Finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
-    pub delta: HashMap<State, HashMap<Transition, HashSet<State>>>,
+    pub delta: Deltas<State, Transition>,
     /// The inverse paths of delta.
     /// This structure helps algorithms requiring interation in the "inverse" order.
-    idelta: HashMap<State, HashMap<Transition, HashSet<State>>>,
+    idelta: Deltas<State, Transition>,
 }
 
 impl<State, Transition> FiniteAutomata<State, Transition>
