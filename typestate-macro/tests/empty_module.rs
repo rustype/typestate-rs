@@ -1,6 +1,6 @@
 use typestate::typestate;
 
 #[typestate]
-struct S;
+mod m {}
 
 fn main() {}

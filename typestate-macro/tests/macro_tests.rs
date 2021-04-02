@@ -1,7 +1,27 @@
+macro_rules! fail {
+    ($tests:ident [$($head:ident),* $(,)?]) => {
+        $( $tests.compile_fail(format!("tests/{}.rs", stringify!($head))); )*
+    };
+}
+
+macro_rules! pass {
+    ($tests:ident [$($head:ident),* $(,)?]) => {
+        $( $tests.pass(format!("tests/{}.rs", stringify!($head))); )*
+    };
+}
+
 #[test]
 fn tests() {
+    // TODO add tests for:
+    // duplicate state attributes
+    // conflicting state attributes
+    // unproductive states
+    // useless states
     let t = trybuild::TestCases::new();
-    t.pass("tests/01-single-struct.rs");
-    t.compile_fail("tests/02-no-mod.rs");
-    t.pass("tests/03-single-struct-w-state.rs");
+    fail!(t[
+        empty_module,
+        duplicate_automata_attr,
+        conflicting_automata_attr,
+    ]);
+    pass!(t[empty_automata]);
 }
