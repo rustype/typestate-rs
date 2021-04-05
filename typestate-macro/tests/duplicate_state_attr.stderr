@@ -1,0 +1,5 @@
+error: Duplicate attribute.
+ --> $DIR/duplicate_state_attr.rs:9:5
+  |
+9 |     #[state]
+  |     ^^^^^^^^

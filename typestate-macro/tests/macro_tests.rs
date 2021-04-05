@@ -12,16 +12,18 @@ macro_rules! pass {
 
 #[test]
 fn tests() {
-    // TODO add tests for:
-    // duplicate state attributes
-    // conflicting state attributes
-    // unproductive states
-    // useless states
     let t = trybuild::TestCases::new();
     fail!(t[
         empty_module,
         duplicate_automata_attr,
+        duplicate_state_attr,
         conflicting_automata_attr,
+        conflicting_state_attr,
+        unproductive_state,
+        useless_state,
     ]);
-    pass!(t[empty_automata]);
+    pass!(t[
+        empty_automata,
+        stateful_automata,
+    ]);
 }

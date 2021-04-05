@@ -1,0 +1,5 @@
+error: Multiple attributes are declared.
+ --> $DIR/conflicting_state_attr.rs:9:5
+  |
+9 |     #[state]
+  |     ^^^^^^^^
