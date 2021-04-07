@@ -7,7 +7,7 @@ use std::{
     hash::Hash,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
-use typestate_automata::{DFA, NFA};
+use typestate_automata::{DFA, NFA, dot::*};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -82,6 +82,8 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // report transition_visitor errors and return
     bail_if_any!(transition_visitor.errors);
 
+    let name = state_machine_info.main_state_name().clone();
+
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     match fa {
         FiniteAutomata::Deterministic(dfa) => {
@@ -115,6 +117,9 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
                 .map(|ident| Error::new_spanned(ident, "Non-useful state."))
                 .collect();
             bail_if_any!(errors);
+
+            let dot = Dot::from(dfa.clone());
+            dot.try_into_file(format!("./{}.dot", name));
         }
         FiniteAutomata::NonDeterministic(nfa) => {
             // TODO clean this mess
