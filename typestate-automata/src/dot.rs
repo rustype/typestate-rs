@@ -92,8 +92,17 @@ where
     Node: Eq + Hash + Clone + Display,
     Edge: Eq + Hash + Clone + Display,
 {
-    fn from(_: NFA<Node, Edge>) -> Self {
-        todo!()
+    fn from(nfa: NFA<Node, Edge>) -> Self {
+        let mut dot = Dot::new();
+        for (source, transitions) in nfa.delta {
+            for (edge, destinations) in transitions {
+                for destination in destinations {
+                    dot.edges
+                        .push(DotEdge::new(source.clone(), edge.clone(), destination))
+                }
+            }
+        }
+        dot
     }
 }
 
