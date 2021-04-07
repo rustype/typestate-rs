@@ -14,24 +14,24 @@ enum Delta {
     IDelta,
 }
 
-/// Type alias for [FiniteAutomata].
-pub type FA<State, Transition> = FiniteAutomata<State, Transition>;
+/// Type alias for [DeterministicFiniteAutomata].
+pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
-/// A representation for finite automata.
-pub struct FiniteAutomata<State, Transition>
+/// A representation for a deterministic finite automata.
+pub struct DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
-    /// Finite automata states.
+    /// Deterministic finite automata states.
     pub states: HashSet<State>,
-    /// Finite automata transition symbols.
+    /// Deterministic finite automata transition symbols.
     sigma: HashSet<Transition>,
-    /// Finite automata initial state-indexes.
+    /// Deterministic finite automata initial state-indexes.
     pub initial_states: HashSet<State>,
-    /// Finite automata final state-indexes.
+    /// Deterministic finite automata final state-indexes.
     pub final_states: HashSet<State>,
-    /// Finite automata transition functions.
+    /// Deterministic finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
     delta: Deltas<State, Transition>,
     /// The inverse paths of delta.
@@ -39,12 +39,12 @@ where
     idelta: Deltas<State, Transition>,
 }
 
-impl<State, Transition> FiniteAutomata<State, Transition>
+impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
-    /// Construct a new finite automata.
+    /// Construct a new deterministic finite automata.
     pub fn new() -> Self {
         Self {
             states: HashSet::new(),
@@ -157,218 +157,6 @@ where
     }
 }
 
-/// Implementation of the [Default] trait for a [FiniteAutomata].
-impl<State, Transition> Default for FiniteAutomata<State, Transition>
-where
-    State: Eq + Hash + Clone,
-    Transition: Eq + Hash + Clone,
-{
-    /// This function is equivalent to [FiniteAutomata::new].
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Tests for [FiniteAutomata].
-#[cfg(test)]
-mod fa_tests {
-    use super::test_traits::*;
-    use super::*;
-
-    fn setup_automata() -> FA<i32, ()> {
-        let mut fa = FA::new();
-        let state_list = [1, 2, 3, 4, 5, 6, 7];
-        for &state in state_list.iter() {
-            fa.add_state(state);
-        }
-        fa.add_initial(1);
-        fa.add_final(7);
-        let transition_list = [
-            (1, 2),
-            (1, 3),
-            (2, 6),
-            (3, 4),
-            (3, 5),
-            (3, 6),
-            (4, 5),
-            (5, 7),
-            (6, 7),
-        ];
-        for &(src, dst) in transition_list.iter() {
-            fa.add_transition(src, (), dst);
-        }
-        fa
-    }
-
-    fn setup_automata_loop() -> FA<i32, ()> {
-        let mut fa = FA::new();
-        fa.add_initial(1);
-        fa.add_final(2);
-        fa.add_transition(1, (), 2);
-        fa.add_transition(2, (), 1);
-        fa
-    }
-
-    #[test]
-    fn test_add_state() {
-        let fa = setup_automata();
-        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
-        let result_states = fa.states;
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_add_initial_state() {
-        let fa = setup_automata();
-        let expected_states = [1].into_hash_set();
-        let result_states = fa.initial_states;
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_add_final_state() {
-        let fa = setup_automata();
-        let expected_states = [7].into_hash_set();
-        let result_states = fa.final_states;
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_add_transition() {
-        let fa = setup_automata();
-        let expected_deltas = [
-            (1, 2),
-            (1, 3),
-            (2, 6),
-            (3, 4),
-            (3, 5),
-            (3, 6),
-            (4, 5),
-            (5, 7),
-            (6, 7),
-        ]
-        .iter()
-        .map(|t| t.to_owned())
-        .collect::<HashSet<_>>();
-        let expected_ideltas = expected_deltas
-            .iter()
-            .map(|(fst, snd)| (*snd, *fst))
-            .map(|t| t.to_owned())
-            .collect::<HashSet<_>>();
-        let mut result_deltas = HashSet::new();
-        for (src, transitions) in fa.delta {
-            for destinations in transitions.values() {
-                for &dst in destinations {
-                    result_deltas.insert((src, dst));
-                }
-            }
-        }
-        let mut result_ideltas = HashSet::new();
-        for (src, transitions) in fa.idelta {
-            for destinations in transitions.values() {
-                for &dst in destinations {
-                    result_ideltas.insert((src, dst));
-                }
-            }
-        }
-        assert_eq!(expected_deltas, result_deltas);
-        assert_eq!(expected_ideltas, result_ideltas);
-    }
-
-    #[test]
-    fn test_productive() {
-        let fa = setup_automata();
-        let result = fa.productive_states();
-        let expected = [1, 2, 3, 4, 5, 6, 7]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn test_productive_loop() {
-        let fa = setup_automata_loop();
-        let result = fa.productive_states();
-        let expected = [1, 2]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn test_useful() {
-        let fa = setup_automata();
-        let result = fa.useful_states();
-        let expected = [1, 2, 3, 4, 5, 6, 7]
-            .iter()
-            .map(|i| i.to_owned())
-            .collect::<HashSet<i32>>();
-        assert_eq!(expected, result);
-    }
-}
-
-/// Type alias for [DeterministicFiniteAutomata].
-pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
-
-/// A representation for a deterministic finite automata.
-pub struct DeterministicFiniteAutomata<State, Transition>
-where
-    State: Eq + Hash + Clone,
-    Transition: Eq + Hash + Clone,
-{
-    pub automata: FiniteAutomata<State, Transition>,
-}
-
-impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
-where
-    State: Eq + Hash + Clone,
-    Transition: Eq + Hash + Clone,
-{
-    /// Construct a new deterministic finite automata.
-    pub fn new() -> Self {
-        Self {
-            automata: FiniteAutomata::new(),
-        }
-    }
-
-    /// Add a state to the automata.
-    pub fn add_state(&mut self, state: State) {
-        self.automata.add_state(state);
-    }
-
-    /// Add an initial state to the automata.
-    pub fn add_initial(&mut self, state: State) {
-        self.automata.add_initial(state);
-    }
-
-    /// Add a final state to the automata.
-    pub fn add_final(&mut self, state: State) {
-        self.automata.add_final(state);
-    }
-
-    /// Add a new symbol to the automata alphabet.
-    pub fn add_sigma(&mut self, sigma: Transition) {
-        self.automata.add_sigma(sigma);
-    }
-
-    // Add a transition from `source` to `destination`, consuming `symbol`.
-    pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
-        self.automata.add_transition(source, symbol, destination);
-    }
-
-    /// Compute the automata productive states.
-    pub fn productive_states(&self) -> HashSet<State> {
-        self.automata.productive_states()
-    }
-
-    /// Compute the automata useful states.
-    pub fn useful_states(&self) -> HashSet<State> {
-        self.automata.useful_states()
-    }
-}
-
 /// Implementation of the [Default] trait for a [DeterministicFiniteAutomata].
 impl<State, Transition> Default for DeterministicFiniteAutomata<State, Transition>
 where
@@ -425,7 +213,7 @@ mod dfa_tests {
     fn test_add_state() {
         let dfa = setup_automata();
         let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
-        let result_states = dfa.automata.states;
+        let result_states = dfa.states;
         assert_eq!(expected_states, result_states);
     }
 
@@ -433,7 +221,7 @@ mod dfa_tests {
     fn test_add_initial_state() {
         let dfa = setup_automata();
         let expected_states = [1].into_hash_set();
-        let result_states = dfa.automata.initial_states;
+        let result_states = dfa.initial_states;
         assert_eq!(expected_states, result_states);
     }
 
@@ -441,7 +229,7 @@ mod dfa_tests {
     fn test_add_final_state() {
         let dfa = setup_automata();
         let expected_states = [7].into_hash_set();
-        let result_states = dfa.automata.final_states;
+        let result_states = dfa.final_states;
         assert_eq!(expected_states, result_states);
     }
 
@@ -468,7 +256,7 @@ mod dfa_tests {
             .map(|t| t.to_owned())
             .collect::<HashSet<_>>();
         let mut result_deltas = HashSet::new();
-        for (src, transitions) in dfa.automata.delta {
+        for (src, transitions) in dfa.delta {
             for destinations in transitions.values() {
                 for &dst in destinations {
                     result_deltas.insert((src, dst));
@@ -476,7 +264,7 @@ mod dfa_tests {
             }
         }
         let mut result_ideltas = HashSet::new();
-        for (src, transitions) in dfa.automata.idelta {
+        for (src, transitions) in dfa.idelta {
             for destinations in transitions.values() {
                 for &dst in destinations {
                     result_ideltas.insert((src, dst));
@@ -530,7 +318,20 @@ where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
-    pub automata: FiniteAutomata<State, Transition>,
+    /// Deterministic finite automata states.
+    pub states: HashSet<State>,
+    /// Deterministic finite automata transition symbols.
+    sigma: HashSet<Transition>,
+    /// Deterministic finite automata initial state-indexes.
+    pub initial_states: HashSet<State>,
+    /// Deterministic finite automata final state-indexes.
+    pub final_states: HashSet<State>,
+    /// Deterministic finite automata transition functions.
+    /// Map of state indexes to map of transitions to state indexes.
+    delta: Deltas<State, Transition>,
+    /// The inverse paths of delta.
+    /// This structure helps algorithms requiring interation in the "inverse" order.
+    idelta: Deltas<State, Transition>,
 }
 
 impl<State, Transition> NonDeterministicFiniteAutomata<State, Transition>
@@ -538,36 +339,73 @@ where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
-    /// Construct a new deterministic finite automata.
+    /// Construct a new non-deterministic finite automata.
     pub fn new() -> Self {
         Self {
-            automata: FiniteAutomata::new(),
+            states: HashSet::new(),
+            sigma: HashSet::new(),
+            initial_states: HashSet::new(),
+            final_states: HashSet::new(),
+            delta: HashMap::new(),
+            idelta: HashMap::new(),
         }
     }
 
     /// Add a state to the automata.
     pub fn add_state(&mut self, state: State) {
-        self.automata.add_state(state);
+        self.states.insert(state);
     }
 
     /// Add an initial state to the automata.
     pub fn add_initial(&mut self, state: State) {
-        self.automata.add_initial(state);
+        self.states.insert(state.clone());
+        self.initial_states.insert(state);
     }
 
     /// Add a final state to the automata.
     pub fn add_final(&mut self, state: State) {
-        self.automata.add_final(state);
+        self.states.insert(state.clone());
+        self.final_states.insert(state);
     }
 
     /// Add a new symbol to the automata alphabet.
     pub fn add_sigma(&mut self, sigma: Transition) {
-        self.automata.add_sigma(sigma);
+        self.sigma.insert(sigma);
+    }
+
+    fn add_delta(&mut self, source: State, symbol: Transition, destination: State, delta: Delta) {
+        let delta = match delta {
+            Delta::Delta => &mut self.delta,
+            Delta::IDelta => &mut self.idelta,
+        };
+        if let Some(transitions) = delta.get_mut(&source) {
+            if let Some(destinations) = transitions.get_mut(&symbol) {
+                destinations.insert(destination);
+            } else {
+                let mut destinations = HashSet::new();
+                destinations.insert(destination);
+                transitions.insert(symbol, destinations);
+            }
+        } else {
+            let mut transitions = HashMap::new();
+            let mut destinations = HashSet::new();
+            destinations.insert(destination);
+            transitions.insert(symbol, destinations);
+            delta.insert(source, transitions);
+        }
     }
 
     // Add a transition from `source` to `destination`, consuming `symbol`.
     pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
-        self.automata.add_transition(source, symbol, destination);
+        // TODO check for state existence or add regardless
+        self.add_sigma(symbol.clone());
+        self.add_delta(
+            source.clone(),
+            symbol.clone(),
+            destination.clone(),
+            Delta::Delta,
+        );
+        self.add_delta(destination, symbol, source, Delta::IDelta);
     }
 
     // Add a transition from `source` to `destinations`, consuming `symbol`.
@@ -578,15 +416,15 @@ where
         destinations: impl Iterator<Item = State>,
     ) {
         // TODO check for state existence or add regardless
-        self.automata.add_sigma(symbol.clone());
+        self.add_sigma(symbol.clone());
         for destination in destinations {
-            self.automata.add_delta(
+            self.add_delta(
                 source.clone(),
                 symbol.clone(),
                 destination.clone(),
                 Delta::Delta,
             );
-            self.automata.add_delta(
+            self.add_delta(
                 destination.clone(),
                 symbol.clone(),
                 source.clone(),
@@ -597,12 +435,45 @@ where
 
     /// Compute the automata productive states.
     pub fn productive_states(&self) -> HashSet<State> {
-        self.automata.productive_states()
+        let mut stack: VecDeque<_> = self.final_states.iter().collect();
+        // productive == visited
+        let mut productive = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if productive.insert(state.clone()) {
+                if let Some(states) = self
+                    .idelta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
     }
 
     /// Compute the automata useful states.
     pub fn useful_states(&self) -> HashSet<State> {
-        self.automata.useful_states()
+        // TODO this could benefit from some "caching" of results on productive
+        let productive = self.productive_states();
+        let mut stack: VecDeque<_> = self.initial_states.iter().collect();
+        // productive == visited
+        let mut reachable = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if reachable.insert(state.clone()) {
+                if let Some(states) = self
+                    .delta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+            .intersection(&reachable)
+            .map(|s| s.to_owned())
+            .collect()
     }
 }
 
@@ -662,7 +533,7 @@ mod nfa_tests {
     fn test_add_state() {
         let nfa = setup_automata();
         let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
-        let result_states = nfa.automata.states;
+        let result_states = nfa.states;
         assert_eq!(expected_states, result_states);
     }
 
@@ -670,7 +541,7 @@ mod nfa_tests {
     fn test_add_initial_state() {
         let nfa = setup_automata();
         let expected_states = [1].into_hash_set();
-        let result_states = nfa.automata.initial_states;
+        let result_states = nfa.initial_states;
         assert_eq!(expected_states, result_states);
     }
 
@@ -678,7 +549,7 @@ mod nfa_tests {
     fn test_add_final_state() {
         let nfa = setup_automata();
         let expected_states = [7].into_hash_set();
-        let result_states = nfa.automata.final_states;
+        let result_states = nfa.final_states;
         assert_eq!(expected_states, result_states);
     }
 
@@ -705,7 +576,7 @@ mod nfa_tests {
             .map(|t| t.to_owned())
             .collect::<HashSet<_>>();
         let mut result_deltas = HashSet::new();
-        for (src, transitions) in nfa.automata.delta {
+        for (src, transitions) in nfa.delta {
             for destinations in transitions.values() {
                 for &dst in destinations {
                     result_deltas.insert((src, dst));
@@ -713,7 +584,7 @@ mod nfa_tests {
             }
         }
         let mut result_ideltas = HashSet::new();
-        for (src, transitions) in nfa.automata.idelta {
+        for (src, transitions) in nfa.idelta {
             for destinations in transitions.values() {
                 for &dst in destinations {
                     result_ideltas.insert((src, dst));
@@ -764,7 +635,7 @@ mod nfa_tests {
             .map(|t| t.to_owned())
             .collect::<HashSet<_>>();
         let mut result_deltas = HashSet::new();
-        for (src, transitions) in nfa.automata.delta {
+        for (src, transitions) in nfa.delta {
             for destinations in transitions.values() {
                 for &dst in destinations {
                     result_deltas.insert((src, dst));
@@ -772,7 +643,7 @@ mod nfa_tests {
             }
         }
         let mut result_ideltas = HashSet::new();
-        for (src, transitions) in nfa.automata.idelta {
+        for (src, transitions) in nfa.idelta {
             for destinations in transitions.values() {
                 for &dst in destinations {
                     result_ideltas.insert((src, dst));
