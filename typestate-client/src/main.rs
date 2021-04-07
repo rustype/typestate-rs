@@ -1,6 +1,6 @@
+use maintenance::*;
 use traffic_light::*;
 use typestate::typestate;
-
 
 const N_CYCLES_MAINTENANCE: u64 = 1000;
 
@@ -12,7 +12,57 @@ fn main() {
     }
     let yellow_light = green_light.to_yellow();
     let red_light = yellow_light.to_red();
-    red_light.turn_off();
+    let _ = red_light.turn_off();
+}
+
+#[typestate]
+mod maintenance {
+    use super::traffic_light::*;
+    #[automata]
+    pub struct Maintenance {
+        pub tl: TrafficLight<Red>,
+    }
+
+    #[state]
+    pub struct In;
+    #[state]
+    pub struct Out;
+
+    pub trait In {
+        fn new() -> In;
+        fn perform(self) -> Out;
+    }
+
+    pub trait Out {
+        fn test(self) -> Out;
+        fn end(self);
+    }
+}
+
+impl InState for Maintenance<In> {
+    fn new() -> Maintenance<In> {
+        Maintenance::<In> {
+            tl: TrafficLight::<Red>::turn_on(),
+            state: In,
+        }
+    }
+    fn perform(self) -> Maintenance<Out> {
+        Maintenance::<Out> {
+            tl: self.tl,
+            state: Out,
+        }
+    }
+}
+
+impl OutState for Maintenance<Out> {
+    fn test(mut self) -> Maintenance<Out> {
+        let green = self.tl.to_green();
+        let yellow = green.to_yellow();
+        let red = yellow.to_red();
+        self.tl = red;
+        self
+    }
+    fn end(self) {}
 }
 
 #[typestate]
@@ -39,7 +89,6 @@ mod traffic_light {
         fn turn_on() -> Red;
         fn turn_off(self);
     }
-
 }
 
 impl GreenState for TrafficLight<Green> {
