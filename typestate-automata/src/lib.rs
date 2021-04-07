@@ -1,679 +1,686 @@
-pub mod automata;
-
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    rc::Rc,
+    hash::Hash,
 };
 
-use std::hash::Hash;
+/// Type alias for the transition "minigraph".
+type Deltas<State, Transition> = HashMap<State, HashMap<Transition, HashSet<State>>>;
 
-#[derive(PartialEq, Eq, Hash)]
-pub enum Direction {
-    Incoming,
-    Outgoing,
+/// Delta kind enumeration.
+/// Distinguishes between `Delta` (forward transitions) and
+/// `IDelta` (backward transitions) which are the inverse of `Delta`.
+enum Delta {
+    Delta,
+    IDelta,
 }
 
-#[derive(PartialEq, Eq, Hash)]
-pub struct DiEdge<Node, Edge>
-where
-    Node: Eq + Hash,
-    Edge: Eq + Hash,
-{
-    edge: Rc<Edge>,
-    node: Rc<Node>,
-    direction: Direction,
-}
-
-impl<Node, Edge> DiEdge<Node, Edge>
-where
-    Node: Eq + Hash,
-    Edge: Eq + Hash,
-{
-    /// Construct a new incoming edge.
-    fn new_incoming(edge: Rc<Edge>, node: Rc<Node>) -> Self {
-        Self {
-            edge,
-            node,
-            direction: Direction::Incoming,
-        }
-    }
-
-    /// Construct a new outgoing edge.
-    fn new_outgoing(edge: Rc<Edge>, node: Rc<Node>) -> Self {
-        Self {
-            edge,
-            node,
-            direction: Direction::Outgoing,
-        }
-    }
-}
-
-pub struct DiGraph<Node, Edge>
-where
-    Node: Eq + Hash,
-    Edge: Eq + Hash,
-{
-    pub nodes: HashSet<Rc<Node>>,
-    pub edges: HashMap<Rc<Node>, HashSet<DiEdge<Node, Edge>>>,
-}
-
-impl<Node, Edge> DiGraph<Node, Edge>
-where
-    Node: Eq + Hash,
-    Edge: Eq + Hash,
-{
-    /// Construct a new directed graph.
-    pub fn new() -> Self {
-        Self {
-            nodes: HashSet::new(),
-            edges: HashMap::new(),
-        }
-    }
-
-    /// Add a new node to the graph.
-    ///
-    /// Returns `true` if the node was not present in the graph,
-    /// otherwise it returns `false`.
-    pub fn add_node(&mut self, node: Node) -> Rc<Node> {
-        // TODO get this reviewed
-        // WARN `Rc<Node>` "duplication"
-        // Consider nodes `A` & `B` where `A == B` although they are different objects in memory.
-        // Should the graph detect this case and return the old `Rc<Node>`?
-        // If we need to return the old `Rc<Node>` we can use a `slab::Slab` along with an `HashMap<Rc<Node>, usize>`,
-        // which maps `Rc`s to indices on the slab.
-        let node = Rc::new(node);
-        self.nodes.insert(node.clone());
-        node
-    }
-
-    /// Check if the graph contains a given node.
-    pub fn contains_node(&self, node: &Node) -> bool {
-        self.nodes.contains(node)
-    }
-
-    fn add_outgoing_edge(&mut self, src: Rc<Node>, dst: Rc<Node>, edge: Rc<Edge>) -> bool {
-        let edge = DiEdge::new_outgoing(edge, dst.clone());
-        if let Some(edges) = self.edges.get_mut(&src) {
-            edges.insert(edge)
-        } else {
-            let mut edges = HashSet::new();
-            let res = edges.insert(edge);
-            self.edges.insert(src, edges);
-            res
-        }
-    }
-
-    fn add_incoming_edge(&mut self, dst: Rc<Node>, src: Rc<Node>, edge: Rc<Edge>) -> bool {
-        let edge = DiEdge::new_incoming(edge, src.clone());
-        if let Some(edges) = self.edges.get_mut(&dst) {
-            edges.insert(edge)
-        } else {
-            let mut edges = HashSet::new();
-            let res = edges.insert(edge);
-            self.edges.insert(dst, edges);
-            res
-        }
-    }
-
-    /// Add a new edge to the graph.
-    ///
-    /// The edge's nodes are also added to the graph.
-    ///
-    /// Returns `true` if the node was not present in the graph,
-    /// otherwise it returns `false`.
-    pub fn add_edge(&mut self, src: Node, dst: Node, edge: Edge) -> bool {
-        let src = Rc::new(src);
-        let dst = Rc::new(dst);
-        let edge = Rc::new(edge);
-        self.nodes.insert(src.clone());
-        self.nodes.insert(dst.clone());
-        self.add_outgoing_edge(src.clone(), dst.clone(), edge.clone())
-            && self.add_incoming_edge(dst.clone(), src.clone(), edge.clone())
-    }
-
-    /// Return an iterator over a given node's incoming neighbors.
-    ///
-    /// Returns `None`, if the node does not exist in the graph.
-    pub fn neighbors(&self, node: &Node) -> Option<impl Iterator<Item = &DiEdge<Node, Edge>>> {
-        self.edges.get(node).map(|set| set.iter())
-    }
-
-    /// Return an iterator over a given node's neighbors.
-    ///
-    /// Returns `None`, if the node does not exist in the graph.
-    pub fn neighbors_incoming(
-        &self,
-        node: &Node,
-    ) -> Option<impl Iterator<Item = &DiEdge<Node, Edge>>> {
-        self.edges.get(node).map(|set| {
-            set.iter()
-                .filter(|edge| edge.direction == Direction::Incoming)
-        })
-    }
-
-    /// Return an iterator over a given node's outgoing neighbors.
-    ///
-    /// Returns `None`, if the node does not exist in the graph.
-    pub fn neighbors_outgoing(
-        &self,
-        node: &Node,
-    ) -> Option<impl Iterator<Item = &DiEdge<Node, Edge>>> {
-        self.edges.get(node).map(|set| {
-            set.iter()
-                .filter(|edge| edge.direction == Direction::Outgoing)
-        })
-    }
-
-    /// Compute the set of nodes reachable in any direction from a given starting node.
-    // HACK deal with the `Rc`
-    // HACK the amount of shadowing is unreal, care with that
-    pub fn reachable(&self, node: Rc<Node>) -> HashSet<Rc<Node>> {
-        let mut stack = VecDeque::new();
-        let mut discovered = HashSet::new();
-        // should the starting node be added as discovered?
-        stack.push_front(node);
-        while let Some(node) = stack.pop_front() {
-            match self.neighbors(&node) {
-                Some(edge_iter) => {
-                    edge_iter
-                        .map(|edge| &edge.node) // we dont care for labels
-                        .for_each(|node| {
-                            if discovered.insert(node.clone()) {
-                                stack.push_back(node.clone())
-                            }
-                        })
-                }
-                None => {}
-            }
-        }
-        discovered
-    }
-
-    /// Compute the set of nodes reachable in the incoming direction from a given starting node.
-    // HACK deal with the `Rc`
-    // HACK the amount of shadowing is unreal, care with that
-    pub fn reachable_incoming(&self, node: Rc<Node>) -> HashSet<Rc<Node>> {
-        let mut stack = VecDeque::new();
-        let mut discovered = HashSet::new();
-        // should the starting node be added as discovered?
-        stack.push_front(node);
-        while let Some(node) = stack.pop_front() {
-            match self.neighbors_incoming(&node) {
-                Some(edge_iter) => {
-                    edge_iter
-                        .map(|edge| &edge.node) // we dont care for labels
-                        .for_each(|node| {
-                            if discovered.insert(node.clone()) {
-                                stack.push_back(node.clone())
-                            }
-                        })
-                }
-                None => {}
-            }
-        }
-        discovered
-    }
-
-    /// Compute the set of nodes reachable in the outgoing direction from a given starting node.
-    // HACK deal with the `Rc`
-    // HACK the amount of shadowing is unreal, care with that
-    pub fn reachable_outgoing(&self, node: Rc<Node>) -> HashSet<Rc<Node>> {
-        let mut stack = VecDeque::new();
-        let mut discovered = HashSet::new();
-        // should the starting node be added as discovered?
-        stack.push_front(node);
-        while let Some(node) = stack.pop_front() {
-            match self.neighbors_outgoing(&node) {
-                Some(edge_iter) => {
-                    edge_iter
-                        .map(|edge| &edge.node) // we dont care for labels
-                        .for_each(|node| {
-                            if discovered.insert(node.clone()) {
-                                stack.push_back(node.clone())
-                            }
-                        })
-                }
-                None => {}
-            }
-        }
-        discovered
-    }
-}
-
-#[cfg(test)]
-mod digraph_test {
-    use super::test_traits::*;
-    use super::*;
-    use std::{collections::hash_set::HashSet, rc::Rc};
-
-    fn setup_graph_with_edges() -> DiGraph<i32, i32> {
-        let mut graph = DiGraph::new();
-        graph.add_edge(1, 2, 1);
-        graph.add_edge(1, 3, 1);
-        graph.add_edge(2, 6, 1);
-        graph.add_edge(3, 4, 1);
-        graph.add_edge(3, 5, 1);
-        graph.add_edge(3, 6, 1);
-        graph.add_edge(4, 5, 1);
-        graph.add_edge(5, 7, 1);
-        graph.add_edge(6, 7, 1);
-        graph
-    }
-
-    #[test]
-    fn test_nodes_from_edges() {
-        let graph = setup_graph_with_edges();
-        let expected_nodes = [1, 2, 3, 4, 5, 6, 7];
-        expected_nodes.iter().for_each(|node| {
-            assert!(graph.nodes.contains(node));
-            assert_eq!(graph.nodes.contains(node), graph.contains_node(node));
-        });
-    }
-
-    #[test]
-    fn test_nodes() {
-        let mut graph: DiGraph<i32, ()> = DiGraph::new();
-        let expected_nodes = [1, 2, 3, 4, 5, 6, 7];
-        expected_nodes.iter().for_each(|node| {
-            graph.add_node(*node);
-        });
-        expected_nodes.iter().for_each(|node| {
-            assert!(graph.nodes.contains(node));
-            assert_eq!(graph.nodes.contains(node), graph.contains_node(node));
-        });
-    }
-
-    #[test]
-    fn test_neighbors() {
-        let graph = setup_graph_with_edges();
-        let expected_neighbors_five: HashSet<i32> = [3, 4, 7].into_hash_set();
-        let neighbors_five: HashSet<i32> = graph.neighbors(&5).unwrap().map(|e| *e.node).collect();
-        assert_eq!(expected_neighbors_five, neighbors_five);
-    }
-
-    #[test]
-    fn test_neighbors_incoming() {
-        let graph = setup_graph_with_edges();
-        let expected_neighbors_five: HashSet<i32> = [3, 4].into_hash_set();
-        let neighbors_five: HashSet<i32> = graph
-            .neighbors_incoming(&5)
-            .unwrap()
-            .map(|e| *e.node)
-            .collect();
-        assert_eq!(expected_neighbors_five, neighbors_five);
-    }
-
-    #[test]
-    fn test_neighbors_outgoing() {
-        let graph = setup_graph_with_edges();
-        let expected_neighbors_five: HashSet<i32> = [7].into_hash_set();
-        let neighbors_five: HashSet<i32> = graph
-            .neighbors_outgoing(&5)
-            .unwrap()
-            .map(|e| *e.node)
-            .collect();
-        assert_eq!(expected_neighbors_five, neighbors_five);
-    }
-
-    #[test]
-    fn test_reachable() {
-        let graph = setup_graph_with_edges();
-        // `3` is included in the expected because it can "loop" back
-        let expected_reachable_three: HashSet<i32> = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
-        let reachable_three: HashSet<i32> = graph
-            .reachable(Rc::new(3))
-            .iter()
-            .map(|rc_node| -> i32 { *rc_node.to_owned() }) // maybe this is kind weird
-            .collect();
-        assert_eq!(expected_reachable_three, reachable_three);
-    }
-
-    #[test]
-    fn test_reachable_incoming() {
-        let graph = setup_graph_with_edges();
-        let expected_reachable_five: HashSet<i32> = [1, 3, 4].into_hash_set();
-        let reachable_five: HashSet<i32> = graph
-            .reachable_incoming(Rc::new(5))
-            .iter()
-            .map(|rc_node| -> i32 { *rc_node.to_owned() }) // maybe this is kind weird
-            .collect();
-        assert_eq!(expected_reachable_five, reachable_five);
-    }
-
-    #[test]
-    fn test_reachable_outgoing() {
-        let graph = setup_graph_with_edges();
-        let expected_reachable_three: HashSet<i32> = [4, 5, 6, 7].into_hash_set();
-        let reachable_three: HashSet<i32> = graph
-            .reachable_outgoing(Rc::new(3))
-            .iter()
-            .map(|rc_node| *rc_node.to_owned()) // maybe this is kind weird
-            .collect();
-        assert_eq!(expected_reachable_three, reachable_three);
-    }
-}
-
-/// Alias for the `DeterministicFiniteAutomata` type.
+/// Type alias for [DeterministicFiniteAutomata].
 pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
-/// A deterministic finite automata representation.
-///
-/// The automata itself is implemented on top of `petgraph::graphmap::DiGraphMap`.
+/// A representation for a deterministic finite automata.
 pub struct DeterministicFiniteAutomata<State, Transition>
 where
-    State: Eq + Hash,
-    Transition: Eq + Hash,
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
 {
-    /// The set of all initial states.
-    pub initial_states: HashSet<Rc<State>>,
-    /// The set of all final states.
-    pub final_states: HashSet<Rc<State>>,
-    /// Automata graph.
-    pub automata: DiGraph<State, Transition>,
+    /// Deterministic finite automata states.
+    pub states: HashSet<State>,
+    /// Deterministic finite automata transition symbols.
+    sigma: HashSet<Transition>,
+    /// Deterministic finite automata initial state-indexes.
+    pub initial_states: HashSet<State>,
+    /// Deterministic finite automata final state-indexes.
+    pub final_states: HashSet<State>,
+    /// Deterministic finite automata transition functions.
+    /// Map of state indexes to map of transitions to state indexes.
+    delta: HashMap<State, HashMap<Transition, State>>,
+    /// The inverse paths of delta.
+    /// This structure helps algorithms requiring interation in the "inverse" order.
+    idelta: HashMap<State, HashMap<Transition, State>>,
 }
 
 impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
 where
-    State: Eq + Hash,
-    Transition: Eq + Hash,
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
 {
-    /// Construct a new DFA.
+    /// Construct a new deterministic finite automata.
     pub fn new() -> Self {
         Self {
+            states: HashSet::new(),
+            sigma: HashSet::new(),
             initial_states: HashSet::new(),
             final_states: HashSet::new(),
-            automata: DiGraph::new(),
+            delta: HashMap::new(),
+            idelta: HashMap::new(),
         }
     }
 
-    /// Add a regular state to the DFA.
+    /// Add a state to the automata.
     pub fn add_state(&mut self, state: State) {
-        self.automata.add_node(state);
+        self.states.insert(state);
     }
 
-    /// Add an initial state to the DFA.
-    ///
-    /// If the state existed before, it is simply added to the initial states set.
-    pub fn add_initial_state(&mut self, state: State) {
-        let state = self.automata.add_node(state);
+    /// Add an initial state to the automata.
+    pub fn add_initial(&mut self, state: State) {
+        self.states.insert(state.clone());
         self.initial_states.insert(state);
     }
 
-    /// Add an final state to the DFA.
-    ///
-    /// If the state existed before, it is simply added to the final states set.
-    pub fn add_final_state(&mut self, state: State) {
-        let state = self.automata.add_node(state);
+    /// Add a final state to the automata.
+    pub fn add_final(&mut self, state: State) {
+        self.states.insert(state.clone());
         self.final_states.insert(state);
     }
 
-    /// Add a transition to the DFA.
-    pub fn add_transition(&mut self, src: State, dst: State, transition: Transition) {
-        self.automata.add_edge(src, dst, transition);
+    /// Add a new symbol to the automata alphabet.
+    pub fn add_sigma(&mut self, sigma: Transition) {
+        self.sigma.insert(sigma);
     }
 
-    /// Compute the productive states.
-    ///
-    /// The taken approach starts by doing a BFS from all the final states,
-    /// following the incoming transitions, and gathering them in a data structure.
-    pub fn compute_productive(&self) -> HashSet<Rc<State>> {
+    fn add_delta(&mut self, source: State, symbol: Transition, destination: State, delta: Delta) {
+        let delta = match delta {
+            Delta::Delta => &mut self.delta,
+            Delta::IDelta => &mut self.idelta,
+        };
+        if let Some(transitions) = delta.get_mut(&source) {
+            if let Some(_) = transitions.get_mut(&symbol) {
+                // TODO duplicate: return error or replace?
+            } else {
+                transitions.insert(symbol, destination);
+            }
+        } else {
+            let mut transitions = HashMap::new();
+            transitions.insert(symbol, destination);
+            delta.insert(source, transitions);
+        }
+    }
+
+    // Add a transition from `source` to `destination`, consuming `symbol`.
+    pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
+        // TODO check for state existence or add regardless
+        self.add_sigma(symbol.clone());
+        self.add_delta(
+            source.clone(),
+            symbol.clone(),
+            destination.clone(),
+            Delta::Delta,
+        );
+        self.add_delta(destination, symbol, source, Delta::IDelta);
+    }
+
+    /// Compute the automata productive states.
+    pub fn productive_states(&self) -> HashSet<State> {
+        let mut stack: VecDeque<_> = self.final_states.iter().collect();
+        // productive == visited
         let mut productive = HashSet::new();
-        self.final_states.iter().for_each(|state| {
-            productive.extend(self.automata.reachable_incoming(state.to_owned()))
-        });
+        while let Some(state) = stack.pop_back() {
+            if productive.insert(state.clone()) {
+                if let Some(states) = self
+                    .idelta
+                    .get(state)
+                    .map(|transitions| transitions.values())
+                {
+                    stack.extend(states)
+                }
+            }
+        }
         productive
     }
 
-    /// Compute the non-productive states.
-    ///
-    /// This is done by calling [DeterministicFiniteAutomata::compute_productive].
-    pub fn compute_non_productive(&self) -> HashSet<Rc<State>> {
-        let productive = self.compute_productive();
-        self.automata
-            .nodes
-            .difference(&productive)
+    /// Compute the automata useful states.
+    pub fn useful_states(&self) -> HashSet<State> {
+        // TODO this could benefit from some "caching" of results on productive
+        let productive = self.productive_states();
+        let mut stack: VecDeque<_> = self.initial_states.iter().collect();
+        // productive == visited
+        let mut reachable = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if reachable.insert(state.clone()) {
+                if let Some(states) = self
+                    .delta
+                    .get(state)
+                    .map(|transitions| transitions.values())
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+            .intersection(&reachable)
             .map(|s| s.to_owned())
             .collect()
     }
+}
 
-    /// Extract the useful states from a given set of productive states.
-    ///
-    /// Currently the complexity on this is *bad*.
-    // TODO fix the node iteration redundancy
-    // To fix it, we need to write a specialized iterator for the graph
-    // The iterator should start in a given node, iterate the immediate neighbors and upon a condition either:
-    // - Mark them and other nodes in their path as visited according to a condition
-    // - Ignore them and not iterate them further
-    pub fn extract_useful(&self, productive: &HashSet<Rc<State>>) -> HashSet<Rc<State>> {
-        self.initial_states
-            .iter()
-            .flat_map(|initial| self.automata.reachable_outgoing(Rc::clone(initial)))
-            .filter(|state| productive.contains(state))
-            .collect::<HashSet<Rc<State>>>()
+/// Implementation of the [Default] trait for a [DeterministicFiniteAutomata].
+impl<State, Transition> Default for DeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    /// This function is equivalent to [DeterministicFiniteAutomata::new].
+    fn default() -> Self {
+        Self::new()
     }
 }
 
+/// Tests for [DeterministicFiniteAutomata].
 #[cfg(test)]
-mod dfa_test {
+mod dfa_tests {
     use super::test_traits::*;
     use super::*;
 
-    fn setup_automata() -> DFA<i32, i32> {
+    fn setup_automata() -> DFA<i32, usize> {
         let mut dfa = DFA::new();
-        dfa.add_transition(1, 2, 1);
-        dfa.add_transition(1, 3, 1);
-        dfa.add_transition(2, 6, 1);
-        dfa.add_transition(3, 4, 1);
-        dfa.add_transition(3, 5, 1);
-        dfa.add_transition(3, 6, 1);
-        dfa.add_transition(4, 5, 1);
-        dfa.add_transition(5, 7, 1);
-        dfa.add_transition(6, 7, 1);
+        let state_list = [1, 2, 3, 4, 5, 6, 7];
+        for &state in state_list.iter() {
+            dfa.add_state(state);
+        }
+        dfa.add_initial(1);
+        dfa.add_final(7);
+        let transition_list = [
+            (1, 2),
+            (1, 3),
+            (2, 6),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+        ];
+        for (idx, &(src, dst)) in transition_list.iter().enumerate() {
+            dfa.add_transition(src, idx, dst);
+        }
+        dfa
+    }
+
+    fn setup_automata_loop() -> DFA<i32, ()> {
+        let mut dfa = DFA::new();
+        dfa.add_initial(1);
+        dfa.add_final(2);
+        dfa.add_transition(1, (), 2);
+        dfa.add_transition(2, (), 1);
         dfa
     }
 
     #[test]
     fn test_add_state() {
-        let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
-        expected_states.iter().for_each(|i| dfa.add_state(*i));
-        let result_states: HashSet<i32> =
-            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
+        let dfa = setup_automata();
+        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
+        let result_states = dfa.states;
         assert_eq!(expected_states, result_states);
     }
 
     #[test]
     fn test_add_initial_state() {
-        let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
-        expected_states
-            .iter()
-            .for_each(|i| dfa.add_initial_state(*i));
-        let result_states: HashSet<i32> =
-            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
-        let initial_result_states: HashSet<i32> =
-            dfa.initial_states.iter().map(|i| *i.to_owned()).collect();
+        let dfa = setup_automata();
+        let expected_states = [1].into_hash_set();
+        let result_states = dfa.initial_states;
         assert_eq!(expected_states, result_states);
-        assert_eq!(expected_states, initial_result_states);
-    }
-
-    #[test]
-    fn test_add_existing_initial_state() {
-        let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
-        expected_states.iter().for_each(|i| dfa.add_state(*i));
-        expected_states
-            .iter()
-            .for_each(|i| dfa.add_initial_state(*i));
-        let result_states: HashSet<i32> =
-            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
-        let initial_result_states: HashSet<i32> =
-            dfa.initial_states.iter().map(|i| *i.to_owned()).collect();
-        assert_eq!(expected_states, result_states);
-        assert_eq!(expected_states, initial_result_states);
     }
 
     #[test]
     fn test_add_final_state() {
-        let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
-        expected_states.iter().for_each(|i| dfa.add_final_state(*i));
-        let result_states: HashSet<i32> =
-            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
-        let final_result_states: HashSet<i32> =
-            dfa.final_states.iter().map(|i| *i.to_owned()).collect();
+        let dfa = setup_automata();
+        let expected_states = [7].into_hash_set();
+        let result_states = dfa.final_states;
         assert_eq!(expected_states, result_states);
-        assert_eq!(expected_states, final_result_states);
-    }
-
-    #[test]
-    fn test_add_existing_final_state() {
-        let mut dfa: DFA<_, ()> = DFA::new();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5].into_hash_set();
-        expected_states.iter().for_each(|i| dfa.add_state(*i));
-        expected_states.iter().for_each(|i| dfa.add_final_state(*i));
-        let result_states: HashSet<i32> =
-            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
-        let final_result_states: HashSet<i32> =
-            dfa.final_states.iter().map(|i| *i.to_owned()).collect();
-        assert_eq!(expected_states, result_states);
-        assert_eq!(expected_states, final_result_states);
     }
 
     #[test]
     fn test_add_transition() {
         let dfa = setup_automata();
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
-        let result_states: HashSet<i32> =
-            dfa.automata.nodes.iter().map(|i| *i.to_owned()).collect();
-        assert_eq!(expected_states, result_states);
+        let expected_deltas = [
+            (1, 2),
+            (1, 3),
+            (2, 6),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+        ]
+        .iter()
+        .map(|t| t.to_owned())
+        .collect::<HashSet<_>>();
+        let expected_ideltas = expected_deltas
+            .iter()
+            .map(|(fst, snd)| (*snd, *fst))
+            .map(|t| t.to_owned())
+            .collect::<HashSet<_>>();
+        let mut result_deltas = HashSet::new();
+        for (src, transitions) in dfa.delta {
+            for &dst in transitions.values() {
+                result_deltas.insert((src, dst));
+            }
+        }
+        let mut result_ideltas = HashSet::new();
+        for (src, transitions) in dfa.idelta {
+            for &dst in transitions.values() {
+                result_ideltas.insert((src, dst));
+            }
+        }
+        assert_eq!(expected_deltas, result_deltas);
+        assert_eq!(expected_ideltas, result_ideltas);
     }
 
     #[test]
-    fn test_compute_productive_empty_final() {
+    fn test_productive() {
         let dfa = setup_automata();
-        let empty_set = HashSet::new();
-        assert_eq!(empty_set, dfa.compute_productive());
+        let result = dfa.productive_states();
+        let expected = [1, 2, 3, 4, 5, 6, 7]
+            .iter()
+            .map(|i| i.to_owned())
+            .collect::<HashSet<i32>>();
+        assert_eq!(expected, result);
     }
 
     #[test]
-    fn test_compute_productive() {
-        let mut dfa = setup_automata();
-        dfa.add_final_state(7);
-        let expected_states: HashSet<i32> = [1, 2, 3, 4, 5, 6].into_hash_set();
-        let result_states: HashSet<i32> = dfa.compute_productive().into_hash_set();
-        assert_eq!(expected_states, result_states);
+    fn test_productive_loop() {
+        let dfa = setup_automata_loop();
+        let result = dfa.productive_states();
+        let expected = [1, 2]
+            .iter()
+            .map(|i| i.to_owned())
+            .collect::<HashSet<i32>>();
+        assert_eq!(expected, result);
     }
 
     #[test]
-    fn test_compute_productive_multiple_states() {
-        let mut dfa = setup_automata();
-        dfa.add_final_state(3);
-        dfa.add_final_state(5);
-        let expected_states: HashSet<i32> = [1, 3, 4].into_hash_set();
-        let result_states: HashSet<i32> = dfa.compute_productive().into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_compute_non_productive_no_final() {
+    fn test_useful() {
         let dfa = setup_automata();
-        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
-        assert_eq!(
-            expected_states,
-            dfa.compute_non_productive().into_hash_set()
-        );
-    }
-
-    #[test]
-    fn test_compute_non_productive() {
-        let mut dfa = setup_automata();
-        dfa.add_final_state(7);
-        let expected_states: HashSet<i32> = [7].into_hash_set();
-        let result_states: HashSet<i32> = dfa.compute_non_productive().into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_compute_non_productive_multiple_states() {
-        let mut dfa = setup_automata();
-        dfa.add_final_state(3);
-        dfa.add_final_state(5);
-        let expected_states: HashSet<i32> = [2, 5, 6, 7].into_hash_set();
-        let result_states: HashSet<i32> = dfa.compute_non_productive().into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_useful_states_no_initial_no_final() {
-        let dfa = setup_automata();
-        let expected_states: HashSet<i32> = HashSet::new();
-        let productive = &dfa.compute_productive();
-        eprintln!("{:?}", productive);
-        let result_states = dfa.extract_useful(productive).into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_useful_states_no_initial() {
-        let mut dfa = setup_automata();
-        dfa.add_final_state(7);
-        let expected_states: HashSet<i32> = HashSet::new();
-        let productive = &dfa.compute_productive();
-        eprintln!("{:?}", productive);
-        let result_states = dfa.extract_useful(productive).into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_useful_states_no_initial_multiple_states() {
-        let mut dfa = setup_automata();
-        dfa.add_final_state(3);
-        dfa.add_final_state(5);
-        let expected_states: HashSet<i32> = HashSet::new();
-        let productive = &dfa.compute_productive();
-        eprintln!("{:?}", productive);
-        let result_states = dfa.extract_useful(productive).into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_useful_states_no_final() {
-        let mut dfa = setup_automata();
-        dfa.add_initial_state(1);
-        let expected_states: HashSet<i32> = HashSet::new();
-        let productive = &dfa.compute_productive();
-        eprintln!("{:?}", productive);
-        let result_states = dfa.extract_useful(productive).into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_useful_states() {
-        let mut dfa = setup_automata();
-        dfa.add_initial_state(1);
-        dfa.add_final_state(7);
-        let expected_states: HashSet<i32> = [2, 3, 4, 5, 6].into_hash_set();
-        let productive = &dfa.compute_productive();
-        eprintln!("{:?}", productive);
-        let result_states = dfa.extract_useful(productive).into_hash_set();
-        assert_eq!(expected_states, result_states);
-    }
-
-    #[test]
-    fn test_useful_states_multiple_states() {
-        let mut dfa = setup_automata();
-        dfa.add_initial_state(1);
-        dfa.add_final_state(3);
-        dfa.add_final_state(5);
-        let expected_states: HashSet<i32> = [3, 4].into_hash_set();
-        let productive = &dfa.compute_productive();
-        eprintln!("{:?}", productive);
-        let result_states = dfa.extract_useful(productive).into_hash_set();
-        assert_eq!(expected_states, result_states);
+        let result = dfa.useful_states();
+        let expected = [1, 2, 3, 4, 5, 6, 7]
+            .iter()
+            .map(|i| i.to_owned())
+            .collect::<HashSet<i32>>();
+        assert_eq!(expected, result);
     }
 }
 
+/// Type alias for [NonDeterministicFiniteAutomata].
+pub type NFA<State, Transition> = NonDeterministicFiniteAutomata<State, Transition>;
+
+/// A representation for non-deterministic finite automata.
+pub struct NonDeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    /// Deterministic finite automata states.
+    pub states: HashSet<State>,
+    /// Deterministic finite automata transition symbols.
+    sigma: HashSet<Transition>,
+    /// Deterministic finite automata initial state-indexes.
+    pub initial_states: HashSet<State>,
+    /// Deterministic finite automata final state-indexes.
+    pub final_states: HashSet<State>,
+    /// Deterministic finite automata transition functions.
+    /// Map of state indexes to map of transitions to state indexes.
+    delta: Deltas<State, Transition>,
+    /// The inverse paths of delta.
+    /// This structure helps algorithms requiring interation in the "inverse" order.
+    idelta: Deltas<State, Transition>,
+}
+
+impl<State, Transition> NonDeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    /// Construct a new non-deterministic finite automata.
+    pub fn new() -> Self {
+        Self {
+            states: HashSet::new(),
+            sigma: HashSet::new(),
+            initial_states: HashSet::new(),
+            final_states: HashSet::new(),
+            delta: HashMap::new(),
+            idelta: HashMap::new(),
+        }
+    }
+
+    /// Add a state to the automata.
+    pub fn add_state(&mut self, state: State) {
+        self.states.insert(state);
+    }
+
+    /// Add an initial state to the automata.
+    pub fn add_initial(&mut self, state: State) {
+        self.states.insert(state.clone());
+        self.initial_states.insert(state);
+    }
+
+    /// Add a final state to the automata.
+    pub fn add_final(&mut self, state: State) {
+        self.states.insert(state.clone());
+        self.final_states.insert(state);
+    }
+
+    /// Add a new symbol to the automata alphabet.
+    pub fn add_sigma(&mut self, sigma: Transition) {
+        self.sigma.insert(sigma);
+    }
+
+    fn add_delta(&mut self, source: State, symbol: Transition, destination: State, delta: Delta) {
+        let delta = match delta {
+            Delta::Delta => &mut self.delta,
+            Delta::IDelta => &mut self.idelta,
+        };
+        if let Some(transitions) = delta.get_mut(&source) {
+            if let Some(destinations) = transitions.get_mut(&symbol) {
+                destinations.insert(destination);
+            } else {
+                let mut destinations = HashSet::new();
+                destinations.insert(destination);
+                transitions.insert(symbol, destinations);
+            }
+        } else {
+            let mut transitions = HashMap::new();
+            let mut destinations = HashSet::new();
+            destinations.insert(destination);
+            transitions.insert(symbol, destinations);
+            delta.insert(source, transitions);
+        }
+    }
+
+    // Add a transition from `source` to `destination`, consuming `symbol`.
+    pub fn add_transition(&mut self, source: State, symbol: Transition, destination: State) {
+        // TODO check for state existence or add regardless
+        self.add_sigma(symbol.clone());
+        self.add_delta(
+            source.clone(),
+            symbol.clone(),
+            destination.clone(),
+            Delta::Delta,
+        );
+        self.add_delta(destination, symbol, source, Delta::IDelta);
+    }
+
+    // Add a transition from `source` to `destinations`, consuming `symbol`.
+    pub fn add_non_deterministic_transitions(
+        &mut self,
+        source: State,
+        symbol: Transition,
+        destinations: impl Iterator<Item = State>,
+    ) {
+        // TODO check for state existence or add regardless
+        self.add_sigma(symbol.clone());
+        for destination in destinations {
+            self.add_delta(
+                source.clone(),
+                symbol.clone(),
+                destination.clone(),
+                Delta::Delta,
+            );
+            self.add_delta(
+                destination.clone(),
+                symbol.clone(),
+                source.clone(),
+                Delta::IDelta,
+            );
+        }
+    }
+
+    /// Compute the automata productive states.
+    pub fn productive_states(&self) -> HashSet<State> {
+        let mut stack: VecDeque<_> = self.final_states.iter().collect();
+        // productive == visited
+        let mut productive = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if productive.insert(state.clone()) {
+                if let Some(states) = self
+                    .idelta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+    }
+
+    /// Compute the automata useful states.
+    pub fn useful_states(&self) -> HashSet<State> {
+        // TODO this could benefit from some "caching" of results on productive
+        let productive = self.productive_states();
+        let mut stack: VecDeque<_> = self.initial_states.iter().collect();
+        // productive == visited
+        let mut reachable = HashSet::new();
+        while let Some(state) = stack.pop_back() {
+            if reachable.insert(state.clone()) {
+                if let Some(states) = self
+                    .delta
+                    .get(state)
+                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                {
+                    stack.extend(states)
+                }
+            }
+        }
+        productive
+            .intersection(&reachable)
+            .map(|s| s.to_owned())
+            .collect()
+    }
+}
+
+/// Implementation of the [Default] trait for a [NonDeterministicFiniteAutomata].
+impl<State, Transition> Default for NonDeterministicFiniteAutomata<State, Transition>
+where
+    State: Eq + Hash + Clone,
+    Transition: Eq + Hash + Clone,
+{
+    /// This function is equivalent to [NonDeterministicFiniteAutomata::new].
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Tests for [NonDeterministicFiniteAutomata].
+#[cfg(test)]
+mod nfa_tests {
+    use super::test_traits::*;
+    use super::*;
+
+    fn setup_automata() -> NFA<i32, ()> {
+        let mut nfa = NFA::new();
+        let state_list = [1, 2, 3, 4, 5, 6, 7];
+        for &state in state_list.iter() {
+            nfa.add_state(state);
+        }
+        nfa.add_initial(1);
+        nfa.add_final(7);
+        let transition_list = [
+            (1, 2),
+            (1, 3),
+            (2, 6),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+        ];
+        for &(src, dst) in transition_list.iter() {
+            nfa.add_transition(src, (), dst);
+        }
+        nfa
+    }
+
+    fn setup_automata_loop() -> NFA<i32, ()> {
+        let mut nfa = NFA::new();
+        nfa.add_initial(1);
+        nfa.add_final(2);
+        nfa.add_transition(1, (), 2);
+        nfa.add_transition(2, (), 1);
+        nfa
+    }
+
+    #[test]
+    fn test_add_state() {
+        let nfa = setup_automata();
+        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
+        let result_states = nfa.states;
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_add_initial_state() {
+        let nfa = setup_automata();
+        let expected_states = [1].into_hash_set();
+        let result_states = nfa.initial_states;
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_add_final_state() {
+        let nfa = setup_automata();
+        let expected_states = [7].into_hash_set();
+        let result_states = nfa.final_states;
+        assert_eq!(expected_states, result_states);
+    }
+
+    #[test]
+    fn test_add_transition() {
+        let nfa = setup_automata();
+        let expected_deltas = [
+            (1, 2),
+            (1, 3),
+            (2, 6),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+        ]
+        .iter()
+        .map(|t| t.to_owned())
+        .collect::<HashSet<_>>();
+        let expected_ideltas = expected_deltas
+            .iter()
+            .map(|(fst, snd)| (*snd, *fst))
+            .map(|t| t.to_owned())
+            .collect::<HashSet<_>>();
+        let mut result_deltas = HashSet::new();
+        for (src, transitions) in nfa.delta {
+            for destinations in transitions.values() {
+                for &dst in destinations {
+                    result_deltas.insert((src, dst));
+                }
+            }
+        }
+        let mut result_ideltas = HashSet::new();
+        for (src, transitions) in nfa.idelta {
+            for destinations in transitions.values() {
+                for &dst in destinations {
+                    result_ideltas.insert((src, dst));
+                }
+            }
+        }
+        assert_eq!(expected_deltas, result_deltas);
+        assert_eq!(expected_ideltas, result_ideltas);
+    }
+
+    #[test]
+    fn test_add_non_deterministic_transition() {
+        let mut nfa = NFA::new();
+        [1, 2, 3, 4, 5, 6, 7]
+            .iter()
+            .map(|i| *i)
+            .for_each(|i| nfa.add_state(i));
+        nfa.add_initial(1);
+        nfa.add_final(7);
+        let non_deterministic_transitions = vec![
+            (1, vec![2, 3]),
+            (2, vec![6]),
+            (3, vec![4, 5, 6]),
+            (4, vec![5]),
+            (5, vec![7]),
+            (6, vec![7]),
+        ];
+        for (source, destinations) in non_deterministic_transitions {
+            nfa.add_non_deterministic_transitions(source, (), destinations.into_iter());
+        }
+        let expected_deltas = [
+            (1, 2),
+            (1, 3),
+            (2, 6),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+        ]
+        .iter()
+        .map(|t| t.to_owned())
+        .collect::<HashSet<_>>();
+        let expected_ideltas = expected_deltas
+            .iter()
+            .map(|(fst, snd)| (*snd, *fst))
+            .map(|t| t.to_owned())
+            .collect::<HashSet<_>>();
+        let mut result_deltas = HashSet::new();
+        for (src, transitions) in nfa.delta {
+            for destinations in transitions.values() {
+                for &dst in destinations {
+                    result_deltas.insert((src, dst));
+                }
+            }
+        }
+        let mut result_ideltas = HashSet::new();
+        for (src, transitions) in nfa.idelta {
+            for destinations in transitions.values() {
+                for &dst in destinations {
+                    result_ideltas.insert((src, dst));
+                }
+            }
+        }
+        assert_eq!(expected_deltas, result_deltas);
+        assert_eq!(expected_ideltas, result_ideltas);
+    }
+
+    #[test]
+    fn test_productive() {
+        let nfa = setup_automata();
+        let result = nfa.productive_states();
+        let expected = [1, 2, 3, 4, 5, 6, 7]
+            .iter()
+            .map(|i| i.to_owned())
+            .collect::<HashSet<i32>>();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_productive_loop() {
+        let nfa = setup_automata_loop();
+        let result = nfa.productive_states();
+        let expected = [1, 2]
+            .iter()
+            .map(|i| i.to_owned())
+            .collect::<HashSet<i32>>();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_useful() {
+        let nfa = setup_automata();
+        let result = nfa.useful_states();
+        let expected = [1, 2, 3, 4, 5, 6, 7]
+            .iter()
+            .map(|i| i.to_owned())
+            .collect::<HashSet<i32>>();
+        assert_eq!(expected, result);
+    }
+}
+
+/// Module containing useful traits for tests.
 #[cfg(test)] // should only be available for tests
 mod test_traits {
     use std::{collections::HashSet, hash::Hash, rc::Rc};
