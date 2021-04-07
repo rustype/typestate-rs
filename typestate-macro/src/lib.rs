@@ -166,6 +166,31 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     ret.into()
 }
 
+/// A value to `proc_macro2::TokenStream2` conversion.
+/// More precisely into
+trait IntoCompileError {
+    fn to_compile_error(self) -> TokenStream2;
+}
+
+impl IntoCompileError for Vec<Error> {
+    fn to_compile_error(mut self) -> TokenStream2 {
+        if !self.is_empty() {
+            // if errors exist, return all errors
+            let fst_err = self.swap_remove(0);
+            return self
+                .into_iter()
+                .fold(fst_err, |mut all, curr| {
+                    all.combine(curr);
+                    all
+                })
+                .to_compile_error();
+        } else {
+            TokenStream2::new()
+        }
+    }
+}
+
+
 #[derive(Debug, PartialEq)]
 enum TypestateAttr {
     Automata,
@@ -197,30 +222,6 @@ impl TryFrom<&Path> for TypestateAttr {
             Ok(Self::State)
         } else {
             Err(())
-        }
-    }
-}
-
-/// A value to `proc_macro2::TokenStream2` conversion.
-/// More precisely into
-trait IntoCompileError {
-    fn to_compile_error(self) -> TokenStream2;
-}
-
-impl IntoCompileError for Vec<Error> {
-    fn to_compile_error(mut self) -> TokenStream2 {
-        if !self.is_empty() {
-            // if errors exist, return all errors
-            let fst_err = self.swap_remove(0);
-            return self
-                .into_iter()
-                .fold(fst_err, |mut all, curr| {
-                    all.combine(curr);
-                    all
-                })
-                .to_compile_error();
-        } else {
-            TokenStream2::new()
         }
     }
 }
@@ -374,9 +375,9 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                 .for_each(|ident| nfa.add_final(ident));
             for t in self.transitions {
                 if let Some(state) = self.non_det_states.get(&t.destination) {
-                    nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
+                    // nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
                     nfa.add_non_deterministic_transitions(
-                        t.destination,
+                        t.source,
                         t.symbol,
                         state.variants.iter().map(|v| v.ident.clone()),
                     )
@@ -384,9 +385,9 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                     nfa.add_transition(t.source, t.symbol, t.destination)
                 }
             }
-            self.non_det_states
-                .into_iter()
-                .for_each(|(ident, _)| nfa.add_state(ident));
+            // self.non_det_states
+            //     .into_iter()
+            //     .for_each(|(ident, _)| nfa.add_state(ident));
             FiniteAutomata::NonDeterministic(nfa)
         }
     }
@@ -610,7 +611,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             }
         }
         if self.errors.is_empty() {
-            self.state_machine_info.add_state(i.clone().into());
+            // self.state_machine_info.add_state(i.clone().into());
             self.state_machine_info
                 .non_det_states
                 .insert(i.ident.clone(), i.clone());
