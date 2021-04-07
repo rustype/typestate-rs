@@ -21,7 +21,7 @@ enum Delta {
 pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
 /// A representation for a deterministic finite automata.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
@@ -309,7 +309,7 @@ mod dfa_tests {
 pub type NFA<State, Transition> = NonDeterministicFiniteAutomata<State, Transition>;
 
 /// A representation for non-deterministic finite automata.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct NonDeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
