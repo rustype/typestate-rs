@@ -362,6 +362,7 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                 .for_each(|t| dfa.add_transition(t.source, t.symbol, t.destination));
             FiniteAutomata::Deterministic(dfa)
         } else {
+            // TODO review this
             let mut nfa = NFA::new();
             self.det_states
                 .into_iter()
