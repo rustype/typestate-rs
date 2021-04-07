@@ -3,6 +3,7 @@ use std::{
     hash::Hash,
 };
 
+#[cfg(feature = "dot")]
 pub mod dot;
 
 /// Type alias for the transition "minigraph".
