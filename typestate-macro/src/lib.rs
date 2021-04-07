@@ -702,6 +702,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         // TODO account for non-deterministic states
+        let attrs = &mut i.attrs;
         let sig = &mut i.sig;
         let input = self.input_kind(sig);
         let output = self.output_kind(sig);
@@ -714,11 +715,15 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                     .insert(return_ty_ident);
             } // initial
             (Some(_), None) => {
+                // add #[must_use]
+                attrs.push(parse_quote!(#[must_use]));
                 self.state_machine_info
                     .final_states
                     .insert(self.current_state.as_ref().unwrap().clone());
             } // final
             (Some(_), Some(return_ty_ident)) => {
+                // add #[must_use]
+                attrs.push(parse_quote!(#[must_use]));
                 let transition = Transition::new(
                     self.current_state.as_ref().unwrap().clone(),
                     return_ty_ident,
