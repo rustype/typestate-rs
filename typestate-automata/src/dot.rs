@@ -1,5 +1,5 @@
 use crate::{DFA, NFA};
-use std::{convert::TryInto, fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
+use std::{fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
 
 struct DotEdge<Node, Edge>
 where
