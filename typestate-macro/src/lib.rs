@@ -7,7 +7,7 @@ use std::{
     hash::Hash,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
-use typestate_automata::automata::{DFA, NFA};
+use typestate_automata::{DFA, NFA};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
