@@ -33,10 +33,10 @@ where
     pub final_states: HashSet<State>,
     /// Deterministic finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
-    delta: Deltas<State, Transition>,
+    delta: HashMap<State, HashMap<Transition, State>>,
     /// The inverse paths of delta.
     /// This structure helps algorithms requiring interation in the "inverse" order.
-    idelta: Deltas<State, Transition>,
+    idelta: HashMap<State, HashMap<Transition, State>>,
 }
 
 impl<State, Transition> DeterministicFiniteAutomata<State, Transition>
@@ -84,18 +84,14 @@ where
             Delta::IDelta => &mut self.idelta,
         };
         if let Some(transitions) = delta.get_mut(&source) {
-            if let Some(destinations) = transitions.get_mut(&symbol) {
-                destinations.insert(destination);
+            if let Some(_) = transitions.get_mut(&symbol) {
+                // TODO duplicate: return error or replace?
             } else {
-                let mut destinations = HashSet::new();
-                destinations.insert(destination);
-                transitions.insert(symbol, destinations);
+                transitions.insert(symbol, destination);
             }
         } else {
             let mut transitions = HashMap::new();
-            let mut destinations = HashSet::new();
-            destinations.insert(destination);
-            transitions.insert(symbol, destinations);
+            transitions.insert(symbol, destination);
             delta.insert(source, transitions);
         }
     }
@@ -123,7 +119,7 @@ where
                 if let Some(states) = self
                     .idelta
                     .get(state)
-                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                    .map(|transitions| transitions.values())
                 {
                     stack.extend(states)
                 }
@@ -144,7 +140,7 @@ where
                 if let Some(states) = self
                     .delta
                     .get(state)
-                    .map(|transitions| transitions.values().flat_map(|states| states.iter()))
+                    .map(|transitions| transitions.values())
                 {
                     stack.extend(states)
                 }
@@ -175,7 +171,7 @@ mod dfa_tests {
     use super::test_traits::*;
     use super::*;
 
-    fn setup_automata() -> DFA<i32, ()> {
+    fn setup_automata() -> DFA<i32, usize> {
         let mut dfa = DFA::new();
         let state_list = [1, 2, 3, 4, 5, 6, 7];
         for &state in state_list.iter() {
@@ -194,8 +190,8 @@ mod dfa_tests {
             (5, 7),
             (6, 7),
         ];
-        for &(src, dst) in transition_list.iter() {
-            dfa.add_transition(src, (), dst);
+        for (idx, &(src, dst)) in transition_list.iter().enumerate() {
+            dfa.add_transition(src, idx, dst);
         }
         dfa
     }
@@ -257,18 +253,14 @@ mod dfa_tests {
             .collect::<HashSet<_>>();
         let mut result_deltas = HashSet::new();
         for (src, transitions) in dfa.delta {
-            for destinations in transitions.values() {
-                for &dst in destinations {
-                    result_deltas.insert((src, dst));
-                }
+            for &dst in transitions.values() {
+                result_deltas.insert((src, dst));
             }
         }
         let mut result_ideltas = HashSet::new();
         for (src, transitions) in dfa.idelta {
-            for destinations in transitions.values() {
-                for &dst in destinations {
-                    result_ideltas.insert((src, dst));
-                }
+            for &dst in transitions.values() {
+                result_ideltas.insert((src, dst));
             }
         }
         assert_eq!(expected_deltas, result_deltas);
