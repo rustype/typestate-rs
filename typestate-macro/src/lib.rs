@@ -7,7 +7,7 @@ use std::{
     hash::Hash,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
-use typestate_automata::{DFA, NFA, dot::*};
+use typestate_automata::{dot::*, DFA, NFA};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -85,6 +85,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let name = state_machine_info.main_state_name().clone();
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
+    println!("{:#?}", fa);
     match fa {
         FiniteAutomata::Deterministic(dfa) => {
             // TODO clean this mess
@@ -119,7 +120,8 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             bail_if_any!(errors);
 
             let dot = Dot::from(dfa.clone());
-            dot.try_into_file(format!("./{}.dot", name)).expect("failed to write DFA to file");
+            dot.try_into_file(format!("./{}.dot", name))
+                .expect("failed to write DFA to file");
         }
         FiniteAutomata::NonDeterministic(nfa) => {
             // TODO clean this mess
@@ -154,7 +156,8 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             bail_if_any!(errors);
 
             let dot = Dot::from(nfa.clone());
-            dot.try_into_file(format!("./{}.dot", name)).expect("failed to write NFA to file");
+            dot.try_into_file(format!("./{}.dot", name))
+                .expect("failed to write NFA to file");
         }
     }
 
@@ -197,7 +200,6 @@ impl IntoCompileError for Vec<Error> {
         }
     }
 }
-
 
 #[derive(Debug, PartialEq)]
 enum TypestateAttr {
@@ -256,11 +258,9 @@ struct StateMachineInfo {
     /// Main structure (aka Automata ?)
     main_struct: Option<ItemStruct>, // late init
     /// Deterministic states (`struct`s)
-    det_states: HashSet<ItemStruct>,
+    det_states: HashMap<Ident, ItemStruct>,
     /// Non-deterministic states (`enum`s)
     non_det_states: HashMap<Ident, ItemEnum>,
-    /// Set of extracted identifiers.
-    state_idents: HashSet<Ident>,
     /// Set of transitions.
     /// Extracted from functions with a signature like `(State) -> State`.
     transitions: HashSet<Transition>,
@@ -277,9 +277,8 @@ impl StateMachineInfo {
     fn new() -> Self {
         Self {
             main_struct: None,
-            det_states: HashSet::new(),
+            det_states: HashMap::new(),
             non_det_states: HashMap::new(),
-            state_idents: HashSet::new(),
             transitions: HashSet::new(),
             initial_states: HashSet::new(),
             final_states: HashSet::new(),
@@ -291,13 +290,12 @@ impl StateMachineInfo {
     fn add_state(&mut self, state: Item) {
         match state {
             Item::Struct(item_struct) => {
-                self.state_idents.insert(item_struct.ident.clone());
-                self.det_states.insert(item_struct);
+                self.det_states
+                    .insert(item_struct.ident.clone(), item_struct);
             }
             Item::Enum(item_enum) => {
-                let ident = &item_enum.ident;
-                self.state_idents.insert(ident.clone());
-                self.non_det_states.insert(ident.clone(), item_enum);
+                self.non_det_states
+                    .insert(item_enum.ident.clone(), item_enum);
             }
             _ => unreachable!("invalid state"),
         }
@@ -307,7 +305,7 @@ impl StateMachineInfo {
     ///
     /// For an identifier to be considered a valid state it must have been previously added.
     fn is_valid_state_ident(&self, ident: &Ident) -> bool {
-        self.state_idents.contains(ident)
+        self.det_states.contains_key(ident) || self.non_det_states.contains_key(ident)
     }
 
     /// Return the main state identifier.
@@ -325,6 +323,7 @@ impl Default for StateMachineInfo {
     }
 }
 
+#[derive(Debug)]
 enum FiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
@@ -340,7 +339,7 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
             let mut dfa = DFA::new();
             self.det_states
                 .into_iter()
-                .map(|it| it.ident)
+                .map(|(ident, _)| ident)
                 .for_each(|ident| dfa.add_state(ident));
             self.initial_states
                 .into_iter()
@@ -357,7 +356,7 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
             let mut nfa = NFA::new();
             self.det_states
                 .into_iter()
-                .map(|it| it.ident)
+                .map(|(ident, _)| ident)
                 .for_each(|ident| nfa.add_state(ident));
             self.initial_states
                 .into_iter()
@@ -366,6 +365,7 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                 .into_iter()
                 .for_each(|ident| nfa.add_final(ident));
             for t in self.transitions {
+                // println!("{:#?}", t);
                 if let Some(state) = self.non_det_states.get(&t.destination) {
                     // nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
                     nfa.add_non_deterministic_transitions(
@@ -641,12 +641,12 @@ impl<'sm> TransitionVisitor<'sm> {
         ));
     }
 
-    fn input_kind(&self, sig: &Signature) -> Option<()> {
+    fn has_receiver(&self, sig: &Signature) -> bool {
         let fn_in = &sig.inputs;
         if let Some(FnArg::Receiver(_)) = fn_in.first() {
-            Some(())
+            true
         } else {
-            None
+            false
         }
     }
 
@@ -677,7 +677,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             return;
         }
 
-        if self.state_machine_info.state_idents.contains(ident) {
+        if self.state_machine_info.det_states.contains_key(ident) {
             self.current_state = Some(ident.clone());
             i.ident = format_ident!("{}State", ident);
             // go deeper
@@ -691,26 +691,27 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         // TODO account for non-deterministic states
+        // println!("{:#?}", i);
         let attrs = &mut i.attrs;
         let sig = &mut i.sig;
-        let input = self.input_kind(sig);
+        let input = self.has_receiver(sig);
         let output = self.output_kind(sig);
 
         match (input, output) {
-            (None, None) => {} // unknown
-            (None, Some(return_ty_ident)) => {
+            (false, None) => {} // unknown
+            (false, Some(return_ty_ident)) => {
                 self.state_machine_info
                     .initial_states
                     .insert(return_ty_ident);
             } // initial
-            (Some(_), None) => {
+            (true, None) => {
                 // add #[must_use]
                 attrs.push(parse_quote!(#[must_use]));
                 self.state_machine_info
                     .final_states
                     .insert(self.current_state.as_ref().unwrap().clone());
             } // final
-            (Some(_), Some(return_ty_ident)) => {
+            (true, Some(return_ty_ident)) => {
                 // add #[must_use]
                 attrs.push(parse_quote!(#[must_use]));
                 let transition = Transition::new(
