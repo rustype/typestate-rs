@@ -20,6 +20,7 @@ enum Delta {
 pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
 /// A representation for a deterministic finite automata.
+#[derive(Clone)]
 pub struct DeterministicFiniteAutomata<State, Transition>
 where
     State: Eq + Hash + Clone,
