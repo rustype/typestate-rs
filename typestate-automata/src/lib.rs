@@ -3,6 +3,8 @@ use std::{
     hash::Hash,
 };
 
+pub mod dot;
+
 /// Type alias for the transition "minigraph".
 type Deltas<State, Transition> = HashMap<State, HashMap<Transition, HashSet<State>>>;
 
