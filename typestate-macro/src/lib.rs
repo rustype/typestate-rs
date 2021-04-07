@@ -92,7 +92,6 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
             // get non-productive to show errors
             let non_productive: HashSet<Ident> = dfa
-                .automata
                 .states
                 .difference(&productive)
                 .map(|s| s.to_owned())
@@ -107,7 +106,6 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             let useful = dfa.useful_states();
             // compute non-useful to show errors
             let non_useful: HashSet<Ident> = dfa
-                .automata
                 .states
                 .difference(&useful)
                 .map(|s| s.to_owned())
@@ -126,7 +124,6 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
             // get non-productive to show errors
             let non_productive: HashSet<Ident> = nfa
-                .automata
                 .states
                 .difference(&productive)
                 .map(|s| s.to_owned())
@@ -141,7 +138,6 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             let useful = nfa.useful_states();
             // compute non-useful to show errors
             let non_useful: HashSet<Ident> = nfa
-                .automata
                 .states
                 .difference(&useful)
                 .map(|s| s.to_owned())
