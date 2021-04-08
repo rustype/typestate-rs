@@ -132,6 +132,17 @@ where
         productive
     }
 
+    /// Compute the automata non-productive states.
+    ///
+    /// This is done by calling [productive_states] and performing a diference against the full state set.
+    pub fn non_productive_states(&self) -> HashSet<State> {
+        // TODO check if the clone should be here or if we can return `HashSet<&State>`
+        self.productive_states()
+            .difference(&self.states)
+            .map(|s| s.clone())
+            .collect()
+    }
+
     /// Compute the automata useful states.
     pub fn useful_states(&self) -> HashSet<State> {
         // TODO this could benefit from some "caching" of results on productive
@@ -153,6 +164,17 @@ where
         productive
             .intersection(&reachable)
             .map(|s| s.to_owned())
+            .collect()
+    }
+
+    /// Compute the automata non-useful states.
+    ///
+    /// This is done by calling [useful_states] and performing a diference against the full state set.
+    pub fn non_useful_states(&self) -> HashSet<State> {
+        // TODO check if the clone should be here or if we can return `HashSet<&State>`
+        self.useful_states()
+            .difference(&self.states)
+            .map(|s| s.clone())
             .collect()
     }
 }
@@ -449,6 +471,17 @@ where
         productive
     }
 
+    /// Compute the automata non-productive states.
+    ///
+    /// This is done by calling [productive_states] and performing a diference against the full state set.
+    pub fn non_productive_states(&self) -> HashSet<State> {
+        // TODO check if the clone should be here or if we can return `HashSet<&State>`
+        self.productive_states()
+            .difference(&self.states)
+            .map(|s| s.clone())
+            .collect()
+    }
+
     /// Compute the automata useful states.
     pub fn useful_states(&self) -> HashSet<State> {
         // TODO this could benefit from some "caching" of results on productive
@@ -470,6 +503,17 @@ where
         productive
             .intersection(&reachable)
             .map(|s| s.to_owned())
+            .collect()
+    }
+
+    /// Compute the automata non-useful states.
+    ///
+    /// This is done by calling [useful_states] and performing a diference against the full state set.
+    pub fn non_useful_states(&self) -> HashSet<State> {
+        // TODO check if the clone should be here or if we can return `HashSet<&State>`
+        self.useful_states()
+            .difference(&self.states)
+            .map(|s| s.clone())
             .collect()
     }
 }
