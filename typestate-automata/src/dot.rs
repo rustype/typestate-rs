@@ -1,65 +1,65 @@
 use crate::{DFA, NFA};
 use std::{fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
 
-struct DotEdge<Node, Edge>
+struct DotEdge<Node, Label>
 where
     Node: Display,
-    Edge: Display,
+    Label: Display,
 {
     source: Node,
-    edge: Edge,
+    label: Label,
     destination: Node,
 }
 
-impl<Node, Edge> DotEdge<Node, Edge>
+impl<Node, Label> DotEdge<Node, Label>
 where
     Node: Display,
-    Edge: Display,
+    Label: Display,
 {
-    fn new(source: Node, edge: Edge, destination: Node) -> Self {
+    fn new(source: Node, label: Label, destination: Node) -> Self {
         Self {
             source,
-            edge,
+            label,
             destination,
         }
     }
 }
 
-impl<Node, Edge> Display for DotEdge<Node, Edge>
+impl<Node, Label> Display for DotEdge<Node, Label>
 where
     Node: Display,
-    Edge: Display,
+    Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "{} -> {} [label={}];\n",
-            self.source, self.destination, self.edge
+            self.source, self.destination, self.label
         ))
     }
 }
 
-pub struct Dot<Node, Edge>
+pub struct Dot<Node, Label>
 where
     Node: Display,
-    Edge: Display,
+    Label: Display,
 {
-    edges: Vec<DotEdge<Node, Edge>>,
+    edges: Vec<DotEdge<Node, Label>>,
 }
 
-impl<Node, Edge> Dot<Node, Edge>
+impl<Node, Label> Dot<Node, Label>
 where
     Node: Display,
-    Edge: Display,
+    Label: Display,
 {
     fn new() -> Self {
         Self { edges: vec![] }
     }
 }
 
-impl<Node, Edge> Display for Dot<Node, Edge>
+impl<Node, Label> Display for Dot<Node, Label>
 where
     Node: Display,
-    Edge: Display,
+    Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "digraph Automata {{")?;
@@ -70,35 +70,35 @@ where
     }
 }
 
-impl<Node, Edge> From<DFA<Node, Edge>> for Dot<Node, Edge>
+impl<Node, Label> From<DFA<Node, Label>> for Dot<Node, Label>
 where
     Node: Eq + Hash + Clone + Display,
-    Edge: Eq + Hash + Clone + Display,
+    Label: Eq + Hash + Clone + Display,
 {
-    fn from(dfa: DFA<Node, Edge>) -> Self {
+    fn from(dfa: DFA<Node, Label>) -> Self {
         let mut dot = Dot::new();
         for (source, transitions) in dfa.delta {
-            for (edge, destination) in transitions {
+            for (label, destination) in transitions {
                 dot.edges
-                    .push(DotEdge::new(source.clone(), edge, destination))
+                    .push(DotEdge::new(source.clone(), label, destination))
             }
         }
         dot
     }
 }
 
-impl<Node, Edge> From<NFA<Node, Edge>> for Dot<Node, Edge>
+impl<Node, Label> From<NFA<Node, Label>> for Dot<Node, Label>
 where
     Node: Eq + Hash + Clone + Display,
-    Edge: Eq + Hash + Clone + Display,
+    Label: Eq + Hash + Clone + Display,
 {
-    fn from(nfa: NFA<Node, Edge>) -> Self {
+    fn from(nfa: NFA<Node, Label>) -> Self {
         let mut dot = Dot::new();
         for (source, transitions) in nfa.delta {
-            for (edge, destinations) in transitions {
+            for (label, destinations) in transitions {
                 for destination in destinations {
                     dot.edges
-                        .push(DotEdge::new(source.clone(), edge.clone(), destination))
+                        .push(DotEdge::new(source.clone(), label.clone(), destination))
                 }
             }
         }
@@ -110,10 +110,10 @@ pub trait TryWriteFile {
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File>;
 }
 
-impl<Node, Edge> TryWriteFile for Dot<Node, Edge>
+impl<Node, Label> TryWriteFile for Dot<Node, Label>
 where
     Node: Display,
-    Edge: Display,
+    Label: Display,
 {
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File> {
         let mut file = File::create(path)?;
