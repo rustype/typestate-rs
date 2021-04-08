@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
+use spanned::Spanned;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
@@ -82,11 +83,32 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // report transition_visitor errors and return
     bail_if_any!(transition_visitor.errors);
 
+    let mut basic_errors = vec![];
+
+    if state_machine_info.initial_states.is_empty() {
+        // error with "missing initial states"
+        basic_errors.push(Error::new_spanned(
+            &module,
+            "Missing initial state. To declare an initial state you can use a function with signature like `fn f() -> T` where `T` is a declared state."
+        ));
+    }
+
+    if state_machine_info.final_states.is_empty() {
+        // error with "missing final states"
+        basic_errors.push(Error::new_spanned(
+            &module,
+            "Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state."
+        ));
+    }
+
+    bail_if_any!(basic_errors);
+
     let name = state_machine_info.main_state_name().clone();
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     println!("{:#?}", fa);
     match fa {
+        // TODO add explanations to the non-productive state and non-useful state
         FiniteAutomata::Deterministic(dfa) => {
             // TODO clean this mess
 
