@@ -96,10 +96,9 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             let productive = dfa.productive_states();
 
             // get non-productive to show errors
-            let non_productive: HashSet<Ident> = dfa
+            let non_productive: HashSet<&Ident> = dfa
                 .states
                 .difference(&productive)
-                .map(|s| s.to_owned())
                 .collect();
             let errors: Vec<Error> = non_productive
                 .into_iter()
@@ -110,10 +109,9 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             // compute useful
             let useful = dfa.useful_states();
             // compute non-useful to show errors
-            let non_useful: HashSet<Ident> = dfa
+            let non_useful: HashSet<&Ident> = dfa
                 .states
                 .difference(&useful)
-                .map(|s| s.to_owned())
                 .collect();
             let errors: Vec<Error> = non_useful
                 .into_iter()
