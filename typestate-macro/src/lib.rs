@@ -90,30 +90,15 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     match fa {
         // TODO add explanations to the non-productive state and non-useful state
         FiniteAutomata::Deterministic(dfa) => {
-            // TODO clean this mess
-
-            // compute productive
-            let productive = dfa.productive_states();
-
-            // get non-productive to show errors
-            let non_productive: HashSet<&Ident> = dfa
-                .states
-                .difference(&productive)
-                .collect();
-            let errors: Vec<Error> = non_productive
+            let errors: Vec<Error> = dfa
+                .non_productive_states()
                 .into_iter()
                 .map(|ident| Error::new_spanned(ident, "Non-productive state."))
                 .collect();
-            bail_if_any!(errors);
 
-            // compute useful
-            let useful = dfa.useful_states();
-            // compute non-useful to show errors
-            let non_useful: HashSet<&Ident> = dfa
-                .states
-                .difference(&useful)
-                .collect();
-            let errors: Vec<Error> = non_useful
+            bail_if_any!(errors);
+            let errors: Vec<Error> = dfa
+                .non_useful_states()
                 .into_iter()
                 .map(|ident| Error::new_spanned(ident, "Non-useful state."))
                 .collect();
@@ -124,32 +109,15 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
                 .expect("failed to write DFA to file");
         }
         FiniteAutomata::NonDeterministic(nfa) => {
-            // TODO clean this mess
-
-            // compute productive
-            let productive = nfa.productive_states();
-
-            // get non-productive to show errors
-            let non_productive: HashSet<Ident> = nfa
-                .states
-                .difference(&productive)
-                .map(|s| s.to_owned())
-                .collect();
-            let errors: Vec<Error> = non_productive
+            let errors: Vec<Error> = nfa
+                .non_productive_states()
                 .into_iter()
                 .map(|ident| Error::new_spanned(ident, "Non-productive state."))
                 .collect();
             bail_if_any!(errors);
 
-            // compute useful
-            let useful = nfa.useful_states();
-            // compute non-useful to show errors
-            let non_useful: HashSet<Ident> = nfa
-                .states
-                .difference(&useful)
-                .map(|s| s.to_owned())
-                .collect();
-            let errors: Vec<Error> = non_useful
+            let errors: Vec<Error> = nfa
+                .non_useful_states()
                 .into_iter()
                 .map(|ident| Error::new_spanned(ident, "Non-useful state."))
                 .collect();
