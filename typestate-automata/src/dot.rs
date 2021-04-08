@@ -1,13 +1,19 @@
 use crate::{DFA, NFA};
 use std::{fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
 
+/// A labeled directed edge in a DOT graph.
+///
+/// It is the same as writing `Source -> Destination [label=Label]`.
 struct DotEdge<Node, Label>
 where
     Node: Display,
     Label: Display,
 {
+    /// Edge source node.
     source: Node,
+    /// Edge label.
     label: Label,
+    /// Edge destination node.
     destination: Node,
 }
 
@@ -16,6 +22,7 @@ where
     Node: Display,
     Label: Display,
 {
+    /// Construct a new labeled DOT edge.
     fn new(source: Node, label: Label, destination: Node) -> Self {
         Self {
             source,
@@ -38,11 +45,13 @@ where
     }
 }
 
+/// The list of directed edges in the DOT graph.
 pub struct Dot<Node, Label>
 where
     Node: Display,
     Label: Display,
 {
+    /// List of [DotEdge].
     edges: Vec<DotEdge<Node, Label>>,
 }
 
@@ -106,7 +115,11 @@ where
     }
 }
 
+/// Write to file operation.
 pub trait TryWriteFile {
+    /// Try to write `self` to the file in `path`.
+    /// This operation uses the `Display` representation for its output.
+    /// If successful, returns the written [File], otherwise, an [std::io::Error] is returned.
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File>;
 }
 
