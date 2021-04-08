@@ -1,7 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
-use spanned::Spanned;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
@@ -82,26 +81,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
     // report transition_visitor errors and return
     bail_if_any!(transition_visitor.errors);
-
-    let mut basic_errors = vec![];
-
-    if state_machine_info.initial_states.is_empty() {
-        // error with "missing initial states"
-        basic_errors.push(Error::new_spanned(
-            &module,
-            "Missing initial state. To declare an initial state you can use a function with signature like `fn f() -> T` where `T` is a declared state."
-        ));
-    }
-
-    if state_machine_info.final_states.is_empty() {
-        // error with "missing final states"
-        basic_errors.push(Error::new_spanned(
-            &module,
-            "Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state."
-        ));
-    }
-
-    bail_if_any!(basic_errors);
+    bail_if_any!(state_machine_info.check_missing());
 
     let name = state_machine_info.main_state_name().clone();
 
@@ -337,6 +317,26 @@ impl StateMachineInfo {
     fn main_state_name(&self) -> &Ident {
         &self.main_struct.as_ref().unwrap().ident
     }
+
+    fn check_missing(&self) -> Vec<Error> {
+        // TODO not a fan oc the `call_site` usage
+        let mut errors = vec![];
+        if self.initial_states.is_empty() {
+            // error with "missing initial states"
+            errors.push(Error::new(
+                Span::call_site(),
+                "Missing initial state. To declare an initial state you can use a function with signature like `fn f() -> T` where `T` is a declared state."
+            ));
+        }
+        if self.final_states.is_empty() {
+            // error with "missing final states"
+            errors.push(Error::new(
+                Span::call_site(),
+                "Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state."
+            ));
+        }
+        errors
+    }
 }
 
 impl Default for StateMachineInfo {
@@ -374,7 +374,6 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                 .for_each(|t| dfa.add_transition(t.source, t.symbol, t.destination));
             FiniteAutomata::Deterministic(dfa)
         } else {
-            // TODO review this
             let mut nfa = NFA::new();
             self.det_states
                 .into_iter()
@@ -399,9 +398,6 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                     nfa.add_transition(t.source, t.symbol, t.destination)
                 }
             }
-            // self.non_det_states
-            //     .into_iter()
-            //     .for_each(|(ident, _)| nfa.add_state(ident));
             FiniteAutomata::NonDeterministic(nfa)
         }
     }
