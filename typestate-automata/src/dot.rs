@@ -106,16 +106,16 @@ where
     }
 }
 
-pub trait TryIntoFile {
-    fn try_into_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File>;
+pub trait TryWriteFile {
+    fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File>;
 }
 
-impl<Node, Edge> TryIntoFile for Dot<Node, Edge>
+impl<Node, Edge> TryWriteFile for Dot<Node, Edge>
 where
     Node: Display,
     Edge: Display,
 {
-    fn try_into_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File> {
+    fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File> {
         let mut file = File::create(path)?;
         file.write(self.to_string().as_bytes())?;
         Ok(file)

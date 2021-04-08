@@ -105,7 +105,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             bail_if_any!(errors);
 
             let dot = Dot::from(dfa.clone());
-            dot.try_into_file(format!("./{}.dot", name))
+            dot.try_write_file(format!("./{}.dot", name))
                 .expect("failed to write DFA to file");
         }
         FiniteAutomata::NonDeterministic(nfa) => {
@@ -124,7 +124,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             bail_if_any!(errors);
 
             let dot = Dot::from(nfa.clone());
-            dot.try_into_file(format!("./{}.dot", name))
+            dot.try_write_file(format!("./{}.dot", name))
                 .expect("failed to write NFA to file");
         }
     }
