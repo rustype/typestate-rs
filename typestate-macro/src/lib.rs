@@ -7,7 +7,9 @@ use std::{
     hash::Hash,
 };
 use syn::{parse::Parser, visit_mut::VisitMut, *};
-use typestate_automata::{dot::*, DFA, NFA};
+#[cfg(feature="typestate_debug")]
+use typestate_automata::dot::*;
+use typestate_automata::{DFA, NFA};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -83,6 +85,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     bail_if_any!(transition_visitor.errors);
     bail_if_any!(state_machine_info.check_missing());
 
+    #[cfg(feature="typestate_debug")]
     let name = state_machine_info.main_state_name().clone();
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
@@ -104,9 +107,12 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
                 .collect();
             bail_if_any!(errors);
 
-            let dot = Dot::from(dfa.clone());
-            dot.try_write_file(format!("./{}.dot", name))
-                .expect("failed to write DFA to file");
+            #[cfg(feature="typestate_debug")]
+            {
+                let dot = Dot::from(dfa.clone());
+                dot.try_write_file(format!("./{}.dot", name))
+                    .expect("failed to write DFA to file");
+            }
         }
         FiniteAutomata::NonDeterministic(nfa) => {
             let errors: Vec<Error> = nfa
@@ -123,9 +129,12 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
                 .collect();
             bail_if_any!(errors);
 
-            let dot = Dot::from(nfa.clone());
-            dot.try_write_file(format!("./{}.dot", name))
-                .expect("failed to write NFA to file");
+            #[cfg(feature="typestate_debug")]
+            {
+                let dot = Dot::from(nfa.clone());
+                dot.try_write_file(format!("./{}.dot", name))
+                    .expect("failed to write NFA to file");
+            }
         }
     }
 
