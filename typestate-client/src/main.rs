@@ -15,6 +15,12 @@ fn main() {
     let _ = red_light.turn_off();
 }
 
+// #[typestate]
+// mod test {
+//     #[automata]
+//     pub struct Automata {}
+// }
+
 #[typestate]
 mod maintenance {
     use super::traffic_light::*;
@@ -88,6 +94,12 @@ mod traffic_light {
         fn to_green(self) -> Green;
         fn turn_on() -> Red;
         fn turn_off(self);
+        fn to_either(self) -> Either;
+    }
+
+    pub enum Either {
+        Yellow,
+        Red,
     }
 }
 
@@ -113,6 +125,13 @@ impl YellowState for TrafficLight<Yellow> {
 }
 
 impl RedState for TrafficLight<Red> {
+    fn to_either(self) -> Either {
+        Either::Yellow(TrafficLight::<Yellow> {
+            cycles: self.cycles,
+            state: Yellow,
+        })
+    }
+
     fn to_green(self) -> TrafficLight<Green> {
         println!("Red -> Green");
         TrafficLight::<Green> {
