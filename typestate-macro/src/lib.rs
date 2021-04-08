@@ -639,11 +639,15 @@ impl<'sm> TransitionVisitor<'sm> {
         if let ReturnType::Type(_, ty) = fn_out {
             if let Type::Path(ref mut ty_path) = **ty {
                 if let Some(ident) = ty_path.path.get_ident() {
-                    if self.state_machine_info.is_valid_state_ident(ident) {
+                    if self.state_machine_info.det_states.contains_key(ident) {
+                        // if the state is deterministic, add bound
                         let res = ident.clone(); // HACK
                         let automata_ident = self.state_machine_info.main_state_name();
                         ty_path.path = parse_quote!(#automata_ident<#ident>);
                         return Some(res);
+                    } else if self.state_machine_info.non_det_states.contains_key(ident) {
+                        // else do not add bound
+                        return Some(ident.clone());
                     }
                 }
             }
