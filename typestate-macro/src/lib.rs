@@ -6,8 +6,8 @@ use std::{
     convert::TryFrom,
     hash::Hash,
 };
-use syn::{parse::Parser, visit_mut::VisitMut, *};
-#[cfg(feature="typestate_debug")]
+use syn::{parse::Parser, spanned::Spanned, visit_mut::VisitMut, *};
+#[cfg(feature = "typestate_debug")]
 use typestate_automata::dot::*;
 use typestate_automata::{DFA, NFA};
 
@@ -35,6 +35,49 @@ const STATE_ATTR_IDENT: &'static str = "state";
 //         ::syn::parse_quote!( $($code)* )
 //     })()
 // )}
+
+enum TypestateError {
+    MissingAutomata,
+    NonProductiveState(Span),
+    NonUsefulState(Span),
+    MissingInitialState,
+    MissingFinalState,
+    ConflictingAttributes(Span),
+    DuplicateAttributes(Span),
+    AutomataRedefinition(Span),
+    InvalidVariant(Span),
+    UnsupportedVariant(Span),
+    UnknownState(Ident),
+    InvalidAssocFuntions(Span),
+    UnsupportedStruct(Span),
+}
+
+impl Into<::syn::Error> for TypestateError {
+    fn into(self) -> ::syn::Error {
+        match self {
+            TypestateError::MissingAutomata => Error::new(Span::call_site(), "Missing `#[automata]` struct."),
+            TypestateError::NonProductiveState(span) => Error::new(span, "Non-productive state. For a state to be productive, a path from the state to a final state is required to exist."),
+            TypestateError::NonUsefulState(span) => Error::new(span, "Non-useful state. For a state to be useful it must first be productive and a path from initial state to the state is required to exist."),
+            TypestateError::MissingInitialState => Error::new(Span::call_site(), "Missing initial state. To declare an initial state you can use a function with signature like `fn f() -> T` where `T` is a declared state."),
+            TypestateError::MissingFinalState => Error::new(Span::call_site(), "Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state."),
+            TypestateError::ConflictingAttributes(span) => Error::new(span, "Conflicting attributes are declared."), // TODO add which attributes are conflicting
+            TypestateError::DuplicateAttributes(span) => Error::new(span, "Duplicate attribute."),
+            TypestateError::AutomataRedefinition(span) => Error::new(span, "`#[automata]` redefinition here."),
+            TypestateError::InvalidVariant(span) => Error::new(span, "`enum` variant is not a valid state."),
+            TypestateError::UnsupportedVariant(span) => Error::new(span, "Only unit (C-like) `enum` variants are supported."),
+            TypestateError::UnknownState(ident) => Error::new_spanned(&ident, format!("`{}` is not a declared state.", ident)),
+            TypestateError::InvalidAssocFuntions(span) => Error::new(span, "Non-deterministic states cannot have associated functions"),
+            TypestateError::UnsupportedStruct(span) => Error::new(span, "Tuple structures are not supported."),
+        }
+    }
+}
+
+impl IntoCompileError for TypestateError {
+    fn to_compile_error(self) -> TokenStream2 {
+        let err: syn::Error = self.into();
+        err.to_compile_error()
+    }
+}
 
 #[proc_macro_attribute]
 pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
@@ -67,9 +110,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
     let sealed_trait = state_visitor.sealed_trait;
     if sealed_trait.trait_ident.is_none() {
-        return Error::new(Span::call_site(), "Missing `#[automata]` struct.")
-            .to_compile_error()
-            .into();
+        return TypestateError::MissingAutomata.to_compile_error().into();
     }
 
     let mut non_det_state_visitor = NonDeterministicStateVisitor::new(&mut state_machine_info);
@@ -85,7 +126,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     bail_if_any!(transition_visitor.errors);
     bail_if_any!(state_machine_info.check_missing());
 
-    #[cfg(feature="typestate_debug")]
+    #[cfg(feature = "typestate_debug")]
     let name = state_machine_info.main_state_name().clone();
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
@@ -96,18 +137,18 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             let errors: Vec<Error> = dfa
                 .non_productive_states()
                 .into_iter()
-                .map(|ident| Error::new_spanned(ident, "Non-productive state."))
+                .map(|ident| TypestateError::NonProductiveState(ident.span()).into())
                 .collect();
-
             bail_if_any!(errors);
+
             let errors: Vec<Error> = dfa
                 .non_useful_states()
                 .into_iter()
-                .map(|ident| Error::new_spanned(ident, "Non-useful state."))
+                .map(|ident| TypestateError::NonUsefulState(ident.span()).into())
                 .collect();
             bail_if_any!(errors);
 
-            #[cfg(feature="typestate_debug")]
+            #[cfg(feature = "typestate_debug")]
             {
                 let dot = Dot::from(dfa.clone());
                 dot.try_write_file(format!("./{}.dot", name))
@@ -118,18 +159,18 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             let errors: Vec<Error> = nfa
                 .non_productive_states()
                 .into_iter()
-                .map(|ident| Error::new_spanned(ident, "Non-productive state."))
+                .map(|ident| TypestateError::NonProductiveState(ident.span()).into())
                 .collect();
             bail_if_any!(errors);
 
             let errors: Vec<Error> = nfa
                 .non_useful_states()
                 .into_iter()
-                .map(|ident| Error::new_spanned(ident, "Non-useful state."))
+                .map(|ident| TypestateError::NonUsefulState(ident.span()).into())
                 .collect();
             bail_if_any!(errors);
 
-            #[cfg(feature="typestate_debug")]
+            #[cfg(feature = "typestate_debug")]
             {
                 let dot = Dot::from(nfa.clone());
                 dot.try_write_file(format!("./{}.dot", name))
@@ -297,18 +338,10 @@ impl StateMachineInfo {
         // TODO not a fan oc the `call_site` usage
         let mut errors = vec![];
         if self.initial_states.is_empty() {
-            // error with "missing initial states"
-            errors.push(Error::new(
-                Span::call_site(),
-                "Missing initial state. To declare an initial state you can use a function with signature like `fn f() -> T` where `T` is a declared state."
-            ));
+            errors.push(TypestateError::MissingInitialState.into());
         }
         if self.final_states.is_empty() {
-            // error with "missing final states"
-            errors.push(Error::new(
-                Span::call_site(),
-                "Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state."
-            ));
+            errors.push(TypestateError::MissingFinalState.into());
         }
         errors
     }
@@ -451,22 +484,20 @@ impl<'sm> DeterministicStateVisitor<'sm> {
 
     /// Add `multiple attributes` error to the error vector.
     fn push_multiple_attr_error(&mut self, attr: &Attribute) {
-        self.errors.push(Error::new_spanned(
-            attr,
-            "Multiple attributes are declared.",
-        ));
+        self.errors
+            .push(TypestateError::ConflictingAttributes(attr.span()).into());
     }
 
     /// Add `duplicate attribute` error to the error vector.
     fn push_multiple_decl_error(&mut self, attr: &Attribute) {
         self.errors
-            .push(Error::new_spanned(attr, "Duplicate attribute."));
+            .push(TypestateError::DuplicateAttributes(attr.span()).into());
     }
 
     /// Add `multiple automata` error to the error vector.
     fn push_multiple_automata_decl_error(&mut self, it: &ItemStruct) {
         self.errors
-            .push(Error::new_spanned(it, "`automata` redefinition here."));
+            .push(TypestateError::AutomataRedefinition(it.span()).into());
     }
 }
 
@@ -562,18 +593,14 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
 
     /// Add `undeclared state` error to the error vector.
     fn push_undeclared_state_error(&mut self, ident: &Ident) {
-        self.errors.push(Error::new_spanned(
-            ident,
-            "`enum` variant is not a valid state.",
-        ));
+        self.errors
+            .push(TypestateError::InvalidVariant(ident.span()).into());
     }
 
     /// Add `unsupported variant` error to the error vector.
     fn push_unsupported_variant_error(&mut self, variant: &Variant) {
-        self.errors.push(Error::new_spanned(
-            variant,
-            "Only unit (C-like) `enum` variants are supported.",
-        ));
+        self.errors
+            .push(TypestateError::UnsupportedVariant(variant.span()).into());
     }
 }
 
@@ -621,17 +648,13 @@ impl<'sm> TransitionVisitor<'sm> {
 
     /// Add `unknown state` error to the error vector.
     fn push_unknown_state_error(&mut self, ident: &Ident) {
-        self.errors.push(Error::new_spanned(
-            ident,
-            format!("`{}` is not a declared state.", ident),
-        ));
+        self.errors
+            .push(TypestateError::UnknownState(ident.to_owned()).into());
     }
 
     fn push_invalid_trait_error(&mut self, it: &ItemTrait) {
-        self.errors.push(Error::new_spanned(
-            it,
-            "Non-deterministic states cannot have associated functions",
-        ));
+        self.errors
+            .push(TypestateError::InvalidAssocFuntions(it.span()).into());
     }
 
     fn has_receiver(&self, sig: &Signature) -> bool {
@@ -740,10 +763,9 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
                 .push(Field::parse_named.parse2(field_to_add).unwrap());
         }
         syn::Fields::Unnamed(_) => {
-            return syn::Result::Err(Error::new_spanned(
-                automata_item,
-                "Tuple structures are not supported.",
-            ));
+            return syn::Result::Err(
+                TypestateError::UnsupportedStruct(automata_item.span()).into(),
+            );
         }
         syn::Fields::Unit => {
             automata_item.fields = Fields::Named(parse_quote!({ #field_to_add }));
