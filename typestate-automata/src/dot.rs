@@ -53,6 +53,10 @@ where
 {
     /// List of [DotEdge].
     edges: Vec<DotEdge<Node, Label>>,
+    /// List of initial state nodes.
+    initial_states: Vec<Node>,
+    /// List of final state nodes.
+    final_states: Vec<Node>,
 }
 
 impl<Node, Label> Dot<Node, Label>
@@ -61,7 +65,11 @@ where
     Label: Display,
 {
     fn new() -> Self {
-        Self { edges: vec![] }
+        Self {
+            edges: vec![],
+            initial_states: vec![],
+            final_states: vec![],
+        }
     }
 }
 
@@ -72,6 +80,16 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "digraph Automata {{")?;
+        for (i, node) in self.initial_states.iter().enumerate() {
+            f.write_fmt(format_args!(
+                "\t_initial_{} [label=\"\", shape=\"plaintext\"];\n",
+                i
+            ))?;
+            f.write_fmt(format_args!("\t_initial_{} -> {};\n", i, node))?;
+        }
+        for node in self.final_states.iter() {
+            f.write_fmt(format_args!("\t{} [style=\"bold\"];\n", node))?;
+        }
         for edge in self.edges.iter() {
             f.write_fmt(format_args!("\t{}", edge))?;
         }
@@ -86,6 +104,12 @@ where
 {
     fn from(dfa: DFA<Node, Label>) -> Self {
         let mut dot = Dot::new();
+        for node in dfa.initial_states {
+            dot.initial_states.push(node)
+        }
+        for node in dfa.final_states {
+            dot.final_states.push(node)
+        }
         for (source, transitions) in dfa.delta {
             for (label, destination) in transitions {
                 dot.edges
