@@ -127,6 +127,12 @@ where
 {
     fn from(nfa: NFA<Node, Label>) -> Self {
         let mut dot = Dot::new();
+        for node in nfa.initial_states {
+            dot.initial_states.push(node)
+        }
+        for node in nfa.final_states {
+            dot.final_states.push(node)
+        }
         for (source, transitions) in nfa.delta {
             for (label, destinations) in transitions {
                 for destination in destinations {
