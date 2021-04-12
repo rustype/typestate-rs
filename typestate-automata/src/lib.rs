@@ -137,10 +137,14 @@ where
     /// This is done by calling [DeterministicFiniteAutomata::productive_states] and performing a diference against the full state set.
     pub fn non_productive_states(&self) -> HashSet<State> {
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
-        self.productive_states()
-            .difference(&self.states)
+        self.states
+            .difference(&self.productive_states())
             .map(|s| s.clone())
             .collect()
+        // self.productive_states()
+        //     .difference(&self.states)
+        //     .map(|s| s.clone())
+        //     .collect()
     }
 
     /// Compute the automata useful states.
@@ -172,8 +176,8 @@ where
     /// This is done by calling [DeterministicFiniteAutomata::useful_states] and performing a diference against the full state set.
     pub fn non_useful_states(&self) -> HashSet<State> {
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
-        self.useful_states()
-            .difference(&self.states)
+        self.states
+            .difference(&self.useful_states())
             .map(|s| s.clone())
             .collect()
     }
@@ -476,8 +480,8 @@ where
     /// This is done by calling [NonDeterministicFiniteAutomata::productive_states] and performing a diference against the full state set.
     pub fn non_productive_states(&self) -> HashSet<State> {
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
-        self.productive_states()
-            .difference(&self.states)
+        self.states
+            .difference(&self.productive_states())
             .map(|s| s.clone())
             .collect()
     }
@@ -511,8 +515,8 @@ where
     /// This is done by calling [NonDeterministicFiniteAutomata::useful_states] and performing a diference against the full state set.
     pub fn non_useful_states(&self) -> HashSet<State> {
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
-        self.useful_states()
-            .difference(&self.states)
+        self.states
+            .difference(&self.useful_states())
             .map(|s| s.clone())
             .collect()
     }
