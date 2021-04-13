@@ -1,5 +1,0 @@
-error: Non-productive state.
- --> $DIR/unproductive_state.rs:9:12
-  |
-9 |     struct A {}
-  |            ^

@@ -1,4 +1,4 @@
-error: Multiple attributes are declared.
+error: Conflicting attributes are declared.
  --> $DIR/conflicting_automata_attr.rs:6:5
   |
 6 |     #[automata] // this should error because it is the second one

@@ -1,0 +1,15 @@
+error: Missing initial state. To declare an initial state you can use a function with signature like `fn f() -> T` where `T` is a declared state.
+ --> $DIR/missing_initial_final_states.rs:3:1
+  |
+3 | #[typestate]
+  | ^^^^^^^^^^^^
+  |
+  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state.
+ --> $DIR/missing_initial_final_states.rs:3:1
+  |
+3 | #[typestate]
+  | ^^^^^^^^^^^^
+  |
+  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)

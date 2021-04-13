@@ -1,5 +1,0 @@
-error: Non-useful state.
- --> $DIR/useless_state.rs:9:12
-  |
-9 |     struct A {}
-  |            ^

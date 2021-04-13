@@ -11,19 +11,27 @@ macro_rules! pass {
 }
 
 #[test]
-fn tests() {
+fn compile_fail() {
     let t = trybuild::TestCases::new();
     fail!(t[
         empty_module,
+        empty_automata,
         duplicate_automata_attr,
         duplicate_state_attr,
         conflicting_automata_attr,
         conflicting_state_attr,
-        unproductive_state,
-        useless_state,
+        missing_initial_final_states,
+        complex_unreachable_state,
     ]);
     pass!(t[
-        empty_automata,
         stateful_automata,
     ]);
 }
+
+// #[test]
+// fn compile_pass() {
+//     let t = trybuild::TestCases::new();
+//     pass!(t[
+//         stateful_automata,
+//     ]);
+// }

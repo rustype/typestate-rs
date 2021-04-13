@@ -1,0 +1,5 @@
+error: Non-productive state. For a state to be productive, a path from the state to a final state is required to exist.
+  --> $DIR/complex_unreachable_state.rs:20:16
+   |
+20 |     pub struct RedA;
+   |                ^^^^
