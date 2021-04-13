@@ -147,9 +147,7 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     // if errors do not exist, return the token stream
-    let ret = module.into_token_stream();
-    // println!("{}", ret);
-    ret.into()
+    module.into_token_stream().into()
 }
 
 /// A value to `proc_macro2::TokenStream2` conversion.
@@ -351,7 +349,6 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                 .into_iter()
                 .for_each(|ident| nfa.add_final(ident));
             for t in self.transitions {
-                // println!("{:#?}", t);
                 if let Some(state) = self.non_det_states.get(&t.destination) {
                     // nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
                     nfa.add_non_deterministic_transitions(
@@ -473,7 +470,6 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
                 let ts_attr = TypestateAttr::try_from(&attr.path);
                 match ts_attr {
                     Ok(inner_ts_attr) => {
-                        // eprintln!("{:#?}", main_attr);
                         match main_attr {
                             Some(ref prev_attr) => {
                                 if *prev_attr == inner_ts_attr {
@@ -509,7 +505,6 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
                     }
                     None => self.state_machine_info.main_struct = Some(it_struct.clone()),
                 };
-                // eprintln!("{:#?}", self.state_machine_info.main_struct);
                 match add_state_type_param(it_struct) {
                     Ok(bound_ident) => match self.sealed_trait.trait_ident {
                         Some(_) => unreachable!("this should have been checked previously"),
@@ -668,7 +663,6 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         // TODO account for non-deterministic states
-        // println!("{:#?}", i);
         let attrs = &mut i.attrs;
         let sig = &mut i.sig;
         let input = self.has_receiver(sig);
