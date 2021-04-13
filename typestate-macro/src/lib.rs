@@ -277,7 +277,7 @@ impl StateMachineInfo {
     /// Check if a given [syn::Ident] is a valid state.
     ///
     /// For an identifier to be considered a valid state it must have been previously added.
-    fn is_valid_state_ident(&self, ident: &Ident) -> bool {
+    fn state_exists(&self, ident: &Ident) -> bool {
         self.det_states.contains_key(ident) || self.non_det_states.contains_key(ident)
     }
 
@@ -559,17 +559,24 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
 impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
     fn visit_item_enum_mut(&mut self, i: &mut ItemEnum) {
         for variant in &mut i.variants {
-            let ident = &variant.ident;
-            if !self.state_machine_info.is_valid_state_ident(ident) {
-                self.push_undeclared_state_error(ident)
-            }
+            // check if the variant is a valid one
+            // i.e. unit-style variant
             if let Fields::Unit = &variant.fields {
-                let automata_ident = self.state_machine_info.main_state_name();
-                variant.fields = Fields::Unnamed(parse_quote!(
-                    /* Variant */ (
-                        #automata_ident<#ident>
-                    )
-                ));
+                let ident = &variant.ident;
+                if self.state_machine_info.non_det_states.contains_key(ident) {
+                    variant.fields = Fields::Unnamed(parse_quote!(
+                        /* Variant */ (#ident)
+                    ));
+                } else if self.state_machine_info.det_states.contains_key(ident) {
+                    let automata_ident = self.state_machine_info.main_state_name();
+                    variant.fields = Fields::Unnamed(parse_quote!(
+                        /* Variant */ (
+                            #automata_ident<#ident>
+                        )
+                    ));
+                } else {
+                    self.push_undeclared_state_error(ident);
+                }
             } else {
                 self.push_unsupported_variant_error(variant);
             }
