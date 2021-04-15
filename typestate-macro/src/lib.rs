@@ -274,13 +274,6 @@ impl StateMachineInfo {
         }
     }
 
-    /// Check if a given [syn::Ident] is a valid state.
-    ///
-    /// For an identifier to be considered a valid state it must have been previously added.
-    fn state_exists(&self, ident: &Ident) -> bool {
-        self.det_states.contains_key(ident) || self.non_det_states.contains_key(ident)
-    }
-
     /// Return the main state identifier.
     /// This is an utility function.
     // maybe the unwrap could be converted into a check
