@@ -29,5 +29,6 @@ trybuild = { version = "1.0", features = ["diff"] }
 quote = "1.0"
 syn = { version = "1.0", features = ["extra-traits", "visit-mut", "parsing", "full"] }
 proc-macro2 = "1.0"
+darling = "0.12"
 
 typestate-automata = { path = "../typestate-automata" }

@@ -1,5 +1,7 @@
+use darling::FromMeta;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
+use punctuated::Punctuated;
 use quote::{format_ident, quote, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
@@ -35,9 +37,8 @@ const STATE_ATTR_IDENT: &'static str = "state";
 //         ::syn::parse_quote!( $($code)* )
 //     })()
 // )}
-
 #[proc_macro_attribute]
-pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
+pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     macro_rules! bail_if_any {
         ( $errors:expr ) => {
             match $errors {
@@ -50,10 +51,15 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
         };
     }
 
-    // conservatively deny macro "misuses"
-    // e.g. #[typestate(non_existent)]
-    // this approach does not break future implementations
-    let _: syn::parse::Nothing = parse_macro_input!(attrs);
+    // Parse attribute arguments
+    let attr_args: AttributeArgs = parse_macro_input!(args);
+    let args = match TypestateArguments::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => {
+            return TokenStream::from(e.write_errors());
+        }
+    };
+
     // parse the input as a mod
     let mut module: ItemMod = parse_macro_input!(input);
 
@@ -83,56 +89,103 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
     bail_if_any!(transition_visitor.errors);
     bail_if_any!(state_machine_info.check_missing());
 
-    #[cfg(feature = "typestate_debug")]
-    let name = state_machine_info.main_state_name().clone();
-
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
-    eprintln!("{:#?}", fa);
+    // eprintln!("{:#?}", fa);
+
+    // TODO handle the duplicate code inside
+    macro_rules! handle_automata {
+        ($name:ident, $automata:ident) => {
+            #[cfg(feature = "typestate_debug")]
+            {
+                let dot = Dot::from($automata.clone());
+                dot.try_write_file(format!("./{}.dot", name))
+                    .expect("failed to write automata to file");
+            }
+
+            let errors: Vec<Error> = $automata
+                .non_productive_states()
+                .into_iter()
+                .map(|ident| TypestateError::NonProductiveState(ident.clone()).into())
+                .collect();
+            bail_if_any!(errors);
+
+            let errors: Vec<Error> = $automata
+                .non_useful_states()
+                .into_iter()
+                .map(|ident| TypestateError::NonUsefulState(ident.clone()).into())
+                .collect();
+            bail_if_any!(errors);
+
+            // do not parse more code
+            // only generate from here
+
+            let mut tokens: Vec<Item> = match args.enumerate {
+                TOption::Some(str) => {
+                    let ident = format_ident!("{}", str);
+                    let states = $automata.states.iter().collect::<Vec<_>>();
+                    // generate the enumeration
+                    let enum_tokens = ::quote::quote! {
+                        enum #ident {
+                            #(#states(#$name<#states>),)*
+                        }
+                    };
+                    // generate impls for conversion from type to enumeration
+                    let from_tokens = states.iter().map(|state| {
+                        ::quote::quote! {
+                            impl ::core::convert::From<#$name<#state>> for #ident {
+                                fn from(value: #$name<#state>) -> Self {
+                                    Self::#state(value)
+                                }
+                            }
+                        }
+                    })
+                    .map(|tokens| ::syn::parse_quote!(#tokens));
+                    let mut res = vec![::syn::parse_quote!(#enum_tokens)];
+                    res.extend(from_tokens);
+                    res
+                }
+                TOption::Default => {
+                    let ident = format_ident!("E{}", $name);
+                    let states = $automata.states.iter().collect::<Vec<_>>();
+                    // generate the enumeration
+                    let enum_tokens = ::quote::quote! {
+                        enum #ident {
+                            #(#states(#$name<#states>),)*
+                        }
+                    };
+                    // generate impls for conversion from type to enumeration
+                    let from_tokens = states.iter().map(|state| {
+                        ::quote::quote! {
+                            impl ::core::convert::From<#$name<#state>> for #ident {
+                                fn from(value: #$name<#state>) -> Self {
+                                    Self::#state(value)
+                                }
+                            }
+                        }
+                    })
+                    .map(|tokens| ::syn::parse_quote!(#tokens));
+                    let mut res = vec![::syn::parse_quote!(#enum_tokens)];
+                    res.extend(from_tokens);
+                    res
+                }
+                TOption::None => vec![],
+            };
+            match &mut module.content {
+                Some((_, v)) => {
+                    v.append(&mut tokens);
+                }
+                None => {}
+            }
+        };
+    }
+
     match fa {
         // TODO add explanations to the non-productive state and non-useful state
-        FiniteAutomata::Deterministic(dfa) => {
-            let errors: Vec<Error> = dfa
-                .non_productive_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonProductiveState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            let errors: Vec<Error> = dfa
-                .non_useful_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonUsefulState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            #[cfg(feature = "typestate_debug")]
-            {
-                let dot = Dot::from(dfa.clone());
-                dot.try_write_file(format!("./{}.dot", name))
-                    .expect("failed to write DFA to file");
-            }
+        FiniteAutomata::Deterministic(name, dfa) => {
+            handle_automata!(name, dfa);
         }
-        FiniteAutomata::NonDeterministic(nfa) => {
-            let errors: Vec<Error> = nfa
-                .non_productive_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonProductiveState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            let errors: Vec<Error> = nfa
-                .non_useful_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonUsefulState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            #[cfg(feature = "typestate_debug")]
-            {
-                let dot = Dot::from(nfa.clone());
-                dot.try_write_file(format!("./{}.dot", name))
-                    .expect("failed to write NFA to file");
-            }
+        FiniteAutomata::NonDeterministic(name, nfa) => {
+            handle_automata!(name, nfa);
         }
     }
 
@@ -144,10 +197,53 @@ pub fn typestate(attrs: TokenStream, input: TokenStream) -> TokenStream {
             v.append(&mut sealed_trait.into());
         }
         None => {}
-    };
+    }
 
     // if errors do not exist, return the token stream
     module.into_token_stream().into()
+}
+
+/// Option-like triplet. Used in argument parsing to differ between:
+/// - Missing value `#[]`
+/// - Concrete value `#[macro(attr = "value")]`
+/// - Present but not overwritten `#[macro(attr)]`
+#[derive(Debug)]
+enum TOption<T> {
+    Some(T),
+    Default,
+    None,
+}
+
+impl<T> Default for TOption<T> {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl FromMeta for TOption<String> {
+    /// If the input string is empty it returns `Ok(Default)`, otherwise it returns `Ok(Some(value))`.
+    fn from_string(value: &str) -> darling::Result<Self> {
+        if value.is_empty() {
+            // arg = ""
+            return Ok(Self::Default);
+        } else {
+            // arg = "..."
+            return Ok(Self::Some(value.to_string()));
+        }
+    }
+
+    /// Returns `Ok(Default)`.
+    fn from_word() -> darling::Result<Self> {
+        Ok(Self::Default)
+    }
+}
+
+#[derive(Debug, FromMeta)]
+struct TypestateArguments {
+    /// Optional arguments.
+    /// Declares if an enumeration is to be generated and possibly gives it a name.
+    #[darling(default)]
+    enumerate: TOption<String>,
 }
 
 /// A value to `proc_macro2::TokenStream2` conversion.
@@ -307,14 +403,15 @@ where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
-    Deterministic(DFA<State, Transition>),
-    NonDeterministic(NFA<State, Transition>),
+    Deterministic(Ident, DFA<State, Transition>),
+    NonDeterministic(Ident, NFA<State, Transition>),
 }
 
 impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
     fn into(self) -> FiniteAutomata<Ident, Ident> {
         if self.non_det_states.is_empty() {
             let mut dfa = DFA::new();
+            let name = self.main_state_name().clone();
             self.det_states
                 .into_iter()
                 .map(|(ident, _)| ident)
@@ -328,9 +425,10 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
             self.transitions
                 .into_iter()
                 .for_each(|t| dfa.add_transition(t.source, t.symbol, t.destination));
-            FiniteAutomata::Deterministic(dfa)
+            FiniteAutomata::Deterministic(name, dfa)
         } else {
             let mut nfa = NFA::new();
+            let name = self.main_state_name().clone();
             self.det_states
                 .into_iter()
                 .map(|(ident, _)| ident)
@@ -353,7 +451,7 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                     nfa.add_transition(t.source, t.symbol, t.destination)
                 }
             }
-            FiniteAutomata::NonDeterministic(nfa)
+            FiniteAutomata::NonDeterministic(name, nfa)
         }
     }
 }
@@ -380,7 +478,7 @@ impl Into<Vec<Item>> for SealedPattern {
         let mut ret = vec![];
 
         // Sealed trait
-        ret.push(parse_quote! {
+        ret.push(::syn::parse_quote! {
             /* private */ mod #private_mod_ident {
                 pub trait #private_mod_trait {}
             }
@@ -388,19 +486,19 @@ impl Into<Vec<Item>> for SealedPattern {
 
         // Sealed trait impls
         ret.extend(states.iter().map(|each_state| {
-            parse_quote! {
+            ::syn::parse_quote! {
                 impl #private_mod_ident::#private_mod_trait for #each_state {}
             }
         }));
 
         // State trait
-        ret.push(parse_quote! {
+        ret.push(::syn::parse_quote! {
             pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
         });
 
         // Blanket impl of state trait from sealed implementors
         // This frees us from having to provide concrete impls for each type.
-        ret.push(parse_quote! {
+        ret.push(::syn::parse_quote! {
             impl<__T : ?::core::marker::Sized> #trait_ident
                 for __T
             where
@@ -557,12 +655,12 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             if let Fields::Unit = &variant.fields {
                 let ident = &variant.ident;
                 if self.state_machine_info.non_det_states.contains_key(ident) {
-                    variant.fields = Fields::Unnamed(parse_quote!(
+                    variant.fields = Fields::Unnamed(::syn::parse_quote!(
                         /* Variant */ (#ident)
                     ));
                 } else if self.state_machine_info.det_states.contains_key(ident) {
                     let automata_ident = self.state_machine_info.main_state_name();
-                    variant.fields = Fields::Unnamed(parse_quote!(
+                    variant.fields = Fields::Unnamed(::syn::parse_quote!(
                         /* Variant */ (
                             #automata_ident<#ident>
                         )
@@ -627,7 +725,7 @@ impl<'sm> TransitionVisitor<'sm> {
                         // if the state is deterministic, add bound
                         let res = ident.clone(); // HACK
                         let automata_ident = self.state_machine_info.main_state_name();
-                        ty_path.path = parse_quote!(#automata_ident<#ident>);
+                        ty_path.path = ::syn::parse_quote!(#automata_ident<#ident>);
                         return Some(res);
                     } else if self.state_machine_info.non_det_states.contains_key(ident) {
                         // else do not add bound
@@ -677,14 +775,14 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             } // initial
             (true, None) => {
                 // add #[must_use]
-                attrs.push(parse_quote!(#[must_use]));
+                attrs.push(::syn::parse_quote!(#[must_use]));
                 self.state_machine_info
                     .final_states
                     .insert(self.current_state.as_ref().unwrap().clone());
             } // final
             (true, Some(return_ty_ident)) => {
                 // add #[must_use]
-                attrs.push(parse_quote!(#[must_use]));
+                attrs.push(::syn::parse_quote!(#[must_use]));
                 let transition = Transition::new(
                     self.current_state.as_ref().unwrap().clone(),
                     return_ty_ident,
@@ -701,7 +799,7 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
     automata_item
         .generics
         .params
-        .push(parse_quote!(State: #type_param_ident));
+        .push(::syn::parse_quote!(State: #type_param_ident));
 
     let field_to_add = quote!(
         pub state: State
@@ -719,7 +817,7 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
             );
         }
         syn::Fields::Unit => {
-            automata_item.fields = Fields::Named(parse_quote!({ #field_to_add }));
+            automata_item.fields = Fields::Named(::syn::parse_quote!({ #field_to_add }));
         }
     };
 
