@@ -124,7 +124,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
                     let states = $automata.states.iter().collect::<Vec<_>>();
                     // generate the enumeration
                     let enum_tokens = ::quote::quote! {
-                        enum #ident {
+                        pub enum #ident {
                             #(#states(#$name<#states>),)*
                         }
                     };
