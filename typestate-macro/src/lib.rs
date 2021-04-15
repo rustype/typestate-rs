@@ -97,7 +97,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             #[cfg(feature = "typestate_debug")]
             {
                 let dot = Dot::from($automata.clone());
-                dot.try_write_file(format!("./{}.dot", name))
+                dot.try_write_file(format!("./{}.dot", $name))
                     .expect("failed to write automata to file");
             }
 
