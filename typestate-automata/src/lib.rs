@@ -32,9 +32,9 @@ where
     /// Deterministic finite automata transition symbols.
     sigma: HashSet<Transition>,
     /// Deterministic finite automata initial state-indexes.
-    pub initial_states: HashSet<State>,
+    pub initial_states: HashMap<State, HashSet<Transition>>,
     /// Deterministic finite automata final state-indexes.
-    pub final_states: HashSet<State>,
+    pub final_states: HashMap<State, HashSet<Transition>>,
     /// Deterministic finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
     delta: HashMap<State, HashMap<Transition, State>>,
@@ -53,8 +53,8 @@ where
         Self {
             states: HashSet::new(),
             sigma: HashSet::new(),
-            initial_states: HashSet::new(),
-            final_states: HashSet::new(),
+            initial_states: HashMap::new(),
+            final_states: HashMap::new(),
             delta: HashMap::new(),
             idelta: HashMap::new(),
         }
@@ -66,15 +66,27 @@ where
     }
 
     /// Add an initial state to the automata.
-    pub fn add_initial(&mut self, state: State) {
+    pub fn add_initial(&mut self, state: State, symbol: Transition) {
         self.states.insert(state.clone());
-        self.initial_states.insert(state);
+        if let Some(symbols) = self.initial_states.get_mut(&state) {
+            symbols.insert(symbol);
+        } else {
+            let mut symbols = HashSet::new();
+            symbols.insert(symbol);
+            self.initial_states.insert(state, symbols);
+        }
     }
 
     /// Add a final state to the automata.
-    pub fn add_final(&mut self, state: State) {
+    pub fn add_final(&mut self, state: State, symbol: Transition) {
         self.states.insert(state.clone());
-        self.final_states.insert(state);
+        if let Some(symbols) = self.final_states.get_mut(&state) {
+            symbols.insert(symbol);
+        } else {
+            let mut symbols = HashSet::new();
+            symbols.insert(symbol);
+            self.final_states.insert(state, symbols);
+        }
     }
 
     /// Add a new symbol to the automata alphabet.
@@ -115,7 +127,7 @@ where
 
     /// Compute the automata productive states.
     pub fn productive_states(&self) -> HashSet<State> {
-        let mut stack: VecDeque<_> = self.final_states.iter().collect();
+        let mut stack: VecDeque<_> = self.final_states.keys().collect();
         // productive == visited
         let mut productive = HashSet::new();
         while let Some(state) = stack.pop_back() {
@@ -151,7 +163,7 @@ where
     pub fn useful_states(&self) -> HashSet<State> {
         // TODO this could benefit from some "caching" of results on productive
         let productive = self.productive_states();
-        let mut stack: VecDeque<_> = self.initial_states.iter().collect();
+        let mut stack: VecDeque<_> = self.initial_states.keys().collect();
         // productive == visited
         let mut reachable = HashSet::new();
         while let Some(state) = stack.pop_back() {
@@ -207,8 +219,8 @@ mod dfa_tests {
         for &state in state_list.iter() {
             dfa.add_state(state);
         }
-        dfa.add_initial(1);
-        dfa.add_final(7);
+        dfa.add_initial(1, 0);
+        dfa.add_final(7, 0);
         let transition_list = [
             (1, 2),
             (1, 3),
@@ -221,15 +233,15 @@ mod dfa_tests {
             (6, 7),
         ];
         for (idx, &(src, dst)) in transition_list.iter().enumerate() {
-            dfa.add_transition(src, idx, dst);
+            dfa.add_transition(src, idx + 1, dst);
         }
         dfa
     }
 
     fn setup_automata_loop() -> DFA<i32, ()> {
         let mut dfa = DFA::new();
-        dfa.add_initial(1);
-        dfa.add_final(2);
+        dfa.add_initial(1, ());
+        dfa.add_final(2, ());
         dfa.add_transition(1, (), 2);
         dfa.add_transition(2, (), 1);
         dfa
@@ -247,7 +259,7 @@ mod dfa_tests {
     fn test_add_initial_state() {
         let dfa = setup_automata();
         let expected_states = [1].into_hash_set();
-        let result_states = dfa.initial_states;
+        let result_states: HashSet<i32> = dfa.initial_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
 
@@ -255,7 +267,7 @@ mod dfa_tests {
     fn test_add_final_state() {
         let dfa = setup_automata();
         let expected_states = [7].into_hash_set();
-        let result_states = dfa.final_states;
+        let result_states: HashSet<i32> = dfa.final_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
 
@@ -346,9 +358,9 @@ where
     /// Deterministic finite automata transition symbols.
     sigma: HashSet<Transition>,
     /// Deterministic finite automata initial state-indexes.
-    pub initial_states: HashSet<State>,
+    pub initial_states: HashMap<State, HashSet<Transition>>,
     /// Deterministic finite automata final state-indexes.
-    pub final_states: HashSet<State>,
+    pub final_states: HashMap<State, HashSet<Transition>>,
     /// Deterministic finite automata transition functions.
     /// Map of state indexes to map of transitions to state indexes.
     delta: Deltas<State, Transition>,
@@ -367,8 +379,8 @@ where
         Self {
             states: HashSet::new(),
             sigma: HashSet::new(),
-            initial_states: HashSet::new(),
-            final_states: HashSet::new(),
+            initial_states: HashMap::new(),
+            final_states: HashMap::new(),
             delta: HashMap::new(),
             idelta: HashMap::new(),
         }
@@ -380,15 +392,27 @@ where
     }
 
     /// Add an initial state to the automata.
-    pub fn add_initial(&mut self, state: State) {
+    pub fn add_initial(&mut self, state: State, symbol: Transition) {
         self.states.insert(state.clone());
-        self.initial_states.insert(state);
+        if let Some(symbols) = self.initial_states.get_mut(&state) {
+            symbols.insert(symbol);
+        } else {
+            let mut symbols = HashSet::new();
+            symbols.insert(symbol);
+            self.initial_states.insert(state, symbols);
+        }
     }
 
     /// Add a final state to the automata.
-    pub fn add_final(&mut self, state: State) {
+    pub fn add_final(&mut self, state: State, symbol: Transition) {
         self.states.insert(state.clone());
-        self.final_states.insert(state);
+        if let Some(symbols) = self.final_states.get_mut(&state) {
+            symbols.insert(symbol);
+        } else {
+            let mut symbols = HashSet::new();
+            symbols.insert(symbol);
+            self.final_states.insert(state, symbols);
+        }
     }
 
     /// Add a new symbol to the automata alphabet.
@@ -458,7 +482,7 @@ where
 
     /// Compute the automata productive states.
     pub fn productive_states(&self) -> HashSet<State> {
-        let mut stack: VecDeque<_> = self.final_states.iter().collect();
+        let mut stack: VecDeque<_> = self.final_states.keys().collect();
         // productive == visited
         let mut productive = HashSet::new();
         while let Some(state) = stack.pop_back() {
@@ -490,7 +514,7 @@ where
     pub fn useful_states(&self) -> HashSet<State> {
         // TODO this could benefit from some "caching" of results on productive
         let productive = self.productive_states();
-        let mut stack: VecDeque<_> = self.initial_states.iter().collect();
+        let mut stack: VecDeque<_> = self.initial_states.keys().collect();
         // productive == visited
         let mut reachable = HashSet::new();
         while let Some(state) = stack.pop_back() {
@@ -546,8 +570,8 @@ mod nfa_tests {
         for &state in state_list.iter() {
             nfa.add_state(state);
         }
-        nfa.add_initial(1);
-        nfa.add_final(7);
+        nfa.add_initial(1, ());
+        nfa.add_final(7, ());
         let transition_list = [
             (1, 2),
             (1, 3),
@@ -567,8 +591,8 @@ mod nfa_tests {
 
     fn setup_automata_loop() -> NFA<i32, ()> {
         let mut nfa = NFA::new();
-        nfa.add_initial(1);
-        nfa.add_final(2);
+        nfa.add_initial(1, ());
+        nfa.add_final(2, ());
         nfa.add_transition(1, (), 2);
         nfa.add_transition(2, (), 1);
         nfa
@@ -586,7 +610,7 @@ mod nfa_tests {
     fn test_add_initial_state() {
         let nfa = setup_automata();
         let expected_states = [1].into_hash_set();
-        let result_states = nfa.initial_states;
+        let result_states: HashSet<i32> = nfa.initial_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
 
@@ -594,7 +618,7 @@ mod nfa_tests {
     fn test_add_final_state() {
         let nfa = setup_automata();
         let expected_states = [7].into_hash_set();
-        let result_states = nfa.final_states;
+        let result_states: HashSet<i32> = nfa.final_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
 
@@ -647,8 +671,8 @@ mod nfa_tests {
             .iter()
             .map(|i| *i)
             .for_each(|i| nfa.add_state(i));
-        nfa.add_initial(1);
-        nfa.add_final(7);
+        nfa.add_initial(1, ());
+        nfa.add_final(7, ());
         let non_deterministic_transitions = vec![
             (1, vec![2, 3]),
             (2, vec![6]),

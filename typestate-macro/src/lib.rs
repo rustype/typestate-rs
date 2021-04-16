@@ -334,10 +334,10 @@ struct StateMachineInfo {
     transitions: HashSet<Transition>,
     /// Set of initial states.
     /// Extracted from functions with a signature like `() -> State`.
-    initial_states: HashSet<Ident>,
+    initial_states: HashMap<Ident, HashSet<Ident>>,
     /// Set of final states.
     /// Extracted from functions with a signature like `(State) -> ()`.
-    final_states: HashSet<Ident>,
+    final_states: HashMap<Ident, HashSet<Ident>>,
 }
 
 impl StateMachineInfo {
@@ -348,8 +348,8 @@ impl StateMachineInfo {
             det_states: HashMap::new(),
             non_det_states: HashMap::new(),
             transitions: HashSet::new(),
-            initial_states: HashSet::new(),
-            final_states: HashSet::new(),
+            initial_states: HashMap::new(),
+            final_states: HashMap::new(),
         }
     }
 
@@ -387,6 +387,26 @@ impl StateMachineInfo {
         }
         errors
     }
+
+    fn insert_initial(&mut self, state: Ident, transition: Ident) {
+        if let Some(transitions) = self.initial_states.get_mut(&state) {
+            transitions.insert(transition);
+        } else {
+            let mut transitions = HashSet::new();
+            transitions.insert(transition);
+            self.initial_states.insert(state, transitions);
+        }
+    }
+
+    fn insert_final(&mut self, state: Ident, transition: Ident) {
+        if let Some(transitions) = self.final_states.get_mut(&state) {
+            transitions.insert(transition);
+        } else {
+            let mut transitions = HashSet::new();
+            transitions.insert(transition);
+            self.final_states.insert(state, transitions);
+        }
+    }
 }
 
 impl Default for StateMachineInfo {
@@ -416,10 +436,18 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                 .for_each(|ident| dfa.add_state(ident));
             self.initial_states
                 .into_iter()
-                .for_each(|ident| dfa.add_initial(ident));
+                .for_each(|(ident, transitions)| {
+                    transitions
+                        .into_iter()
+                        .for_each(|t| dfa.add_initial(ident.clone(), t))
+                });
             self.final_states
                 .into_iter()
-                .for_each(|ident| dfa.add_final(ident));
+                .for_each(|(ident, transitions)| {
+                    transitions
+                        .into_iter()
+                        .for_each(|t| dfa.add_final(ident.clone(), t))
+                });
             self.transitions
                 .into_iter()
                 .for_each(|t| dfa.add_transition(t.source, t.symbol, t.destination));
@@ -433,10 +461,18 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                 .for_each(|ident| nfa.add_state(ident));
             self.initial_states
                 .into_iter()
-                .for_each(|ident| nfa.add_initial(ident));
+                .for_each(|(ident, transitions)| {
+                    transitions
+                        .into_iter()
+                        .for_each(|t| nfa.add_initial(ident.clone(), t))
+                });
             self.final_states
                 .into_iter()
-                .for_each(|ident| nfa.add_final(ident));
+                .for_each(|(ident, transitions)| {
+                    transitions
+                        .into_iter()
+                        .for_each(|t| nfa.add_final(ident.clone(), t))
+                });
             for t in self.transitions {
                 if let Some(state) = self.non_det_states.get(&t.destination) {
                     // nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
@@ -869,38 +905,31 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             states.insert(k.clone()); // HACK clone
         });
         let fn_kind = sig.extract_signature_kind(&states);
+        let fn_ident = sig.ident.clone();
         sig.expand_signature_state(&self.state_machine_info); // TODO check for correct expansion
         eprintln!("{} {:?}", sig.ident.to_string(), fn_kind);
 
         match fn_kind {
             FnKind::Initial(return_ty_ident) => {
                 self.state_machine_info
-                    .initial_states
-                    .insert(return_ty_ident);
+                    .insert_initial(return_ty_ident, fn_ident);
             }
             FnKind::Final => {
                 // add #[must_use]
                 // attrs.push(::syn::parse_quote!(#[must_use]));
-                self.state_machine_info
-                    .final_states
-                    .insert(self.current_state.as_ref().unwrap().clone());
+                let state = self.current_state.as_ref().unwrap().clone();
+                self.state_machine_info.insert_final(state, fn_ident);
             }
             FnKind::Transition(return_ty_ident) => {
                 // add #[must_use]
                 attrs.push(::syn::parse_quote!(#[must_use]));
-                let transition = Transition::new(
-                    self.current_state.as_ref().unwrap().clone(),
-                    return_ty_ident,
-                    i.sig.ident.clone(),
-                );
+                let state = self.current_state.as_ref().unwrap().clone();
+                let transition = Transition::new(state, return_ty_ident, fn_ident);
                 self.state_machine_info.transitions.insert(transition);
             }
             FnKind::SelfTransition => {
-                let transition = Transition::new(
-                    self.current_state.as_ref().unwrap().clone(),
-                    self.current_state.as_ref().unwrap().clone(),
-                    i.sig.ident.clone(),
-                );
+                let state = self.current_state.as_ref().unwrap().clone();
+                let transition = Transition::new(state.clone(), state, fn_ident);
                 self.state_machine_info.transitions.insert(transition);
             }
             FnKind::Other => {}

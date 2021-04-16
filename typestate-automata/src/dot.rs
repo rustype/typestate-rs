@@ -54,9 +54,9 @@ where
     /// List of [DotEdge].
     edges: Vec<DotEdge<Node, Label>>,
     /// List of initial state nodes.
-    initial_states: Vec<Node>,
+    initial_states: Vec<(Node, Label)>,
     /// List of final state nodes.
-    final_states: Vec<Node>,
+    final_states: Vec<(Node, Label)>,
 }
 
 impl<Node, Label> Dot<Node, Label>
@@ -80,15 +80,17 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "digraph Automata {{")?;
-        for (i, node) in self.initial_states.iter().enumerate() {
+        writeln!(f, "graph [pad=\"0.75\", nodesep=\"0.75\", ranksep=\"1\"];")?;
+        for (i, (node, label)) in self.initial_states.iter().enumerate() {
             f.write_fmt(format_args!(
                 "\t_initial_{} [label=\"\", shape=\"plaintext\"];\n",
                 i
             ))?;
-            f.write_fmt(format_args!("\t_initial_{} -> {};\n", i, node))?;
+            f.write_fmt(format_args!("\t_initial_{} -> {} [label=\"{}\"];\n", i, node, label))?;
         }
-        for node in self.final_states.iter() {
+        for (node, label) in self.final_states.iter() {
             f.write_fmt(format_args!("\t{} [style=\"bold\"];\n", node))?;
+            f.write_fmt(format_args!("\t{} -> {} [label=\"{}\", style=dashed];\n", node, node, label))?;
         }
         for edge in self.edges.iter() {
             f.write_fmt(format_args!("\t{}", edge))?;
@@ -104,11 +106,15 @@ where
 {
     fn from(dfa: DFA<Node, Label>) -> Self {
         let mut dot = Dot::new();
-        for node in dfa.initial_states {
-            dot.initial_states.push(node)
+        for (node, transitions) in dfa.initial_states {
+            transitions
+                .into_iter()
+                .for_each(|t| dot.initial_states.push((node.clone(), t)));
         }
-        for node in dfa.final_states {
-            dot.final_states.push(node)
+        for (node, transitions) in dfa.final_states {
+            transitions
+                .into_iter()
+                .for_each(|t| dot.final_states.push((node.clone(), t)));
         }
         for (source, transitions) in dfa.delta {
             for (label, destination) in transitions {
@@ -127,11 +133,15 @@ where
 {
     fn from(nfa: NFA<Node, Label>) -> Self {
         let mut dot = Dot::new();
-        for node in nfa.initial_states {
-            dot.initial_states.push(node)
+        for (node, transitions) in nfa.initial_states {
+            transitions
+                .into_iter()
+                .for_each(|t| dot.initial_states.push((node.clone(), t)));
         }
-        for node in nfa.final_states {
-            dot.final_states.push(node)
+        for (node, transitions) in nfa.final_states {
+            transitions
+                .into_iter()
+                .for_each(|t| dot.final_states.push((node.clone(), t)));
         }
         for (source, transitions) in nfa.delta {
             for (label, destinations) in transitions {
