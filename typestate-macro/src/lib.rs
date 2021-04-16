@@ -718,8 +718,8 @@ enum FnKind {
 
 trait SignatureKind {
     fn extract_receiver_kind(&self) -> ReceiverKind;
-    fn extract_output_kind(&self, states: &HashMap<Ident, ItemStruct>) -> OutputKind;
-    fn extract_signature_kind(&self, states: &HashMap<Ident, ItemStruct>) -> FnKind;
+    fn extract_output_kind(&self, states: &HashSet<Ident>) -> OutputKind;
+    fn extract_signature_kind(&self, states: &HashSet<Ident>) -> FnKind;
     fn expand_signature_state(&mut self, info: &StateMachineInfo);
 }
 
@@ -746,14 +746,14 @@ impl SignatureKind for Signature {
     // the `states: HashMap<Ident, ItemStruct>` kinda sucks
     // making a `Contains` trait with a `contains` method and implement that for `HashMap<T, _>`
     // would probably be better
-    fn extract_output_kind(&self, states: &HashMap<Ident, ItemStruct>) -> OutputKind {
+    fn extract_output_kind(&self, states: &HashSet<Ident>) -> OutputKind {
         let fn_out = &self.output;
         match fn_out {
             ReturnType::Default => OutputKind::Unit,
             ReturnType::Type(_, ty) => match **ty {
                 Type::Path(ref path) => {
                     if let Some(ident) = path.path.get_ident() {
-                        if states.contains_key(ident) {
+                        if states.contains(ident) {
                             return OutputKind::State(ident.clone());
                         }
                     }
@@ -764,7 +764,7 @@ impl SignatureKind for Signature {
         }
     }
 
-    fn extract_signature_kind(&self, states: &HashMap<Ident, ItemStruct>) -> FnKind {
+    fn extract_signature_kind(&self, states: &HashSet<Ident>) -> FnKind {
         let recv = self.extract_receiver_kind();
         let out = self.extract_output_kind(states);
         match (recv, out) {
@@ -861,8 +861,16 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
         let attrs = &mut i.attrs;
         let sig = &mut i.sig;
-        let fn_kind = sig.extract_signature_kind(&self.state_machine_info.det_states);
-        sig.expand_signature_state(&self.state_machine_info);
+        let mut states = HashSet::new();
+        &self.state_machine_info.det_states.keys().for_each(|k| {
+            states.insert(k.clone()); // HACK clone
+        });
+        &self.state_machine_info.non_det_states.keys().for_each(|k| {
+            states.insert(k.clone()); // HACK clone
+        });
+        let fn_kind = sig.extract_signature_kind(&states);
+        sig.expand_signature_state(&self.state_machine_info); // TODO check for correct expansion
+        eprintln!("{} {:?}", sig.ident.to_string(), fn_kind);
 
         match fn_kind {
             FnKind::Initial(return_ty_ident) => {
@@ -887,7 +895,14 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                 );
                 self.state_machine_info.transitions.insert(transition);
             }
-            FnKind::SelfTransition => {}
+            FnKind::SelfTransition => {
+                let transition = Transition::new(
+                    self.current_state.as_ref().unwrap().clone(),
+                    self.current_state.as_ref().unwrap().clone(),
+                    i.sig.ident.clone(),
+                );
+                self.state_machine_info.transitions.insert(transition);
+            }
             FnKind::Other => {}
         };
     }
