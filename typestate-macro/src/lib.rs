@@ -7,7 +7,7 @@ use std::{
     convert::TryFrom,
     hash::Hash,
 };
-use syn::{parse::Parser, visit_mut::VisitMut, *};
+use syn::{parse::Parser, visit_mut::VisitMut, Signature, *};
 #[cfg(feature = "typestate_debug")]
 use typestate_automata::dot::*;
 use typestate_automata::{DFA, NFA};
@@ -378,7 +378,6 @@ impl StateMachineInfo {
     }
 
     fn check_missing(&self) -> Vec<Error> {
-        // TODO not a fan oc the `call_site` usage
         let mut errors = vec![];
         if self.initial_states.is_empty() {
             errors.push(TypestateError::MissingInitialState.into());
@@ -680,6 +679,137 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
     }
 }
 
+#[derive(Debug)]
+enum ReceiverKind {
+    /// `self`
+    OwnedSelf,
+    /// `mut self`
+    MutOwnedSelf,
+    /// `&self`
+    RefSelf,
+    /// `&mut self`
+    MutRefSelf,
+    /// `T`
+    Other,
+}
+
+#[derive(Debug)]
+enum OutputKind {
+    /// `()`
+    Unit,
+    /// `T` where `T` is a valid state.
+    State(Ident),
+    /// `T`
+    Other,
+}
+
+#[derive(Debug)]
+enum FnKind {
+    /// `fn() -> State`
+    Initial(Ident),
+    /// `fn(self) -> T`
+    Final,
+    /// `fn(self) -> State`
+    Transition(Ident),
+    /// `fn(&self) -> T` or `fn(&mut self) -> T`
+    SelfTransition,
+    Other,
+}
+
+trait SignatureKind {
+    fn extract_receiver_kind(&self) -> ReceiverKind;
+    fn extract_output_kind(&self, states: &HashMap<Ident, ItemStruct>) -> OutputKind;
+    fn extract_signature_kind(&self, states: &HashMap<Ident, ItemStruct>) -> FnKind;
+    fn expand_signature_state(&mut self, info: &StateMachineInfo);
+}
+
+impl SignatureKind for Signature {
+    fn extract_receiver_kind(&self) -> ReceiverKind {
+        let fn_in = &self.inputs;
+        if let Some(FnArg::Receiver(Receiver {
+            reference,
+            mutability,
+            ..
+        })) = fn_in.first()
+        {
+            match (reference, mutability) {
+                (None, None) => ReceiverKind::OwnedSelf,
+                (None, Some(_)) => ReceiverKind::MutOwnedSelf,
+                (Some(_), None) => ReceiverKind::RefSelf,
+                (Some(_), Some(_)) => ReceiverKind::MutRefSelf,
+            }
+        } else {
+            ReceiverKind::Other
+        }
+    }
+
+    // the `states: HashMap<Ident, ItemStruct>` kinda sucks
+    // making a `Contains` trait with a `contains` method and implement that for `HashMap<T, _>`
+    // would probably be better
+    fn extract_output_kind(&self, states: &HashMap<Ident, ItemStruct>) -> OutputKind {
+        let fn_out = &self.output;
+        match fn_out {
+            ReturnType::Default => OutputKind::Unit,
+            ReturnType::Type(_, ty) => match **ty {
+                Type::Path(ref path) => {
+                    if let Some(ident) = path.path.get_ident() {
+                        if states.contains_key(ident) {
+                            return OutputKind::State(ident.clone());
+                        }
+                    }
+                    return OutputKind::Other;
+                }
+                _ => return OutputKind::Other,
+            },
+        }
+    }
+
+    fn extract_signature_kind(&self, states: &HashMap<Ident, ItemStruct>) -> FnKind {
+        let recv = self.extract_receiver_kind();
+        let out = self.extract_output_kind(states);
+        match (recv, out) {
+            (ReceiverKind::OwnedSelf, OutputKind::State(ident))
+            | (ReceiverKind::MutOwnedSelf, OutputKind::State(ident)) => FnKind::Transition(ident),
+            (ReceiverKind::OwnedSelf, _) | (ReceiverKind::MutOwnedSelf, _) => FnKind::Final,
+            (ReceiverKind::RefSelf, _) | (ReceiverKind::MutRefSelf, _) => FnKind::SelfTransition,
+            (ReceiverKind::Other, OutputKind::State(ident)) => FnKind::Initial(ident),
+            (ReceiverKind::Other, _) => FnKind::Other,
+        }
+    }
+
+    fn expand_signature_state(&mut self, info: &StateMachineInfo) {
+        let fn_out = &mut self.output;
+        let det_states = &info.det_states;
+        match fn_out {
+            ReturnType::Type(_, ty) => match **ty {
+                Type::Path(ref mut path) => {
+                    if let Some(ident) = path.path.get_ident() {
+                        if det_states.contains_key(ident) {
+                            let automata_ident = info.main_state_name();
+                            path.path = ::syn::parse_quote!(#automata_ident<#ident>);
+                        }
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+}
+
+trait Contains<Value> {
+    fn contains(&self, value: &Value) -> bool;
+}
+
+impl<K, V> Contains<K> for HashMap<K, V>
+where
+    K: Eq + Hash,
+{
+    fn contains(&self, k: &K) -> bool {
+        self.contains_key(k)
+    }
+}
+
 struct TransitionVisitor<'sm> {
     current_state: Option<Ident>,
     state_machine_info: &'sm mut StateMachineInfo,
@@ -705,36 +835,6 @@ impl<'sm> TransitionVisitor<'sm> {
         self.errors
             .push(TypestateError::InvalidAssocFuntions(it.clone()).into());
     }
-
-    fn has_receiver(&self, sig: &Signature) -> bool {
-        let fn_in = &sig.inputs;
-        if let Some(FnArg::Receiver(_)) = fn_in.first() {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn output_kind(&self, sig: &mut Signature) -> Option<Ident> {
-        let fn_out = &mut sig.output;
-        if let ReturnType::Type(_, ty) = fn_out {
-            if let Type::Path(ref mut ty_path) = **ty {
-                if let Some(ident) = ty_path.path.get_ident() {
-                    if self.state_machine_info.det_states.contains_key(ident) {
-                        // if the state is deterministic, add bound
-                        let res = ident.clone(); // HACK
-                        let automata_ident = self.state_machine_info.main_state_name();
-                        ty_path.path = ::syn::parse_quote!(#automata_ident<#ident>);
-                        return Some(res);
-                    } else if self.state_machine_info.non_det_states.contains_key(ident) {
-                        // else do not add bound
-                        return Some(ident.clone());
-                    }
-                }
-            }
-        }
-        None
-    }
 }
 
 impl<'sm> VisitMut for TransitionVisitor<'sm> {
@@ -759,27 +859,25 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
     }
 
     fn visit_trait_item_method_mut(&mut self, i: &mut TraitItemMethod) {
-        // TODO account for non-deterministic states
         let attrs = &mut i.attrs;
         let sig = &mut i.sig;
-        let input = self.has_receiver(sig);
-        let output = self.output_kind(sig);
+        let fn_kind = sig.extract_signature_kind(&self.state_machine_info.det_states);
+        sig.expand_signature_state(&self.state_machine_info);
 
-        match (input, output) {
-            (false, None) => {} // unknown
-            (false, Some(return_ty_ident)) => {
+        match fn_kind {
+            FnKind::Initial(return_ty_ident) => {
                 self.state_machine_info
                     .initial_states
                     .insert(return_ty_ident);
-            } // initial
-            (true, None) => {
+            }
+            FnKind::Final => {
                 // add #[must_use]
                 attrs.push(::syn::parse_quote!(#[must_use]));
                 self.state_machine_info
                     .final_states
                     .insert(self.current_state.as_ref().unwrap().clone());
-            } // final
-            (true, Some(return_ty_ident)) => {
+            }
+            FnKind::Transition(return_ty_ident) => {
                 // add #[must_use]
                 attrs.push(::syn::parse_quote!(#[must_use]));
                 let transition = Transition::new(
@@ -788,7 +886,9 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                     i.sig.ident.clone(),
                 );
                 self.state_machine_info.transitions.insert(transition);
-            } // transition
+            }
+            FnKind::SelfTransition => {}
+            FnKind::Other => {}
         };
     }
 }
