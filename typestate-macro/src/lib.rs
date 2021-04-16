@@ -872,7 +872,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             }
             FnKind::Final => {
                 // add #[must_use]
-                attrs.push(::syn::parse_quote!(#[must_use]));
+                // attrs.push(::syn::parse_quote!(#[must_use]));
                 self.state_machine_info
                     .final_states
                     .insert(self.current_state.as_ref().unwrap().clone());
