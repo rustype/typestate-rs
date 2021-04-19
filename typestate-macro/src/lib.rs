@@ -833,19 +833,6 @@ impl SignatureKind for Signature {
     }
 }
 
-trait Contains<Value> {
-    fn contains(&self, value: &Value) -> bool;
-}
-
-impl<K, V> Contains<K> for HashMap<K, V>
-where
-    K: Eq + Hash,
-{
-    fn contains(&self, k: &K) -> bool {
-        self.contains_key(k)
-    }
-}
-
 struct TransitionVisitor<'sm> {
     current_state: Option<Ident>,
     state_machine_info: &'sm mut StateMachineInfo,
