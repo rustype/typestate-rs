@@ -1,0 +1,5 @@
+error: Only unit (C-like) `enum` variants are supported.
+  --> $DIR/unsupported_variant.rs:19:9
+   |
+19 |         Second(B)
+   |         ^^^^^^^^^
