@@ -1,0 +1,5 @@
+error: `enum` variant is not a declared state.
+  --> $DIR/undeclared_variant.rs:19:9
+   |
+19 |         Second
+   |         ^^^^^^

@@ -669,9 +669,9 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
     }
 
     /// Add `undeclared state` error to the error vector.
-    fn push_undeclared_state_error(&mut self, ident: &Ident) {
+    fn push_undeclared_variant_error(&mut self, ident: &Ident) {
         self.errors
-            .push(TypestateError::InvalidVariant(ident.clone()).into());
+            .push(TypestateError::UndeclaredVariant(ident.clone()).into());
     }
 
     /// Add `unsupported variant` error to the error vector.
@@ -704,7 +704,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
                         )
                     ));
                 } else {
-                    self.push_undeclared_state_error(ident);
+                    self.push_undeclared_variant_error(ident);
                 }
             } else {
                 self.push_unsupported_variant_error(variant);
@@ -998,7 +998,7 @@ enum TypestateError {
     ConflictingAttributes(Attribute),
     DuplicateAttributes(Attribute),
     AutomataRedefinition(ItemStruct),
-    InvalidVariant(Ident),
+    UndeclaredVariant(Ident),
     UnsupportedVariant(Variant),
     UnknownState(Ident),
     InvalidAssocFuntions(ItemTrait),
@@ -1017,7 +1017,7 @@ impl Into<::syn::Error> for TypestateError {
             TypestateError::ConflictingAttributes(attr) => Error::new_spanned(attr, "Conflicting attributes are declared."), // TODO add which attributes are conflicting
             TypestateError::DuplicateAttributes(attr) => Error::new_spanned(attr, "Duplicate attribute."),
             TypestateError::AutomataRedefinition(item_struct) => Error::new_spanned(item_struct, "`#[automata]` redefinition here."),
-            TypestateError::InvalidVariant(ident) => Error::new_spanned(&ident, "`enum` variant is not a valid state."), // TODO is not a DECLARED state
+            TypestateError::UndeclaredVariant(ident) => Error::new_spanned(&ident, "`enum` variant is not a declared state."),
             TypestateError::UnsupportedVariant(variant) => Error::new_spanned(&variant, "Only unit (C-like) `enum` variants are supported."),
             TypestateError::UnknownState(ident) => Error::new_spanned(&ident, format!("`{}` is not a declared state.", ident)),
             TypestateError::InvalidAssocFuntions(item_trait) => Error::new_spanned(&item_trait, "Non-deterministic states cannot have associated functions"),
