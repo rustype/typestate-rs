@@ -679,6 +679,12 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
         self.errors
             .push(TypestateError::UnsupportedVariant(variant.clone()).into());
     }
+
+    /// Add `unsupported state` error to the error vector.
+    fn push_unsupported_state_error(&mut self, ident: &Ident) {
+        self.errors
+            .push(TypestateError::UnsupportedState(ident.clone()).into());
+    }
 }
 
 impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
@@ -689,9 +695,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             if let Fields::Unit = &variant.fields {
                 let ident = &variant.ident;
                 if self.state_machine_info.non_det_states.contains_key(ident) {
-                    variant.fields = Fields::Unnamed(::syn::parse_quote!(
-                        /* Variant */ (#ident)
-                    ));
+                    self.push_unsupported_state_error(ident);
                 } else if self.state_machine_info.det_states.contains_key(ident) {
                     let automata_ident = self.state_machine_info.main_state_name();
                     variant.fields = Fields::Unnamed(::syn::parse_quote!(
@@ -776,7 +780,6 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         let fn_kind = sig.extract_signature_kind(&states);
         let fn_ident = sig.ident.clone();
         sig.expand_signature_state(&self.state_machine_info); // TODO check for correct expansion
-        eprintln!("{} {:?}", sig.ident.to_string(), fn_kind);
 
         match fn_kind {
             FnKind::Initial(return_ty_ident) => {
@@ -836,7 +839,6 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
 
     Ok(type_param_ident)
 }
-
 
 /// Enumeration describing a function's receiver kind.
 ///
@@ -1001,6 +1003,7 @@ enum TypestateError {
     UnknownState(Ident),
     InvalidAssocFuntions(ItemTrait),
     UnsupportedStruct(ItemStruct),
+    UnsupportedState(Ident),
 }
 
 impl Into<::syn::Error> for TypestateError {
@@ -1014,11 +1017,12 @@ impl Into<::syn::Error> for TypestateError {
             TypestateError::ConflictingAttributes(attr) => Error::new_spanned(attr, "Conflicting attributes are declared."), // TODO add which attributes are conflicting
             TypestateError::DuplicateAttributes(attr) => Error::new_spanned(attr, "Duplicate attribute."),
             TypestateError::AutomataRedefinition(item_struct) => Error::new_spanned(item_struct, "`#[automata]` redefinition here."),
-            TypestateError::InvalidVariant(ident) => Error::new_spanned(&ident, "`enum` variant is not a valid state."),
+            TypestateError::InvalidVariant(ident) => Error::new_spanned(&ident, "`enum` variant is not a valid state."), // TODO is not a DECLARED state
             TypestateError::UnsupportedVariant(variant) => Error::new_spanned(&variant, "Only unit (C-like) `enum` variants are supported."),
             TypestateError::UnknownState(ident) => Error::new_spanned(&ident, format!("`{}` is not a declared state.", ident)),
             TypestateError::InvalidAssocFuntions(item_trait) => Error::new_spanned(&item_trait, "Non-deterministic states cannot have associated functions"),
             TypestateError::UnsupportedStruct(item_struct) => Error::new_spanned(&item_struct, "Tuple structures are not supported."),
+            TypestateError::UnsupportedState(ident) => Error::new_spanned(&ident, "`enum` variants cannot refer to other `enum`s."),
         }
     }
 }

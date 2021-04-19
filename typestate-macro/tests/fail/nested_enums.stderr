@@ -1,0 +1,5 @@
+error: `enum` variants cannot refer to other `enum`s.
+  --> $DIR/nested_enums.rs:34:9
+   |
+34 |         A
+   |         ^
