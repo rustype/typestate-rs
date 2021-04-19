@@ -715,124 +715,6 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
     }
 }
 
-#[derive(Debug)]
-enum ReceiverKind {
-    /// `self`
-    OwnedSelf,
-    /// `mut self`
-    MutOwnedSelf,
-    /// `&self`
-    RefSelf,
-    /// `&mut self`
-    MutRefSelf,
-    /// `T`
-    Other,
-}
-
-#[derive(Debug)]
-enum OutputKind {
-    /// `()`
-    Unit,
-    /// `T` where `T` is a valid state.
-    State(Ident),
-    /// `T`
-    Other,
-}
-
-#[derive(Debug)]
-enum FnKind {
-    /// `fn() -> State`
-    Initial(Ident),
-    /// `fn(self) -> T`
-    Final,
-    /// `fn(self) -> State`
-    Transition(Ident),
-    /// `fn(&self) -> T` or `fn(&mut self) -> T`
-    SelfTransition,
-    Other,
-}
-
-trait SignatureKind {
-    fn extract_receiver_kind(&self) -> ReceiverKind;
-    fn extract_output_kind(&self, states: &HashSet<Ident>) -> OutputKind;
-    fn extract_signature_kind(&self, states: &HashSet<Ident>) -> FnKind;
-    fn expand_signature_state(&mut self, info: &StateMachineInfo);
-}
-
-impl SignatureKind for Signature {
-    fn extract_receiver_kind(&self) -> ReceiverKind {
-        let fn_in = &self.inputs;
-        if let Some(FnArg::Receiver(Receiver {
-            reference,
-            mutability,
-            ..
-        })) = fn_in.first()
-        {
-            match (reference, mutability) {
-                (None, None) => ReceiverKind::OwnedSelf,
-                (None, Some(_)) => ReceiverKind::MutOwnedSelf,
-                (Some(_), None) => ReceiverKind::RefSelf,
-                (Some(_), Some(_)) => ReceiverKind::MutRefSelf,
-            }
-        } else {
-            ReceiverKind::Other
-        }
-    }
-
-    // the `states: HashMap<Ident, ItemStruct>` kinda sucks
-    // making a `Contains` trait with a `contains` method and implement that for `HashMap<T, _>`
-    // would probably be better
-    fn extract_output_kind(&self, states: &HashSet<Ident>) -> OutputKind {
-        let fn_out = &self.output;
-        match fn_out {
-            ReturnType::Default => OutputKind::Unit,
-            ReturnType::Type(_, ty) => match **ty {
-                Type::Path(ref path) => {
-                    if let Some(ident) = path.path.get_ident() {
-                        if states.contains(ident) {
-                            return OutputKind::State(ident.clone());
-                        }
-                    }
-                    return OutputKind::Other;
-                }
-                _ => return OutputKind::Other,
-            },
-        }
-    }
-
-    fn extract_signature_kind(&self, states: &HashSet<Ident>) -> FnKind {
-        let recv = self.extract_receiver_kind();
-        let out = self.extract_output_kind(states);
-        match (recv, out) {
-            (ReceiverKind::OwnedSelf, OutputKind::State(ident))
-            | (ReceiverKind::MutOwnedSelf, OutputKind::State(ident)) => FnKind::Transition(ident),
-            (ReceiverKind::OwnedSelf, _) | (ReceiverKind::MutOwnedSelf, _) => FnKind::Final,
-            (ReceiverKind::RefSelf, _) | (ReceiverKind::MutRefSelf, _) => FnKind::SelfTransition,
-            (ReceiverKind::Other, OutputKind::State(ident)) => FnKind::Initial(ident),
-            (ReceiverKind::Other, _) => FnKind::Other,
-        }
-    }
-
-    fn expand_signature_state(&mut self, info: &StateMachineInfo) {
-        let fn_out = &mut self.output;
-        let det_states = &info.det_states;
-        match fn_out {
-            ReturnType::Type(_, ty) => match **ty {
-                Type::Path(ref mut path) => {
-                    if let Some(ident) = path.path.get_ident() {
-                        if det_states.contains_key(ident) {
-                            let automata_ident = info.main_state_name();
-                            path.path = ::syn::parse_quote!(#automata_ident<#ident>);
-                        }
-                    }
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-    }
-}
-
 struct TransitionVisitor<'sm> {
     current_state: Option<Ident>,
     state_machine_info: &'sm mut StateMachineInfo,
@@ -953,6 +835,156 @@ fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
     };
 
     Ok(type_param_ident)
+}
+
+
+/// Enumeration describing a function's receiver kind.
+///
+/// Possible kinds are:
+/// - `self`
+/// - `mut self`
+/// - `&self`
+/// - `&mut self`
+/// - `T`/`&T`/`&mut T`
+#[derive(Debug)]
+enum ReceiverKind {
+    /// Receiver takes ownership of `self`.
+    OwnedSelf,
+    /// Receiver takes mutable ownership of `self`.
+    MutOwnedSelf,
+    /// Receiver takes a reference to `self`.
+    RefSelf,
+    /// Receiver takes a mutable reference to `self`.
+    MutRefSelf,
+    /// Receiver takes any other type.
+    Other,
+}
+
+/// Enumeration describing a function's output kind in regards to existing states.
+///
+/// Possible kinds are:
+/// - `()`
+/// - `State`
+/// - `T`
+#[derive(Debug)]
+enum OutputKind {
+    /// Function does not return a value (i.e. Java's `void`).
+    Unit,
+    /// Function returns a `T` which is a valid state.
+    ///
+    /// Note: `&T` or `&mut T` are not valid states.
+    State(Ident),
+    /// Any other `T`.
+    Other,
+}
+
+/// Enumeration describing a function's kind in regard to the typestate state machine.
+///
+/// Possible kinds are:
+/// - `fn() -> State`
+/// - `fn(self) -> T`
+/// - `fn(self) -> State`
+/// - `fn(&self) -> T` or `fn(&mut self) -> T`
+#[derive(Debug)]
+enum FnKind {
+    /// Function that does not take `self` and returns a valid state.
+    Initial(Ident),
+    /// Function that consumes `self` and does not return a valid state.
+    Final,
+    /// Function that consumes `self` and returns a valid state.
+    Transition(Ident),
+    /// Function that takes a reference (mutable or not) to `self`, it cannot return a state.
+    SelfTransition,
+    /// Other kinds of functions
+    Other,
+}
+
+/// Provides a series of utility methods to be used on [syn::Signature].
+trait SignatureKind {
+    /// Extract a [ReceiverKind] from a [syn::Signature].
+    fn extract_receiver_kind(&self) -> ReceiverKind;
+    /// Extract a [OutputKind] from a [syn::Signature].
+    fn extract_output_kind(&self, states: &HashSet<Ident>) -> OutputKind;
+    /// Extract a [FnKind] from a [syn::Signature].
+    /// Takes a set of states to check for valid states.
+    fn extract_signature_kind(&self, states: &HashSet<Ident>) -> FnKind;
+    /// Expands a signature
+    /// (e.g. `fn f() -> State => fn f() -> Automata<State>`).
+    fn expand_signature_state(&mut self, info: &StateMachineInfo);
+}
+
+impl SignatureKind for Signature {
+    fn extract_receiver_kind(&self) -> ReceiverKind {
+        let fn_in = &self.inputs;
+        if let Some(FnArg::Receiver(Receiver {
+            reference,
+            mutability,
+            ..
+        })) = fn_in.first()
+        {
+            match (reference, mutability) {
+                (None, None) => ReceiverKind::OwnedSelf,
+                (None, Some(_)) => ReceiverKind::MutOwnedSelf,
+                (Some(_), None) => ReceiverKind::RefSelf,
+                (Some(_), Some(_)) => ReceiverKind::MutRefSelf,
+            }
+        } else {
+            ReceiverKind::Other
+        }
+    }
+
+    // the `states: HashMap<Ident, ItemStruct>` kinda sucks
+    // making a `Contains` trait with a `contains` method and implement that for `HashMap<T, _>`
+    // would probably be better
+    fn extract_output_kind(&self, states: &HashSet<Ident>) -> OutputKind {
+        let fn_out = &self.output;
+        match fn_out {
+            ReturnType::Default => OutputKind::Unit,
+            ReturnType::Type(_, ty) => match **ty {
+                Type::Path(ref path) => {
+                    if let Some(ident) = path.path.get_ident() {
+                        if states.contains(ident) {
+                            return OutputKind::State(ident.clone());
+                        }
+                    }
+                    return OutputKind::Other;
+                }
+                _ => return OutputKind::Other,
+            },
+        }
+    }
+
+    fn extract_signature_kind(&self, states: &HashSet<Ident>) -> FnKind {
+        let recv = self.extract_receiver_kind();
+        let out = self.extract_output_kind(states);
+        match (recv, out) {
+            (ReceiverKind::OwnedSelf, OutputKind::State(ident))
+            | (ReceiverKind::MutOwnedSelf, OutputKind::State(ident)) => FnKind::Transition(ident),
+            (ReceiverKind::OwnedSelf, _) | (ReceiverKind::MutOwnedSelf, _) => FnKind::Final,
+            (ReceiverKind::RefSelf, _) | (ReceiverKind::MutRefSelf, _) => FnKind::SelfTransition,
+            (ReceiverKind::Other, OutputKind::State(ident)) => FnKind::Initial(ident),
+            (ReceiverKind::Other, _) => FnKind::Other,
+        }
+    }
+
+    fn expand_signature_state(&mut self, info: &StateMachineInfo) {
+        let fn_out = &mut self.output;
+        let det_states = &info.det_states;
+        match fn_out {
+            ReturnType::Type(_, ty) => match **ty {
+                Type::Path(ref mut path) => {
+                    if let Some(ident) = path.path.get_ident() {
+                        if det_states.contains_key(ident) {
+                            let automata_ident = info.main_state_name();
+                            path.path = ::syn::parse_quote!(#automata_ident<#ident>);
+                        }
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
 }
 
 enum TypestateError {
