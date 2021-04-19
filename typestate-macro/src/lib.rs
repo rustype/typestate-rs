@@ -118,9 +118,16 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             // do not parse more code
             // only generate from here
 
-            let mut tokens: Vec<Item> = match args.enumerate {
-                TOption::Some(str) => {
-                    let ident = format_ident!("{}", str);
+            // check the option triplet and convert it into a normal `Option<T>`
+            let ident = match args.enumerate {
+                TOption::Some(str) => Some(format_ident!("{}", str)),
+                TOption::Default => Some(format_ident!("E{}", $name)),
+                TOption::None => None
+            };
+
+            // match the `Option<Ident>`
+            let mut tokens = match ident {
+                Some(ident) => {
                     let states = $automata.states.iter().collect::<Vec<_>>();
                     // generate the enumeration
                     let enum_tokens = ::quote::quote! {
@@ -143,32 +150,9 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
                     res.extend(from_tokens);
                     res
                 }
-                TOption::Default => {
-                    let ident = format_ident!("E{}", $name);
-                    let states = $automata.states.iter().collect::<Vec<_>>();
-                    // generate the enumeration
-                    let enum_tokens = ::quote::quote! {
-                        enum #ident {
-                            #(#states(#$name<#states>),)*
-                        }
-                    };
-                    // generate impls for conversion from type to enumeration
-                    let from_tokens = states.iter().map(|state| {
-                        ::quote::quote! {
-                            impl ::core::convert::From<#$name<#state>> for #ident {
-                                fn from(value: #$name<#state>) -> Self {
-                                    Self::#state(value)
-                                }
-                            }
-                        }
-                    })
-                    .map(|tokens| ::syn::parse_quote!(#tokens));
-                    let mut res = vec![::syn::parse_quote!(#enum_tokens)];
-                    res.extend(from_tokens);
-                    res
-                }
-                TOption::None => vec![],
+                None => vec![],
             };
+
             match &mut module.content {
                 Some((_, v)) => {
                     v.append(&mut tokens);
