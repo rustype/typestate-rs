@@ -7,7 +7,7 @@ use std::{
     convert::TryFrom,
     hash::Hash,
 };
-use syn::{parse::Parser, visit_mut::VisitMut, Signature, *};
+use syn::{parse::Parser, visit_mut::VisitMut, *};
 #[cfg(feature = "typestate_debug")]
 use typestate_automata::dot::*;
 use typestate_automata::{DFA, NFA};
