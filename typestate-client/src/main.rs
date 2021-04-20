@@ -1,4 +1,4 @@
-use maintenance::*;
+// use maintenance::*;
 use traffic_light::*;
 use typestate::typestate;
 
@@ -21,58 +21,59 @@ fn main() {
 //     pub struct Automata {}
 // }
 
-#[typestate]
-mod maintenance {
-    use super::traffic_light::*;
-    #[automata]
-    pub struct Maintenance {
-        pub tl: TrafficLight<Red>,
-    }
+// #[typestate]
+// mod maintenance {
+//     use super::traffic_light::*;
+//     #[automata]
+//     pub struct Maintenance {
+//         pub tl: TrafficLight<Red>,
+//     }
 
-    #[state]
-    pub struct In;
-    #[state]
-    pub struct Out;
+//     #[state]
+//     pub struct In;
+//     #[state]
+//     pub struct Out;
 
-    pub trait In {
-        fn new() -> In;
-        fn perform(self) -> Out;
-    }
+//     pub trait In {
+//         fn new() -> In;
+//         fn perform(self) -> Out;
+//     }
 
-    pub trait Out {
-        fn test(self) -> Out;
-        fn end(self);
-    }
-}
+//     pub trait Out {
+//         fn test(self) -> Out;
+//         fn end(self);
+//     }
+// }
 
-impl InState for Maintenance<In> {
-    fn new() -> Maintenance<In> {
-        Maintenance::<In> {
-            tl: TrafficLight::<Red>::turn_on(),
-            state: In,
-        }
-    }
-    fn perform(self) -> Maintenance<Out> {
-        Maintenance::<Out> {
-            tl: self.tl,
-            state: Out,
-        }
-    }
-}
+// impl InState for Maintenance<In> {
+//     fn new() -> Maintenance<In> {
+//         Maintenance::<In> {
+//             tl: TrafficLight::<Red>::turn_on(),
+//             state: In,
+//         }
+//     }
+//     fn perform(self) -> Maintenance<Out> {
+//         Maintenance::<Out> {
+//             tl: self.tl,
+//             state: Out,
+//         }
+//     }
+// }
 
-impl OutState for Maintenance<Out> {
-    fn test(mut self) -> Maintenance<Out> {
-        let green = self.tl.to_green();
-        let yellow = green.to_yellow();
-        let red = yellow.to_red();
-        self.tl = red;
-        self
-    }
-    fn end(self) {}
-}
+// impl OutState for Maintenance<Out> {
+//     fn test(mut self) -> Maintenance<Out> {
+//         let green = self.tl.to_green();
+//         let yellow = green.to_yellow();
+//         let red = yellow.to_red();
+//         self.tl = red;
+//         self
+//     }
+//     fn end(self) {}
+// }
 
-#[typestate]
+#[typestate(enumerate)]
 mod traffic_light {
+    #[derive(Debug)]
     #[automata]
     pub struct TrafficLight {
         pub cycles: u64,
@@ -83,6 +84,7 @@ mod traffic_light {
     pub struct Yellow;
     #[state]
     pub struct Red;
+
     // #[transition]
     pub trait Green {
         fn to_yellow(self) -> Yellow;
@@ -96,6 +98,7 @@ mod traffic_light {
         fn turn_off(self);
         fn to_either(self) -> Either;
     }
+    pub enum A {} // TODO unused -> ERROR
 
     pub enum Either {
         Yellow,

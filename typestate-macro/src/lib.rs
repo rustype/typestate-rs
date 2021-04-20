@@ -181,9 +181,15 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 trait Expand {
+    /// Expand the [ToString] implentation for enumeration.
+    /// Only available with `std` and when `enumerate` is used.
     fn expand_to_string(&mut self, automata_enum: &Ident, states: &Vec<&Ident>);
-    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
+    /// Expand the enumeration containing all states.
+    /// Only available when `enumerate` is used.
     fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
+    /// Expand the [From] implementation to convert from states to enumeration and back.
+    /// Only available when `enumerate` is used.
+    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
 }
 
 impl Expand for Vec<Item> {
