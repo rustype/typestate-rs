@@ -122,7 +122,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             let ident = match args.enumerate {
                 TOption::Some(str) => Some(format_ident!("{}", str)),
                 TOption::Default => Some(format_ident!("E{}", $name)),
-                TOption::None => None
+                TOption::None => None,
             };
 
             // match the `Option<Ident>`
@@ -207,16 +207,18 @@ impl Expand for Vec<Item> {
     }
 
     fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>) {
-        let from_tokens = states.iter().map(|state| {
-            ::quote::quote! {
-                impl ::core::convert::From<#automata<#state>> for #automata_enum {
-                    fn from(value: #automata<#state>) -> Self {
-                        Self::#state(value)
+        let from_tokens = states
+            .iter()
+            .map(|state| {
+                ::quote::quote! {
+                    impl ::core::convert::From<#automata<#state>> for #automata_enum {
+                        fn from(value: #automata<#state>) -> Self {
+                            Self::#state(value)
+                        }
                     }
                 }
-            }
-        })
-        .map(|tokens| ::syn::parse_quote!(#tokens));
+            })
+            .map(|tokens| ::syn::parse_quote!(#tokens));
         self.extend(from_tokens);
     }
 
@@ -229,8 +231,6 @@ impl Expand for Vec<Item> {
         self.push(::syn::parse_quote!(#enum_tokens));
     }
 }
-
-
 
 /// Option-like triplet. Used in argument parsing to differ between:
 /// - Missing value `#[]`
@@ -660,7 +660,7 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
                     }
                     None => self.state_machine_info.main_struct = Some(it_struct.clone()),
                 };
-                match add_state_type_param(it_struct) {
+                match it_struct.expand_state_type_parameter() {
                     Ok(bound_ident) => match self.sealed_trait.trait_ident {
                         Some(_) => unreachable!("this should have been checked previously"),
                         None => self.sealed_trait.trait_ident = Some(bound_ident),
@@ -839,35 +839,39 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
     }
 }
 
-fn add_state_type_param(automata_item: &mut ItemStruct) -> syn::Result<Ident> {
-    // TODO make the suffix custom
-    let type_param_ident = format_ident!("{}State", automata_item.ident);
-    automata_item
-        .generics
-        .params
-        .push(::syn::parse_quote!(State: #type_param_ident));
+trait ExpandState {
+    /// Expand the state type parameter in a structure or other kind of item.
+    fn expand_state_type_parameter(&mut self) -> syn::Result<Ident>;
+}
 
-    let field_to_add = quote!(
-        pub state: State
-    );
+impl ExpandState for ItemStruct {
+    fn expand_state_type_parameter(&mut self) -> syn::Result<Ident> {
+        // TODO make the suffix custom
+        let type_param_ident = format_ident!("{}State", self.ident);
+        self.generics
+            .params
+            .push(::syn::parse_quote!(State: #type_param_ident));
 
-    match &mut automata_item.fields {
-        syn::Fields::Named(named) => {
-            named
-                .named
-                .push(Field::parse_named.parse2(field_to_add).unwrap());
-        }
-        syn::Fields::Unnamed(_) => {
-            return syn::Result::Err(
-                TypestateError::UnsupportedStruct(automata_item.clone()).into(),
-            );
-        }
-        syn::Fields::Unit => {
-            automata_item.fields = Fields::Named(::syn::parse_quote!({ #field_to_add }));
-        }
-    };
+        let field_to_add = quote!(
+            pub state: State
+        );
 
-    Ok(type_param_ident)
+        match &mut self.fields {
+            syn::Fields::Named(named) => {
+                named
+                    .named
+                    .push(Field::parse_named.parse2(field_to_add).unwrap());
+            }
+            syn::Fields::Unnamed(_) => {
+                return syn::Result::Err(TypestateError::UnsupportedStruct(self.clone()).into());
+            }
+            syn::Fields::Unit => {
+                self.fields = Fields::Named(::syn::parse_quote!({ #field_to_add }));
+            }
+        };
+
+        Ok(type_param_ident)
+    }
 }
 
 /// Enumeration describing a function's receiver kind.
