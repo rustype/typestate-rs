@@ -17,25 +17,6 @@ type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 const AUTOMATA_ATTR_IDENT: &'static str = "automata";
 const STATE_ATTR_IDENT: &'static str = "state";
 
-// macro_rules! parse_quote {(
-//     $($code:tt)*
-// ) => (
-//     (|| {
-//         fn type_of_some<T> (_: Option<T>)
-//           -> &'static str
-//         {
-//             ::core::any::type_name::<T>()
-//         }
-//         let target_ty = None; if false { return target_ty.unwrap(); }
-//         eprintln!(
-//             "[{}:{}:{}:parse_quote!]\n  - ty: `{ty}`\n  - code: `{code}`",
-//             file!(), line!(), column!(),
-//             code = ::quote::quote!( $($code)* ),
-//             ty = type_of_some(target_ty),
-//         );
-//         ::syn::parse_quote!( $($code)* )
-//     })()
-// )}
 #[proc_macro_attribute]
 pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     macro_rules! bail_if_any {
