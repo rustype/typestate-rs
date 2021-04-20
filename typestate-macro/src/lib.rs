@@ -33,11 +33,17 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Parse attribute arguments
     let attr_args: AttributeArgs = parse_macro_input!(args);
-    let args = match TypestateArguments::from_list(&attr_args) {
+    let args = match MacroAttributeArguments::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => {
             return TokenStream::from(e.write_errors());
         }
+    };
+
+    let state_constructors_ident = match args.state_constructors {
+        TOption::Some(string) => Some(format_ident!("{}", string)),
+        TOption::Default => Some(format_ident!("new_state")),
+        TOption::None => None,
     };
 
     // parse the input as a mod
@@ -46,10 +52,16 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut state_machine_info = StateMachineInfo::new();
 
     // start visitor
-    let mut state_visitor = DeterministicStateVisitor::new(&mut state_machine_info);
+    let mut state_visitor =
+        DeterministicStateVisitor::new(&mut state_machine_info, state_constructors_ident);
     state_visitor.visit_item_mod_mut(&mut module);
     // report state_visitor errors and return
     bail_if_any!(state_visitor.errors);
+
+    let constructors = state_visitor.constructors;
+    if let Some((_, v)) = &mut module.content {
+        v.extend(constructors.into_iter().map(|it_fn| Item::from(it_fn)));
+    }
 
     let sealed_trait = state_visitor.sealed_trait;
     if sealed_trait.trait_ident.is_none() {
@@ -99,40 +111,27 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             // do not parse more code
             // only generate from here
 
+            let states = $automata.states.iter().collect::<Vec<_>>();
+
             // check the option triplet and convert it into a normal `Option<T>`
-            let ident = match args.enumerate {
-                TOption::Some(str) => Some(format_ident!("{}", str)),
+            let enumerate_ident = match args.enumerate {
+                TOption::Some(string) => Some(format_ident!("{}", string)),
                 TOption::Default => Some(format_ident!("E{}", $name)),
                 TOption::None => None,
             };
 
             // match the `Option<Ident>`
-            let mut tokens = match ident {
-                Some(ident) => {
-                    let states = $automata.states.iter().collect::<Vec<_>>();
-
+            let mut enumerate_tokens = match enumerate_ident {
+                Some(enumerate_ident) => {
                     let mut res: Vec<Item> = vec![];
-
-                    // expand the enumeration
-                    res.expand_enum(&$name, &ident, &states);
-
-                    // expand conversion traits: `From`
-                    res.expand_from(&$name, &ident, &states);
-
-                    // if std is present, generate `to_string` implementations
-                    #[cfg(feature = "std")]
-                    res.expand_to_string(&ident, &states);
-
+                    res.expand_enumerate(&$name, &enumerate_ident, &states);
                     res
                 }
                 None => vec![],
             };
 
-            match &mut module.content {
-                Some((_, v)) => {
-                    v.append(&mut tokens);
-                }
-                None => {}
+            if let Some((_, v)) = &mut module.content {
+                v.append(&mut enumerate_tokens);
             }
         };
     }
@@ -161,7 +160,8 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     module.into_token_stream().into()
 }
 
-trait Expand {
+trait ExpandEnumerate {
+    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
     /// Expand the [ToString] implentation for enumeration.
     /// Only available with `std` and when `enumerate` is used.
     fn expand_to_string(&mut self, automata_enum: &Ident, states: &Vec<&Ident>);
@@ -173,7 +173,19 @@ trait Expand {
     fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
 }
 
-impl Expand for Vec<Item> {
+impl ExpandEnumerate for Vec<Item> {
+    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>) {
+        // expand the enumeration
+        self.expand_enum(automata, automata_enum, states);
+
+        // expand conversion traits: `From`
+        self.expand_from(automata, automata_enum, states);
+
+        // if std is present, generate `to_string` implementations
+        #[cfg(feature = "std")]
+        self.expand_to_string(automata_enum, states);
+    }
+
     fn expand_to_string(&mut self, automata_enum: &Ident, states: &Vec<&Ident>) {
         let to_string = ::quote::quote! {
             impl ::std::string::ToString for #automata_enum {
@@ -249,11 +261,13 @@ impl FromMeta for TOption<String> {
 }
 
 #[derive(Debug, FromMeta)]
-struct TypestateArguments {
+struct MacroAttributeArguments {
     /// Optional arguments.
     /// Declares if an enumeration is to be generated and possibly gives it a name.
     #[darling(default)]
     enumerate: TOption<String>,
+    #[darling(default)]
+    state_constructors: TOption<String>,
 }
 
 /// A value to `proc_macro2::TokenStream2` conversion.
@@ -315,7 +329,7 @@ impl TryFrom<&Path> for TypestateAttr {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 struct Transition {
     source: Ident,
     destination: Ident,
@@ -333,6 +347,7 @@ impl Transition {
 }
 
 /// Extracted information from the states
+#[derive(Debug, Clone)]
 struct StateMachineInfo {
     /// Main structure (aka Automata ?)
     main_struct: Option<ItemStruct>, // late init
@@ -509,6 +524,7 @@ struct SealedPattern {
     state_idents: Vec<Ident>,
 }
 
+// TODO rework this as an ExpandX trait
 impl Into<Vec<Item>> for SealedPattern {
     /// Convert the SealedTrait into a vector of Item.
     /// This enables the addition of new items to the main module.
@@ -554,20 +570,54 @@ impl Into<Vec<Item>> for SealedPattern {
     }
 }
 
+trait ExpandStateConstructors {
+    fn expand_state_constructors(&mut self, constructor_ident: &Ident, item_struct: &ItemStruct);
+}
+
+impl ExpandStateConstructors for Vec<Item> {
+    fn expand_state_constructors(&mut self, constructor_ident: &Ident, item_struct: &ItemStruct) {
+        if let Fields::Named(named) = &item_struct.fields {
+            let struct_ident = &item_struct.ident;
+            let field_ident = named.named.iter().map(|field| &field.ident);
+            let field_ident2 = named.named.iter().map(|field| &field.ident); // HACK
+            let field_ty = named.named.iter().map(|field| &field.ty);
+            let tokens = quote! {
+                impl #struct_ident {
+                    fn #constructor_ident(#(#field_ident: #field_ty,)*) -> Self {
+                        Self {
+                            #(#field_ident2,)*
+                        }
+                    }
+                }
+            };
+            self.push(parse_quote!(#tokens));
+        }
+    }
+}
+
 struct DeterministicStateVisitor<'sm> {
     /// State machine required information
     state_machine_info: &'sm mut StateMachineInfo,
     /// Sealed trait information
     sealed_trait: SealedPattern,
+    /// Default constructors
+    constructors: Vec<Item>,
+    /// Default constructor ident
+    constructor_ident: Option<Ident>,
     /// Errors found during expansion
     errors: Vec<Error>,
 }
 
 impl<'sm> DeterministicStateVisitor<'sm> {
-    fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
+    fn new(
+        state_machine_info: &'sm mut StateMachineInfo,
+        constructor_ident: Option<Ident>,
+    ) -> Self {
         Self {
             state_machine_info,
             sealed_trait: SealedPattern::default(),
+            constructors: vec![],
+            constructor_ident,
             errors: vec![],
         }
     }
@@ -655,6 +705,10 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
             Some(TypestateAttr::State) => {
                 self.state_machine_info.add_state(it_struct.clone().into());
                 self.sealed_trait.state_idents.push(it_struct.ident.clone());
+                if let Some(ident) = &self.constructor_ident {
+                    self.constructors
+                        .expand_state_constructors(ident, it_struct);
+                }
             }
             None => {
                 // empty attribute list
