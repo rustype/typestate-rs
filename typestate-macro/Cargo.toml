@@ -13,6 +13,8 @@ repository = "https://github.com/rustype/typestate-rs"
 autotests = false
 
 [features]
+default = ["std"]
+std = []
 typestate_debug = ["typestate-automata/dot"]
 
 [lib]

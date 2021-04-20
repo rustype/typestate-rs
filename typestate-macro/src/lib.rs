@@ -129,25 +129,19 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             let mut tokens = match ident {
                 Some(ident) => {
                     let states = $automata.states.iter().collect::<Vec<_>>();
-                    // generate the enumeration
-                    let enum_tokens = ::quote::quote! {
-                        pub enum #ident {
-                            #(#states(#$name<#states>),)*
-                        }
-                    };
-                    // generate impls for conversion from type to enumeration
-                    let from_tokens = states.iter().map(|state| {
-                        ::quote::quote! {
-                            impl ::core::convert::From<#$name<#state>> for #ident {
-                                fn from(value: #$name<#state>) -> Self {
-                                    Self::#state(value)
-                                }
-                            }
-                        }
-                    })
-                    .map(|tokens| ::syn::parse_quote!(#tokens));
-                    let mut res = vec![::syn::parse_quote!(#enum_tokens)];
-                    res.extend(from_tokens);
+
+                    let mut res: Vec<Item> = vec![];
+
+                    // expand the enumeration
+                    res.expand_enum(&$name, &ident, &states);
+
+                    // expand conversion traits: `From`
+                    res.expand_from(&$name, &ident, &states);
+
+                    // if std is present, generate `to_string` implementations
+                    #[cfg(feature = "std")]
+                    res.expand_to_string(&ident, &states);
+
                     res
                 }
                 None => vec![],
@@ -185,6 +179,52 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     // if errors do not exist, return the token stream
     module.into_token_stream().into()
 }
+
+trait Expand {
+    fn expand_to_string(&mut self, automata_enum: &Ident, states: &Vec<&Ident>);
+    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
+    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
+}
+
+impl Expand for Vec<Item> {
+    fn expand_to_string(&mut self, automata_enum: &Ident, states: &Vec<&Ident>) {
+        let to_string = ::quote::quote! {
+            impl ::std::string::ToString for #automata_enum {
+                fn to_string(&self) -> String {
+                    match &self {
+                        #(#automata_enum::#states(_) => stringify!(#states).to_string(),)*
+                    }
+                }
+            }
+        };
+        self.push(::syn::parse_quote!(#to_string));
+    }
+
+    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>) {
+        let from_tokens = states.iter().map(|state| {
+            ::quote::quote! {
+                impl ::core::convert::From<#automata<#state>> for #automata_enum {
+                    fn from(value: #automata<#state>) -> Self {
+                        Self::#state(value)
+                    }
+                }
+            }
+        })
+        .map(|tokens| ::syn::parse_quote!(#tokens));
+        self.extend(from_tokens);
+    }
+
+    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>) {
+        let enum_tokens = ::quote::quote! {
+            pub enum #automata_enum {
+                #(#states(#automata<#states>),)*
+            }
+        };
+        self.push(::syn::parse_quote!(#enum_tokens));
+    }
+}
+
+
 
 /// Option-like triplet. Used in argument parsing to differ between:
 /// - Missing value `#[]`
