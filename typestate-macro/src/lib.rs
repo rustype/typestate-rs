@@ -613,7 +613,7 @@ impl ExpandStateConstructors for Vec<Item> {
             let field_ty = named.named.iter().map(|field| &field.ty);
             let tokens = quote! {
                 impl #struct_ident {
-                    fn #constructor_ident(#(#field_ident: #field_ty,)*) -> Self {
+                    pub fn #constructor_ident(#(#field_ident: #field_ty,)*) -> Self {
                         Self {
                             #(#field_ident2,)*
                         }
