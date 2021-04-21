@@ -351,16 +351,21 @@ impl Transition {
 struct StateMachineInfo {
     /// Main structure (aka Automata ?)
     main_struct: Option<ItemStruct>, // late init
+
     /// Deterministic states (`struct`s)
     det_states: HashMap<Ident, ItemStruct>,
-    /// Non-deterministic states (`enum`s)
-    non_det_states: HashMap<Ident, ItemEnum>,
+
+    /// Non-deterministic transitions (`enum`s)
+    non_det_transitions: HashMap<Ident, ItemEnum>,
+
     /// Set of transitions.
     /// Extracted from functions with a signature like `(State) -> State`.
     transitions: HashSet<Transition>,
+
     /// Set of initial states.
     /// Extracted from functions with a signature like `() -> State`.
     initial_states: HashMap<Ident, HashSet<Ident>>,
+
     /// Set of final states.
     /// Extracted from functions with a signature like `(State) -> ()`.
     final_states: HashMap<Ident, HashSet<Ident>>,
@@ -372,7 +377,7 @@ impl StateMachineInfo {
         Self {
             main_struct: None,
             det_states: HashMap::new(),
-            non_det_states: HashMap::new(),
+            non_det_transitions: HashMap::new(),
             transitions: HashSet::new(),
             initial_states: HashMap::new(),
             final_states: HashMap::new(),
@@ -388,7 +393,7 @@ impl StateMachineInfo {
                     .insert(item_struct.ident.clone(), item_struct);
             }
             Item::Enum(item_enum) => {
-                self.non_det_states
+                self.non_det_transitions
                     .insert(item_enum.ident.clone(), item_enum);
             }
             _ => unreachable!("invalid state"),
@@ -453,7 +458,7 @@ where
 
 impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
     fn into(self) -> FiniteAutomata<Ident, Ident> {
-        if self.non_det_states.is_empty() {
+        if self.non_det_transitions.is_empty() {
             let mut dfa = DFA::new();
             let name = self.main_state_name().clone();
             self.det_states
@@ -500,7 +505,7 @@ impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
                         .for_each(|t| nfa.add_final(ident.clone(), t))
                 });
             for t in self.transitions {
-                if let Some(state) = self.non_det_states.get(&t.destination) {
+                if let Some(state) = self.non_det_transitions.get(&t.destination) {
                     // nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
                     nfa.add_non_deterministic_transitions(
                         t.source,
@@ -759,7 +764,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             // i.e. unit-style variant
             if let Fields::Unit = &variant.fields {
                 let ident = &variant.ident;
-                if self.state_machine_info.non_det_states.contains_key(ident) {
+                if self.state_machine_info.non_det_transitions.contains_key(ident) {
                     self.push_unsupported_state_error(ident);
                 } else if self.state_machine_info.det_states.contains_key(ident) {
                     let automata_ident = self.state_machine_info.main_state_name();
@@ -778,7 +783,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
         if self.errors.is_empty() {
             // self.state_machine_info.add_state(i.clone().into());
             self.state_machine_info
-                .non_det_states
+                .non_det_transitions
                 .insert(i.ident.clone(), i.clone());
         }
     }
@@ -815,7 +820,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
     fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
         let ident = &i.ident;
 
-        if self.state_machine_info.non_det_states.contains_key(ident) {
+        if self.state_machine_info.non_det_transitions.contains_key(ident) {
             self.push_invalid_trait_error(i);
             return;
         }
@@ -839,7 +844,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         &self.state_machine_info.det_states.keys().for_each(|k| {
             states.insert(k.clone()); // HACK clone
         });
-        &self.state_machine_info.non_det_states.keys().for_each(|k| {
+        &self.state_machine_info.non_det_transitions.keys().for_each(|k| {
             states.insert(k.clone()); // HACK clone
         });
         let fn_kind = sig.extract_signature_kind(&states);
