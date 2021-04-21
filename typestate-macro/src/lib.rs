@@ -80,6 +80,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     // report transition_visitor errors and return
     bail_if_any!(transition_visitor.errors);
     bail_if_any!(state_machine_info.check_missing());
+    bail_if_any!(state_machine_info.check_unused_non_det_transitions());
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
@@ -358,6 +359,10 @@ struct StateMachineInfo {
     /// Non-deterministic transitions (`enum`s)
     non_det_transitions: HashMap<Ident, ItemEnum>,
 
+    /// Non-deterministic transitions present in this collection are used.
+    /// This is just so we can throw an error on unused enumerations.
+    used_non_det_transitions: HashSet<Ident>,
+
     /// Set of transitions.
     /// Extracted from functions with a signature like `(State) -> State`.
     transitions: HashSet<Transition>,
@@ -378,6 +383,7 @@ impl StateMachineInfo {
             main_struct: None,
             det_states: HashMap::new(),
             non_det_transitions: HashMap::new(),
+            used_non_det_transitions: HashSet::new(),
             transitions: HashSet::new(),
             initial_states: HashMap::new(),
             final_states: HashMap::new(),
@@ -385,7 +391,6 @@ impl StateMachineInfo {
     }
 
     /// Add a generic state to the [StateMachineInfo]
-    // TODO create specialized versions which also use this one.
     fn add_state(&mut self, state: Item) {
         match state {
             Item::Struct(item_struct) => {
@@ -408,6 +413,7 @@ impl StateMachineInfo {
         &self.main_struct.as_ref().unwrap().ident
     }
 
+    /// Check for missing initial or final states.
     fn check_missing(&self) -> Vec<Error> {
         let mut errors = vec![];
         if self.initial_states.is_empty() {
@@ -417,6 +423,25 @@ impl StateMachineInfo {
             errors.push(TypestateError::MissingFinalState.into());
         }
         errors
+    }
+
+    /// Check for unused non-deterministic transitions
+    fn check_unused_non_det_transitions(&self) -> Vec<Error> {
+        self.non_det_transitions
+            .keys()
+            .collect::<HashSet<_>>()
+            .difference(
+                // HACK
+                &self
+                    .used_non_det_transitions
+                    .iter()
+                    .map(|i| i)
+                    .collect::<HashSet<_>>(),
+            )
+            .collect::<Vec<_>>()
+            .iter()
+            .map(|i| TypestateError::UnusedTransition((***i).clone()).into())
+            .collect::<Vec<_>>()
     }
 
     fn insert_initial(&mut self, state: Ident, transition: Ident) {
@@ -764,7 +789,11 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             // i.e. unit-style variant
             if let Fields::Unit = &variant.fields {
                 let ident = &variant.ident;
-                if self.state_machine_info.non_det_transitions.contains_key(ident) {
+                if self
+                    .state_machine_info
+                    .non_det_transitions
+                    .contains_key(ident)
+                {
                     self.push_unsupported_state_error(ident);
                 } else if self.state_machine_info.det_states.contains_key(ident) {
                     let automata_ident = self.state_machine_info.main_state_name();
@@ -820,7 +849,11 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
     fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
         let ident = &i.ident;
 
-        if self.state_machine_info.non_det_transitions.contains_key(ident) {
+        if self
+            .state_machine_info
+            .non_det_transitions
+            .contains_key(ident)
+        {
             self.push_invalid_trait_error(i);
             return;
         }
@@ -844,9 +877,13 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         &self.state_machine_info.det_states.keys().for_each(|k| {
             states.insert(k.clone()); // HACK clone
         });
-        &self.state_machine_info.non_det_transitions.keys().for_each(|k| {
-            states.insert(k.clone()); // HACK clone
-        });
+        &self
+            .state_machine_info
+            .non_det_transitions
+            .keys()
+            .for_each(|k| {
+                states.insert(k.clone()); // HACK clone
+            });
         let fn_kind = sig.extract_signature_kind(&states);
         let fn_ident = sig.ident.clone();
         sig.expand_signature_state(&self.state_machine_info); // TODO check for correct expansion
@@ -866,13 +903,33 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                 // add #[must_use]
                 attrs.push(::syn::parse_quote!(#[must_use]));
                 let state = self.current_state.as_ref().unwrap().clone();
-                let transition = Transition::new(state, return_ty_ident, fn_ident);
+                let transition = Transition::new(state, return_ty_ident.clone(), fn_ident);
                 self.state_machine_info.transitions.insert(transition);
+                // mark non det transition as used
+                if self
+                    .state_machine_info
+                    .non_det_transitions
+                    .contains_key(&return_ty_ident)
+                {
+                    self.state_machine_info
+                        .used_non_det_transitions
+                        .insert(return_ty_ident);
+                }
             }
             FnKind::SelfTransition => {
                 let state = self.current_state.as_ref().unwrap().clone();
-                let transition = Transition::new(state.clone(), state, fn_ident);
+                let transition = Transition::new(state.clone(), state.clone(), fn_ident);
                 self.state_machine_info.transitions.insert(transition);
+                // mark non det transition as used
+                if self
+                    .state_machine_info
+                    .non_det_transitions
+                    .contains_key(&state)
+                {
+                    self.state_machine_info
+                        .used_non_det_transitions
+                        .insert(state);
+                }
             }
             FnKind::Other => {}
         };
@@ -1078,6 +1135,7 @@ enum TypestateError {
     InvalidAssocFuntions(ItemTrait),
     UnsupportedStruct(ItemStruct),
     UnsupportedState(Ident),
+    UnusedTransition(Ident),
 }
 
 impl Into<::syn::Error> for TypestateError {
@@ -1097,7 +1155,8 @@ impl Into<::syn::Error> for TypestateError {
             TypestateError::InvalidAssocFuntions(item_trait) => Error::new_spanned(&item_trait, "Non-deterministic states cannot have associated functions"),
             TypestateError::UnsupportedStruct(item_struct) => Error::new_spanned(&item_struct, "Tuple structures are not supported."),
             TypestateError::UnsupportedState(ident) => Error::new_spanned(&ident, "`enum` variants cannot refer to other `enum`s."),
-        }
+            TypestateError::UnusedTransition(ident) => Error::new_spanned(&ident, "Unused transitions are not allowed."),
+}
     }
 }
 
