@@ -1,6 +1,7 @@
 [package]
 name = "typestate-client"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
 
