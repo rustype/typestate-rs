@@ -1,6 +1,6 @@
 [package]
 name = "typestate"
-version = "0.3.0-alpha"
+version = "0.4.0"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
 description = "A proc macro DSL for typestates"
