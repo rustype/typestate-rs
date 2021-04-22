@@ -1,158 +1,223 @@
 # `#[typestate]`
 
-This crate provides a single attribute macro: `#[typestate]`.
+This library provides developers with a macro to design typestated objects.
 
-The macro is attached to a `mod` and allows for the usage of a pure-Rust macro DSL.
+<!-- ```toml
+[dependencies]
+typestate = "0.5"
+``` -->
 
-## Defining automata and states
+<!-- TODO: Compiler support -->
 
-To define automata and states the macro uses attributes.
-The attributes are parsed by the macro enabling typestates to be described with minimal effort.
+## Introduction
 
-### The `#[automata]` attribute
+Are you frustrated with `IllegalStateException`s in Java?
 
-This attribute defines the main automata structure.
-It adds a single generic type parameter, the `State` parameter.
-The type parameter will be bounded by a sealed trait, disabling external manual extensions of the acceptable type sets.
+Typestates allow you to define *safe* usage protocols for your objects.
+The compiler will help you on your journey and disallow errors on given states.
+You will no longer be able to try and read from closed streams.
 
-### The `#[state]` attribute
+`#[typestate]` build on ideas from the [`state_machine_future`](https://github.com/fitzgen/state_machine_future) crate.
+If typestates are so useful, why not use them with limit them to `Future`s?
 
-This attribute defines a possible state the automata can be in.
-It implements the sealed trait which bounds the automata state.
+### Typestates in Rust
 
-The defined state can contain data, which will be only available when the state is "on".
+Typestates are not a new concept to Rust.
+There are several blog posts on the subject
+[[1](https://yoric.github.io/post/rust-typestate/),
+[2](http://cliffle.com/blog/rust-typestate/),
+[3](https://rustype.github.io/notes/notes/rust-typestate-series/rust-typestate-index)]
+as well as a [chapter](https://docs.rust-embedded.org/book/static-guarantees/typestate-programming.html) in *The Embedded Rust Book*.
 
-## Special states
+In short, we can write typestates by hand, we add some generics here and there,
+declare them as a "*state*" and in the end we can keep living our lives with our new state machine.
 
-Along with regular states, we can have special cases; the initial and end states.
+This approach however is *error-prone* and *verbose* (especially with bigger automata).
+It also provides *no* guarantees about the automata, unless of course, you designed and tested the design previously.
 
-The key idea behind the declaration of these states is that each one can be thought as a constructor or destructor (I am aware Rust uses `Drop`).
-Since each one is a function we can simply write functions and infer which states should be starting states and which ones should be end states.
+As programmers, we want to automate this cumbersome job and to do so, we use Rust's powerful procedural macros!
 
-### Defining initial states
+## Basic Guide
 
-The rule to infer an initial state is as follows:
-> If a function does not take a `self` state, but returns a valid state; the returned state is considered to be an initial state.
+Consider we are tasked with building the firmware for a traffic light,
+we can turn it on and off and cycle between Green, Yellow and Red.
 
-The following function signatures declare `A` and `B` as initial states.
-```rust
-fn new_a() -> A;
-fn new_b(_: u64) -> B;
+We first declare a module with the `#[typestate]` macro attached to it.
+```rs
+#[typestate]
+mod traffic_light {}
 ```
 
-### Defining end states
+This of course does nothing, in fact it will provide you an error,
+saying that we haven't declared an *automata*.
 
-Just like initial states, end states are inferred, the rule is:
-> If a function takes ownership of a `self` state, but does not return a valid state; the `self` state is considered to be an end state.
-
-The following function signatures declare `C` and `D` as end states.
-```rust
-fn end_c(self: C);
-fn end_d(self: D) -> u64;
+And so, our next task is to do that.
+Inside our `traffic_light` module we declare a structure annotated with `#[automata]`.
+```rs
+#[automata]
+pub struct TrafficLight;
 ```
 
-## Transitions
-
-Transitions are defined and inferred through functions.
-Their inference rule is:
-> A function is inferred as a transition if it takes ownership of a `self` state, *and* returns a valid state.
-
-```rust
-fn a_to_b(self: A) -> B;
+Our next step is to declare the states.
+We declare three empty structures annotated with `"[state]`.
+```rs
+#[state] pub struct Green;
+#[state] pub struct Yellow;
+#[state] pub struct Red;
 ```
 
-## Extra functions
+So far so good, however some errors should appear, regarding the lack of initial and final states.
 
-Our state machine would be incomplete if we were not able to define functions for a certain state.
-The inference rule is similar to that of transitions:
-> A function is considered to be part of a certain state if `self` is typed with a valid state.
+To declare initial and final states we need to see them as describable by transitions.
+Whenever an object is created, the method that created leaves the object in the *initial* state.
+Equally, whenever a method consumes an object and does not return it (or a similar version of it),
+it made the object reach the *final* state.
 
-Remember that this function must not take ownership of the current state.
-To cope with that restriction we use references, immutable or mutable.
+With this in mind we can lay down the following rules:
+- Functions that *do not* take a valid state (i.e. `self`) and return a valid state, describe an initial state.
+- Functions that take a valid state (i.e. `self`) and *do not* return a valid state, describe a final state.
 
-```rust
-fn check_a(self: &A) -> bool;
-fn mutate_b_field(self: &mut B);
+So we write the following function signatures:
+```rs
+fn turn_on() -> Red;
+fn turn_off(self);
 ```
 
-## Notes on functions
-
-Functions are tied to states through `trait`s,
-these need to share their name with an existing state, otherwise a compilation error is produced.
-
-For example:
-```rust
-#[typestate] mod m {
-    // since T was not declared as a state
-    // `trait T` will produce a compile time error
-    trait T {}
+However, these are *free* functions, meaning that `self` relates to nothing.
+To attach them to a state we wrap them around a `trait` with the name of the state they are supposed to be attached to.
+So our previous example becomes:
+```rs
+trait Red {
+    fn turn_on() -> Red;
+    fn turn_off(self);
 }
 ```
 
-## Code Example
+> *Before we go further, a quick review:*
+> - The module is annotated with `#[typestate]` enabling the DSL.
+> - To declare the main automaton we attach `#[automata]` to a structure.
+> - The states are declared by attaching `#[state]`.
+> - State functions are declared through traits that share the same name.
+> - Initial and final states are declared by functions with a "special" signature.
 
-Consider the traffic light example in <https://github.com/rustype/traffic-light>.
+Finally, we need to address how states transition between each other.
+An astute reader might have inferred that we can consume one state and return another,
+such reader would be 100% correct.
 
-Using the `#[typestate]` macro we can write the following code:
+For example, to transition between the `Red` state and the `Green` we do:
+```rs
+trait Red {
+    fn to_green(self) -> Green;
+}
+```
 
-```rust
+Building on this we can finish the other states:
+```rs
+pub trait Green {
+    fn to_yellow(self) -> Yellow;
+}
+
+pub trait Yellow {
+    fn to_red(self) -> Red;
+}
+
+pub trait Red {
+    fn to_green(self) -> Green;
+    fn turn_on() -> Red;
+    fn turn_off(self);
+}
+```
+
+And the full code becomes:
+
+```rs
 #[typestate]
 mod traffic_light {
-    #[automata] struct TrafficLight { cycles: u64 }
-    #[state] struct Green;
-    #[state] struct Yellow;
-    #[state] struct Red;
+    #[automata]
+    pub struct TrafficLight {
+        pub cycles: u64,
+    }
 
-    trait Green { fn to_yellow(self: Green) -> Yellow; }
-    trait Yellow { fn to_red(self: Yellow) -> Red; }
-    trait Red {
+    #[state] pub struct Green;
+    #[state] pub struct Yellow;
+    #[state] pub struct Red;
+
+    pub trait Green {
+        fn to_yellow(self) -> Yellow;
+    }
+
+    pub trait Yellow {
+        fn to_red(self) -> Red;
+    }
+
+    pub trait Red {
+        fn to_green(self) -> Green;
         fn turn_on() -> Red;
-        fn turn_off(self: Red);
-        fn to_green(self: Red) -> Green;
+        fn turn_off(self);
     }
 }
 ```
 
-Which gets expanded into:
+The code above will generate:
+- Expand the main structure with a `state: State` field.
+- A sealed trait which disallows states from being added *externally*.
+- Traits for each state, providing the described functions.
 
-```rust
-pub struct TrafficLight<State>
-where
-    State: TrafficLightState,
-{
-    cycles: u64,
-    state: State,
+## Advanced Guide
+
+There are some features which may be helpful when describing a typestate.
+There are two main features that weren't discussed yet.
+
+### Self-transitioning functions
+Putting it simply, states may require to mutate themselves without transitioning, or maybe we require a simple getter.
+To declare methods for that purpose, we can use functions that take references (mutable or not) to `self`.
+
+Consider the following example where we have a flag that can be up or not.
+We have two functions, one checks if the flag is up, the other, sets the flag up.
+
+```rs
+#[state] struct Flag {
+    up: bool
 }
 
-pub struct Green;
-pub struct Yellow;
-pub struct Red;
-
-mod private {
-    use crate::{Green, Red, Yellow};
-    pub trait Private {}
-    impl Private for Green {}
-    impl Private for Yellow {}
-    impl Private for Red {}
-}
-
-pub trait TrafficLightState: private::Private {}
-
-impl TrafficLightState for Green {}
-impl TrafficLightState for Yellow {}
-impl TrafficLightState for Red {}
-
-pub trait GreenState {
-    fn to_yellow(self) -> TrafficLight<Yellow>;
-}
-
-pub trait YellowState {
-    fn to_red(self) -> TrafficLight<Red>;
-}
-
-pub trait RedState {
-    fn to_green(self) -> TrafficLight<Green>;
-    fn turn_on() -> TrafficLight<Red>;
-    fn turn_off(self);
+impl Flag {
+    fn is_up(&self) -> bool;
+    fn set_up(&mut self);
 }
 ```
+
+As these functions do not change the typestate state,
+they transition back to the current state.
+
+### Non-deterministic transitions
+Consider that a typestate relies on an external component that can fail, to model that, one would use `Result<T>`.
+However, we need our typestate to transition between known states, so we declare two things:
+- An `Error` state along with the other states.
+- An `enum` to represent the bifurcation of states.
+
+```rs
+#[state] struct Error {
+    message: String
+}
+
+enum OperationResult {
+    State, Error
+}
+```
+
+Inside the enumeration there can only be other valid states and only `Unit` style variants are supported.
+
+## Attributes
+
+This is the list of attributes that can be used along `#[typestate]`:
+- `#[typestate]`: the main attribute macro, without attribute parameters.
+- `#[typestate(enumerate = "...")]`: this option makes the macro generate an additional `enum`,
+  the `enum` enables working with variables and structures "generic" to the state.
+  - The parameter can be declared *with* or *without* a string literal, if declared with the string,
+    that string will be used as identifier to the `enum`.
+  - If the parameter is used with an *empty string* or *without* a string, the default behavior is to prepend an `E` to the
+- `#[typestate(state_constructors = "...")`: this option generates basic constructors for states with fields.
+
+## Features
+The cargo features you can enable:
+- `typestate_debug` will generate a `.dot` file of you state machine.
