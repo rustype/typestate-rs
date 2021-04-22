@@ -12,7 +12,7 @@ fn main() {
     }
     let yellow_light = green_light.to_yellow();
     let red_light = yellow_light.to_red();
-    let _ = red_light.turn_off();
+    red_light.turn_off();
 }
 
 // #[typestate]
@@ -71,7 +71,7 @@ fn main() {
 //     fn end(self) {}
 // }
 
-#[typestate(enumerate)]
+#[typestate(enumerate, state_constructors)]
 mod traffic_light {
     #[derive(Debug)]
     #[automata]
@@ -98,7 +98,6 @@ mod traffic_light {
         fn turn_off(self);
         fn to_either(self) -> Either;
     }
-    pub enum A {} // TODO unused -> ERROR
 
     pub enum Either {
         Yellow,
