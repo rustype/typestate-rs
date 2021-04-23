@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [beta, stable, 1.36.0]
+        rust: [beta, stable, 1.51.0]
         include:
           - rust: nightly
     steps:
@@ -25,11 +25,11 @@ jobs:
           RUSTFLAGS: ${{matrix.rustflags}}
 
   msrv:
-    name: Rust 1.31.0
+    name: Rust 1.51.0
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@1.31.0
+      - uses: dtolnay/rust-toolchain@1.51.0
       - run: cargo check
 
   clippy:
