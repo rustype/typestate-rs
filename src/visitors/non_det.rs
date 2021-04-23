@@ -25,7 +25,7 @@ pub(crate) fn visit_non_deterministic(
     vec![]
 }
 
-pub(crate) struct NonDeterministicStateVisitor<'sm> {
+struct NonDeterministicStateVisitor<'sm> {
     state_machine_info: &'sm mut StateMachineInfo,
     errors: Vec<Error>,
 }

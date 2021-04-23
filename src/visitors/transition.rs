@@ -30,7 +30,7 @@ pub(crate) fn visit_transitions(
     vec![]
 }
 
-pub(crate) struct TransitionVisitor<'sm> {
+struct TransitionVisitor<'sm> {
     current_state: Option<Ident>,
     state_machine_info: &'sm mut StateMachineInfo,
     errors: Vec<Error>,
