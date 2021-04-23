@@ -151,11 +151,11 @@ where
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
         self.states
             .difference(&self.productive_states())
-            .map(|s| s.clone())
+            .cloned()
             .collect()
         // self.productive_states()
         //     .difference(&self.states)
-        //     .map(|s| s.clone())
+        //     .cloned()
         //     .collect()
     }
 
@@ -190,7 +190,7 @@ where
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
         self.states
             .difference(&self.useful_states())
-            .map(|s| s.clone())
+            .cloned()
             .collect()
     }
 }
@@ -506,7 +506,7 @@ where
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
         self.states
             .difference(&self.productive_states())
-            .map(|s| s.clone())
+            .cloned()
             .collect()
     }
 
@@ -541,7 +541,7 @@ where
         // TODO check if the clone should be here or if we can return `HashSet<&State>`
         self.states
             .difference(&self.useful_states())
-            .map(|s| s.clone())
+            .cloned()
             .collect()
     }
 }
