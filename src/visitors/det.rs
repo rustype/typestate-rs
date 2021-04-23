@@ -3,7 +3,10 @@ use std::convert::TryFrom;
 use crate::{StateMachineInfo, TypestateError};
 
 use parse::Parser;
-use syn::{visit_mut::VisitMut, *};
+use syn::{
+    parse, parse_quote, visit_mut::VisitMut, Attribute, Error, Field, Fields, Ident, Item, ItemMod,
+    ItemStruct, Path,
+};
 
 const AUTOMATA_ATTR_IDENT: &str = "automata";
 const STATE_ATTR_IDENT: &str = "state";
@@ -92,7 +95,7 @@ pub(crate) struct SealedPattern {
 
 // TODO rework this as an ExpandX trait
 impl From<SealedPattern> for Vec<Item> {
-    /// Convert the SealedTrait into a vector of Item.
+    /// Convert the [`SealedTrait`] into a vector of Item.
     /// This enables the addition of new items to the main module.
     fn from(sealed_pattern: SealedPattern) -> Self {
         let trait_ident = sealed_pattern.trait_ident.expect("missing `.trait_ident`");

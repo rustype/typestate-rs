@@ -7,7 +7,10 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
-use syn::*;
+use syn::{
+    parse_macro_input, Attribute, AttributeArgs, Error, Ident, Item, ItemEnum, ItemMod, ItemStruct,
+    ItemTrait, Variant,
+};
 #[cfg(feature = "typestate_debug")]
 use typestate_automata::dot::*;
 use typestate_automata::{Dfa, Nfa};
@@ -148,13 +151,13 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
 trait ExpandEnumerate {
     fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
-    /// Expand the [ToString] implentation for enumeration.
+    /// Expand the [`ToString`] implentation for enumeration.
     /// Only available with `std` and when `enumerate` is used.
     fn expand_to_string(&mut self, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the enumeration containing all states.
     /// Only available when `enumerate` is used.
     fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
-    /// Expand the [From] implementation to convert from states to enumeration and back.
+    /// Expand the [`From`] implementation to convert from states to enumeration and back.
     /// Only available when `enumerate` is used.
     fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
 }
@@ -245,6 +248,7 @@ impl FromMeta for TOption<String> {
     }
 }
 
+
 #[derive(Debug, FromMeta)]
 struct MacroAttributeArguments {
     /// Optional arguments.
@@ -325,7 +329,7 @@ struct StateMachineInfo {
 }
 
 impl StateMachineInfo {
-    /// Construct a new [StateMachineInfo].
+    /// Construct a new [`StateMachineInfo`].
     fn new() -> Self {
         Self {
             main_struct: None,
@@ -338,7 +342,7 @@ impl StateMachineInfo {
         }
     }
 
-    /// Add a generic state to the [StateMachineInfo]
+    /// Add a generic state to the [`StateMachineInfo`]
     fn add_state(&mut self, state: Item) {
         match state {
             Item::Struct(item_struct) => {
@@ -477,8 +481,8 @@ impl From<StateMachineInfo> for FiniteAutomata<Ident, Ident> {
                 if let Some(state) = info.non_det_transitions.get(&t.destination) {
                     // nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
                     nfa.add_non_deterministic_transitions(
-                        t.source,
-                        t.symbol,
+                        &t.source,
+                        &t.symbol,
                         state.variants.iter().map(|v| v.ident.clone()),
                     )
                 } else {

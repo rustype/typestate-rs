@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
 use crate::{StateMachineInfo, Transition, TypestateError};
-use syn::{visit_mut::VisitMut, *};
+use syn::{
+    visit_mut::VisitMut, Error, FnArg, Ident, ItemMod, ItemTrait, Receiver, ReturnType, Signature,
+    TraitItemMethod, Type,
+};
 
 macro_rules! bail_if_any {
     ( $errors:expr ) => {
@@ -74,7 +77,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             self.current_state = Some(ident.clone());
             i.ident = ::quote::format_ident!("{}State", ident);
             // go deeper
-            for item in i.items.iter_mut() {
+            for item in &mut i.items {
                 self.visit_trait_item_mut(item);
             }
         } else {
@@ -208,13 +211,13 @@ enum FnKind {
     Other,
 }
 
-/// Provides a series of utility methods to be used on [syn::Signature].
+/// Provides a series of utility methods to be used on [`syn::Signature`].
 trait SignatureKind {
-    /// Extract a [ReceiverKind] from a [syn::Signature].
+    /// Extract a [`ReceiverKind`] from a [`syn::Signature`].
     fn extract_receiver_kind(&self) -> ReceiverKind;
-    /// Extract a [OutputKind] from a [syn::Signature].
+    /// Extract a [`OutputKind`] from a [`syn::Signature`].
     fn extract_output_kind(&self, states: &HashSet<Ident>) -> OutputKind;
-    /// Extract a [FnKind] from a [syn::Signature].
+    /// Extract a [`FnKind`] from a [`syn::Signature`].
     /// Takes a set of states to check for valid states.
     fn extract_signature_kind(&self, states: &HashSet<Ident>) -> FnKind;
     /// Expands a signature

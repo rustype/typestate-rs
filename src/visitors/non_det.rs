@@ -1,4 +1,4 @@
-use syn::{visit_mut::VisitMut, *};
+use syn::{visit_mut::VisitMut, Error, Fields, Ident, ItemEnum, ItemMod, Variant};
 
 use crate::{StateMachineInfo, TypestateError};
 
