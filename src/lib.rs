@@ -10,7 +10,7 @@ use std::{
 use syn::{parse::Parser, visit_mut::VisitMut, *};
 #[cfg(feature = "typestate_debug")]
 use typestate_automata::dot::*;
-use typestate_automata::{DFA, NFA};
+use typestate_automata::{Dfa, Nfa};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
@@ -24,7 +24,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             match $errors {
                 errors => {
                     if !errors.is_empty() {
-                        return errors.to_compile_error().into();
+                        return errors.into_compile_error().into();
                     }
                 }
             }
@@ -58,14 +58,14 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     // report state_visitor errors and return
     bail_if_any!(state_visitor.errors);
 
-    let constructors = state_visitor.constructors;
+    let mut constructors = state_visitor.constructors;
     if let Some((_, v)) = &mut module.content {
-        v.extend(constructors.into_iter().map(|it_fn| Item::from(it_fn)));
+        v.append(&mut constructors);
     }
 
     let sealed_trait = state_visitor.sealed_trait;
     if sealed_trait.trait_ident.is_none() {
-        return TypestateError::MissingAutomata.to_compile_error().into();
+        return TypestateError::MissingAutomata.into_compile_error().into();
     }
 
     let mut non_det_state_visitor = NonDeterministicStateVisitor::new(&mut state_machine_info);
@@ -162,20 +162,20 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 trait ExpandEnumerate {
-    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
+    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the [ToString] implentation for enumeration.
     /// Only available with `std` and when `enumerate` is used.
-    fn expand_to_string(&mut self, automata_enum: &Ident, states: &Vec<&Ident>);
+    fn expand_to_string(&mut self, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the enumeration containing all states.
     /// Only available when `enumerate` is used.
-    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
+    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the [From] implementation to convert from states to enumeration and back.
     /// Only available when `enumerate` is used.
-    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>);
+    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
 }
 
 impl ExpandEnumerate for Vec<Item> {
-    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>) {
+    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]) {
         // expand the enumeration
         self.expand_enum(automata, automata_enum, states);
 
@@ -187,7 +187,7 @@ impl ExpandEnumerate for Vec<Item> {
         self.expand_to_string(automata_enum, states);
     }
 
-    fn expand_to_string(&mut self, automata_enum: &Ident, states: &Vec<&Ident>) {
+    fn expand_to_string(&mut self, automata_enum: &Ident, states: &[&Ident]) {
         let to_string = ::quote::quote! {
             impl ::std::string::ToString for #automata_enum {
                 fn to_string(&self) -> String {
@@ -200,7 +200,7 @@ impl ExpandEnumerate for Vec<Item> {
         self.push(::syn::parse_quote!(#to_string));
     }
 
-    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>) {
+    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]) {
         let from_tokens = states
             .iter()
             .map(|state| {
@@ -216,7 +216,7 @@ impl ExpandEnumerate for Vec<Item> {
         self.extend(from_tokens);
     }
 
-    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &Vec<&Ident>) {
+    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]) {
         let enum_tokens = ::quote::quote! {
             pub enum #automata_enum {
                 #(#states(#automata<#states>),)*
@@ -273,11 +273,11 @@ struct MacroAttributeArguments {
 /// A value to `proc_macro2::TokenStream2` conversion.
 /// More precisely into
 trait IntoCompileError {
-    fn to_compile_error(self) -> TokenStream2;
+    fn into_compile_error(self) -> TokenStream2;
 }
 
 impl IntoCompileError for Vec<Error> {
-    fn to_compile_error(mut self) -> TokenStream2 {
+    fn into_compile_error(mut self) -> TokenStream2 {
         if !self.is_empty() {
             // if errors exist, return all errors
             let fst_err = self.swap_remove(0);
@@ -430,11 +430,7 @@ impl StateMachineInfo {
             .collect::<HashSet<_>>()
             .difference(
                 // HACK
-                &self
-                    .used_non_det_transitions
-                    .iter()
-                    .map(|i| i)
-                    .collect::<HashSet<_>>(),
+                &self.used_non_det_transitions.iter().collect::<HashSet<_>>(),
             )
             .collect::<Vec<_>>()
             .iter()
@@ -475,60 +471,60 @@ where
     State: Eq + Hash + Clone,
     Transition: Eq + Hash + Clone,
 {
-    Deterministic(Ident, DFA<State, Transition>),
-    NonDeterministic(Ident, NFA<State, Transition>),
+    Deterministic(Ident, Dfa<State, Transition>),
+    NonDeterministic(Ident, Nfa<State, Transition>),
 }
 
-impl Into<FiniteAutomata<Ident, Ident>> for StateMachineInfo {
-    fn into(self) -> FiniteAutomata<Ident, Ident> {
-        if self.non_det_transitions.is_empty() {
-            let mut dfa = DFA::new();
-            let name = self.main_state_name().clone();
-            self.det_states
+impl From<StateMachineInfo> for FiniteAutomata<Ident, Ident> {
+    fn from(info: StateMachineInfo) -> Self {
+        if info.non_det_transitions.is_empty() {
+            let mut dfa = Dfa::new();
+            let name = info.main_state_name().clone();
+            info.det_states
                 .into_iter()
                 .map(|(ident, _)| ident)
                 .for_each(|ident| dfa.add_state(ident));
-            self.initial_states
+            info.initial_states
                 .into_iter()
                 .for_each(|(ident, transitions)| {
                     transitions
                         .into_iter()
                         .for_each(|t| dfa.add_initial(ident.clone(), t))
                 });
-            self.final_states
+            info.final_states
                 .into_iter()
                 .for_each(|(ident, transitions)| {
                     transitions
                         .into_iter()
                         .for_each(|t| dfa.add_final(ident.clone(), t))
                 });
-            self.transitions
+            info.transitions
                 .into_iter()
                 .for_each(|t| dfa.add_transition(t.source, t.symbol, t.destination));
             FiniteAutomata::Deterministic(name, dfa)
         } else {
-            let mut nfa = NFA::new();
-            let name = self.main_state_name().clone();
-            self.det_states
+            let mut nfa = Nfa::new();
+            let name = info.main_state_name().clone();
+            info.det_states
                 .into_iter()
                 .map(|(ident, _)| ident)
                 .for_each(|ident| nfa.add_state(ident));
-            self.initial_states
+            info.initial_states
                 .into_iter()
                 .for_each(|(ident, transitions)| {
                     transitions
                         .into_iter()
                         .for_each(|t| nfa.add_initial(ident.clone(), t))
                 });
-            self.final_states
+            info.final_states
                 .into_iter()
                 .for_each(|(ident, transitions)| {
                     transitions
                         .into_iter()
                         .for_each(|t| nfa.add_final(ident.clone(), t))
                 });
-            for t in self.transitions {
-                if let Some(state) = self.non_det_transitions.get(&t.destination) {
+            for t in info.transitions {
+                if let Some(state) = info.non_det_transitions.get(&t.destination) {
                     // nfa.add_transition(t.source, t.symbol.clone(), t.destination.clone());
                     nfa.add_non_deterministic_transitions(
                         t.source,
@@ -553,25 +549,38 @@ struct SealedPattern {
 }
 
 // TODO rework this as an ExpandX trait
-impl Into<Vec<Item>> for SealedPattern {
+impl From<SealedPattern> for Vec<Item> {
     /// Convert the SealedTrait into a vector of Item.
     /// This enables the addition of new items to the main module.
-    fn into(self) -> Vec<Item> {
-        let trait_ident = self.trait_ident.expect("missing `.trait_ident`");
+    fn from(sealed_pattern: SealedPattern) -> Self {
+        let trait_ident = sealed_pattern.trait_ident.expect("missing `.trait_ident`");
         let private_mod_ident = format_ident!("__private");
         // or `Private` or `Sealed` or `format_ident!("{}Sealed", …)`
         // take into account that `trait_ident` may have already been used
         let private_mod_trait = &trait_ident;
 
-        let states = &self.state_idents;
-        let mut ret = vec![];
-
-        // Sealed trait
-        ret.push(::syn::parse_quote! {
-            /* private */ mod #private_mod_ident {
-                pub trait #private_mod_trait {}
-            }
-        });
+        let states = &sealed_pattern.state_idents;
+        let mut ret = vec![
+            // Sealed trait
+            ::syn::parse_quote! {
+                /* private */ mod #private_mod_ident {
+                    pub trait #private_mod_trait {}
+                }
+            },
+            // State trait
+            ::syn::parse_quote! {
+                pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
+            },
+            // Blanket impl of state trait from sealed implementors
+            // This frees us from having to provide concrete impls for each type.
+            ::syn::parse_quote! {
+                impl<__T : ?::core::marker::Sized> #trait_ident
+                    for __T
+                where
+                    __T : #private_mod_ident::#private_mod_trait,
+                {}
+            },
+        ];
 
         // Sealed trait impls
         ret.extend(states.iter().map(|each_state| {
@@ -580,20 +589,6 @@ impl Into<Vec<Item>> for SealedPattern {
             }
         }));
 
-        // State trait
-        ret.push(::syn::parse_quote! {
-            pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
-        });
-
-        // Blanket impl of state trait from sealed implementors
-        // This frees us from having to provide concrete impls for each type.
-        ret.push(::syn::parse_quote! {
-            impl<__T : ?::core::marker::Sized> #trait_ident
-                for __T
-            where
-                __T : #private_mod_ident::#private_mod_trait,
-            {}
-        });
         ret
     }
 }
@@ -726,7 +721,6 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
                     },
                     Err(e) => {
                         self.errors.push(e);
-                        return;
                     }
                 }
             }
@@ -740,9 +734,6 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
             }
             None => {
                 // empty attribute list
-                // ignore
-                // TODO maybe do something?
-                return;
             }
         }
     }
@@ -1077,9 +1068,9 @@ impl SignatureKind for Signature {
                             return OutputKind::State(ident.clone());
                         }
                     }
-                    return OutputKind::Other;
+                    OutputKind::Other
                 }
-                _ => return OutputKind::Other,
+                _ => OutputKind::Other,
             },
         }
     }
@@ -1155,7 +1146,7 @@ impl From<TypestateError> for syn::Error {
 }
 
 impl IntoCompileError for TypestateError {
-    fn to_compile_error(self) -> TokenStream2 {
+    fn into_compile_error(self) -> TokenStream2 {
         let err: syn::Error = self.into();
         err.to_compile_error()
     }
