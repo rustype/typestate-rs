@@ -4,10 +4,10 @@ This library provides developers with a macro to design typestated objects.
 
 ```toml
 [dependencies]
-typestate = "0.4"
+typestate = "0.5"
 ```
 
-<!-- TODO: Compiler support -->
+*Compiler support: requires rustc 1.51+*
 
 ## Introduction
 
@@ -220,4 +220,4 @@ This is the list of attributes that can be used along `#[typestate]`:
 
 ## Features
 The cargo features you can enable:
-- `typestate_debug` will generate a `.dot` file of you state machine.
+- `typestate_debug` will generate a `.dot` file of your state machine.
