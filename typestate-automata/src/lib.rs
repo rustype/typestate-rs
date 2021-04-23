@@ -18,7 +18,7 @@ enum Delta {
 }
 
 /// Type alias for [DeterministicFiniteAutomata].
-pub type DFA<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
+pub type Dfa<State, Transition> = DeterministicFiniteAutomata<State, Transition>;
 
 /// A representation for a deterministic finite automata.
 #[derive(Debug, Clone)]
@@ -209,8 +209,8 @@ mod dfa_tests {
     use super::test_traits::*;
     use super::*;
 
-    fn setup_automata() -> DFA<i32, usize> {
-        let mut dfa = DFA::new();
+    fn setup_automata() -> Dfa<i32, usize> {
+        let mut dfa = Dfa::new();
         let state_list = [1, 2, 3, 4, 5, 6, 7];
         for &state in state_list.iter() {
             dfa.add_state(state);
@@ -234,8 +234,8 @@ mod dfa_tests {
         dfa
     }
 
-    fn setup_automata_loop() -> DFA<i32, ()> {
-        let mut dfa = DFA::new();
+    fn setup_automata_loop() -> Dfa<i32, ()> {
+        let mut dfa = Dfa::new();
         dfa.add_initial(1, ());
         dfa.add_final(2, ());
         dfa.add_transition(1, (), 2);
@@ -340,7 +340,7 @@ mod dfa_tests {
 }
 
 /// Type alias for [NonDeterministicFiniteAutomata].
-pub type NFA<State, Transition> = NonDeterministicFiniteAutomata<State, Transition>;
+pub type Nfa<State, Transition> = NonDeterministicFiniteAutomata<State, Transition>;
 
 /// A representation for non-deterministic finite automata.
 #[derive(Debug, Clone)]
@@ -560,8 +560,8 @@ mod nfa_tests {
     use super::test_traits::*;
     use super::*;
 
-    fn setup_automata() -> NFA<i32, ()> {
-        let mut nfa = NFA::new();
+    fn setup_automata() -> Nfa<i32, ()> {
+        let mut nfa = Nfa::new();
         let state_list = [1, 2, 3, 4, 5, 6, 7];
         for &state in state_list.iter() {
             nfa.add_state(state);
@@ -585,8 +585,8 @@ mod nfa_tests {
         nfa
     }
 
-    fn setup_automata_loop() -> NFA<i32, ()> {
-        let mut nfa = NFA::new();
+    fn setup_automata_loop() -> Nfa<i32, ()> {
+        let mut nfa = Nfa::new();
         nfa.add_initial(1, ());
         nfa.add_final(2, ());
         nfa.add_transition(1, (), 2);
@@ -662,7 +662,7 @@ mod nfa_tests {
 
     #[test]
     fn test_add_non_deterministic_transition() {
-        let mut nfa = NFA::new();
+        let mut nfa = Nfa::new();
         [1, 2, 3, 4, 5, 6, 7]
             .iter()
             .map(|i| *i)
