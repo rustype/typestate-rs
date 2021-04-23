@@ -2,10 +2,10 @@
 
 This library provides developers with a macro to design typestated objects.
 
-<!-- ```toml
+```toml
 [dependencies]
-typestate = "0.5"
-``` -->
+typestate = "0.4"
+```
 
 <!-- TODO: Compiler support -->
 
@@ -43,7 +43,7 @@ Consider we are tasked with building the firmware for a traffic light,
 we can turn it on and off and cycle between Green, Yellow and Red.
 
 We first declare a module with the `#[typestate]` macro attached to it.
-```rs
+```rust
 #[typestate]
 mod traffic_light {}
 ```
@@ -53,14 +53,14 @@ saying that we haven't declared an *automata*.
 
 And so, our next task is to do that.
 Inside our `traffic_light` module we declare a structure annotated with `#[automata]`.
-```rs
+```rust
 #[automata]
 pub struct TrafficLight;
 ```
 
 Our next step is to declare the states.
 We declare three empty structures annotated with `"[state]`.
-```rs
+```rust
 #[state] pub struct Green;
 #[state] pub struct Yellow;
 #[state] pub struct Red;
@@ -78,7 +78,7 @@ With this in mind we can lay down the following rules:
 - Functions that take a valid state (i.e. `self`) and *do not* return a valid state, describe a final state.
 
 So we write the following function signatures:
-```rs
+```rust
 fn turn_on() -> Red;
 fn turn_off(self);
 ```
@@ -86,7 +86,7 @@ fn turn_off(self);
 However, these are *free* functions, meaning that `self` relates to nothing.
 To attach them to a state we wrap them around a `trait` with the name of the state they are supposed to be attached to.
 So our previous example becomes:
-```rs
+```rust
 trait Red {
     fn turn_on() -> Red;
     fn turn_off(self);
@@ -105,14 +105,14 @@ An astute reader might have inferred that we can consume one state and return an
 such reader would be 100% correct.
 
 For example, to transition between the `Red` state and the `Green` we do:
-```rs
+```rust
 trait Red {
     fn to_green(self) -> Green;
 }
 ```
 
 Building on this we can finish the other states:
-```rs
+```rust
 pub trait Green {
     fn to_yellow(self) -> Yellow;
 }
@@ -130,7 +130,7 @@ pub trait Red {
 
 And the full code becomes:
 
-```rs
+```rust
 #[typestate]
 mod traffic_light {
     #[automata]
@@ -175,7 +175,7 @@ To declare methods for that purpose, we can use functions that take references (
 Consider the following example where we have a flag that can be up or not.
 We have two functions, one checks if the flag is up, the other, sets the flag up.
 
-```rs
+```rust
 #[state] struct Flag {
     up: bool
 }
@@ -195,7 +195,7 @@ However, we need our typestate to transition between known states, so we declare
 - An `Error` state along with the other states.
 - An `enum` to represent the bifurcation of states.
 
-```rs
+```rust
 #[state] struct Error {
     message: String
 }
