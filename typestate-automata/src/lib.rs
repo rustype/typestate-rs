@@ -153,10 +153,6 @@ where
             .difference(&self.productive_states())
             .cloned()
             .collect()
-        // self.productive_states()
-        //     .difference(&self.states)
-        //     .cloned()
-        //     .collect()
     }
 
     /// Compute the automata useful states.
