@@ -37,7 +37,5 @@ typestate-automata = { version = "0.2.0", path = "typestate-automata" }
 
 [workspace]
 members = [
-    # "typestate-macro",
-    "typestate-client",
     "typestate-automata"
 ]
