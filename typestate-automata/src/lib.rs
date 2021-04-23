@@ -100,7 +100,7 @@ where
             Delta::IDelta => &mut self.idelta,
         };
         if let Some(transitions) = delta.get_mut(&source) {
-            if let Some(_) = transitions.get_mut(&symbol) {
+            if transitions.get_mut(&symbol).is_some() {
                 // TODO duplicate: return error or replace?
             } else {
                 transitions.insert(symbol, destination);
