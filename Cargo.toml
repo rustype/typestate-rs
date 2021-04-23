@@ -1,6 +1,6 @@
 [package]
 name = "typestate"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
 description = "A proc macro DSL for typestates"
@@ -33,7 +33,7 @@ syn = { version = "1.0", features = ["extra-traits", "visit-mut", "parsing", "fu
 proc-macro2 = "1.0"
 darling = "0.12"
 
-typestate-automata = { version = "0.2.0", path = "typestate-automata" }
+typestate-automata = { version = "0.3.0", path = "typestate-automata" }
 
 [workspace]
 members = [
