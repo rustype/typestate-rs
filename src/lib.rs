@@ -2,19 +2,16 @@ mod visitors;
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote, ToTokens};
-use visitors::det;
+use quote::{format_ident, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
     hash::Hash,
 };
-use syn::{parse::Parser, visit_mut::VisitMut, *};
+use syn::*;
 #[cfg(feature = "typestate_debug")]
 use typestate_automata::dot::*;
 use typestate_automata::{Dfa, Nfa};
-
-
+use visitors::det;
 
 #[proc_macro_attribute]
 pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -50,7 +47,11 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let mut state_machine_info = StateMachineInfo::new();
 
-    let (sealed_trait, errors) = det::visit_states(&mut module, &mut state_machine_info, state_constructors_ident);
+    let (sealed_trait, errors) = det::visit_states(
+        &mut module,
+        &mut state_machine_info,
+        state_constructors_ident,
+    );
     bail_if_any!(errors);
 
     // Visit non-deterministic transitions
