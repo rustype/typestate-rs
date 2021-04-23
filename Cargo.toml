@@ -1,6 +1,43 @@
+[package]
+name = "typestate"
+version = "0.4.0"
+authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
+edition = "2018"
+description = "A proc macro DSL for typestates"
+readme = "../README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["typestate"]
+categories = ["development-tools"]
+homepage = "https://github.com/rustype/typestate-rs"
+repository = "https://github.com/rustype/typestate-rs"
+autotests = false
+
+[features]
+default = ["std"]
+std = []
+typestate_debug = ["typestate-automata/dot"]
+
+[lib]
+proc-macro = true
+
+[[test]]
+name = "tests"
+path = "tests/macro_tests.rs"
+
+[dev-dependencies]
+trybuild = { version = "1.0", features = ["diff"] }
+
+[dependencies]
+quote = "1.0"
+syn = { version = "1.0", features = ["extra-traits", "visit-mut", "parsing", "full"] }
+proc-macro2 = "1.0"
+darling = "0.12"
+
+typestate-automata = { version = "0.2.0", path = "typestate-automata" }
+
 [workspace]
 members = [
-    "typestate-macro",
+    # "typestate-macro",
     "typestate-client",
     "typestate-automata"
 ]

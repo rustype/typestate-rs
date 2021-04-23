@@ -11,4 +11,4 @@ edition = "2018"
 # typestate_debug = ["typestate/typestate_debug"]
 
 [dependencies]
-typestate = { features=["typestate_debug"], path = "../typestate-macro" }
+typestate = { features=["typestate_debug"], path = "../" }
