@@ -69,10 +69,10 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         return TypestateError::MissingAutomata.into_compile_error().into();
     }
 
-    let mut non_det_state_visitor = NonDeterministicStateVisitor::new(&mut state_machine_info);
-    non_det_state_visitor.visit_item_mod_mut(&mut module);
-    // report non_det_state_visitor errors and return
-    bail_if_any!(non_det_state_visitor.errors);
+    bail_if_any!(visitors::non_det::visit_non_deterministic(
+        &mut module,
+        &mut state_machine_info
+    ));
 
     // Visit transitions
     bail_if_any!(visitors::transition::visit_transitions(
@@ -733,74 +733,6 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
             None => {
                 // empty attribute list
             }
-        }
-    }
-}
-
-struct NonDeterministicStateVisitor<'sm> {
-    state_machine_info: &'sm mut StateMachineInfo,
-    errors: Vec<Error>,
-}
-
-impl<'sm> NonDeterministicStateVisitor<'sm> {
-    fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
-        Self {
-            state_machine_info,
-            errors: vec![],
-        }
-    }
-
-    /// Add `undeclared state` error to the error vector.
-    fn push_undeclared_variant_error(&mut self, ident: &Ident) {
-        self.errors
-            .push(TypestateError::UndeclaredVariant(ident.clone()).into());
-    }
-
-    /// Add `unsupported variant` error to the error vector.
-    fn push_unsupported_variant_error(&mut self, variant: &Variant) {
-        self.errors
-            .push(TypestateError::UnsupportedVariant(variant.clone()).into());
-    }
-
-    /// Add `unsupported state` error to the error vector.
-    fn push_unsupported_state_error(&mut self, ident: &Ident) {
-        self.errors
-            .push(TypestateError::UnsupportedState(ident.clone()).into());
-    }
-}
-
-impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
-    fn visit_item_enum_mut(&mut self, i: &mut ItemEnum) {
-        for variant in &mut i.variants {
-            // check if the variant is a valid one
-            // i.e. unit-style variant
-            if let Fields::Unit = &variant.fields {
-                let ident = &variant.ident;
-                if self
-                    .state_machine_info
-                    .non_det_transitions
-                    .contains_key(ident)
-                {
-                    self.push_unsupported_state_error(ident);
-                } else if self.state_machine_info.det_states.contains_key(ident) {
-                    let automata_ident = self.state_machine_info.main_state_name();
-                    variant.fields = Fields::Unnamed(::syn::parse_quote!(
-                        /* Variant */ (
-                            #automata_ident<#ident>
-                        )
-                    ));
-                } else {
-                    self.push_undeclared_variant_error(ident);
-                }
-            } else {
-                self.push_unsupported_variant_error(variant);
-            }
-        }
-        if self.errors.is_empty() {
-            // self.state_machine_info.add_state(i.clone().into());
-            self.state_machine_info
-                .non_det_transitions
-                .insert(i.ident.clone(), i.clone());
         }
     }
 }
