@@ -14,8 +14,8 @@ use typestate_automata::{DFA, NFA};
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;
 
-const AUTOMATA_ATTR_IDENT: &'static str = "automata";
-const STATE_ATTR_IDENT: &'static str = "state";
+const AUTOMATA_ATTR_IDENT: &str = "automata";
+const STATE_ATTR_IDENT: &str = "state";
 
 #[proc_macro_attribute]
 pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -249,10 +249,9 @@ impl FromMeta for TOption<String> {
         if value.is_empty() {
             // arg = ""
             return Ok(Self::Default);
-        } else {
-            // arg = "..."
-            return Ok(Self::Some(value.to_string()));
         }
+        // arg = "..."
+        Ok(Self::Some(value.to_string()))
     }
 
     /// Returns `Ok(Default)`.
@@ -289,9 +288,8 @@ impl IntoCompileError for Vec<Error> {
                     all
                 })
                 .to_compile_error();
-        } else {
-            TokenStream2::new()
         }
+        TokenStream2::new()
     }
 }
 
@@ -874,11 +872,10 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         let attrs = &mut i.attrs;
         let sig = &mut i.sig;
         let mut states = HashSet::new();
-        &self.state_machine_info.det_states.keys().for_each(|k| {
+        self.state_machine_info.det_states.keys().for_each(|k| {
             states.insert(k.clone()); // HACK clone
         });
-        &self
-            .state_machine_info
+        self.state_machine_info
             .non_det_transitions
             .keys()
             .for_each(|k| {
@@ -1103,19 +1100,16 @@ impl SignatureKind for Signature {
     fn expand_signature_state(&mut self, info: &StateMachineInfo) {
         let fn_out = &mut self.output;
         let det_states = &info.det_states;
-        match fn_out {
-            ReturnType::Type(_, ty) => match **ty {
-                Type::Path(ref mut path) => {
-                    if let Some(ident) = path.path.get_ident() {
-                        if det_states.contains_key(ident) {
-                            let automata_ident = info.main_state_name();
-                            path.path = ::syn::parse_quote!(#automata_ident<#ident>);
-                        }
+
+        if let ReturnType::Type(_, ty) = fn_out {
+            if let Type::Path(ref mut path) = **ty {
+                if let Some(ident) = path.path.get_ident() {
+                    if det_states.contains_key(ident) {
+                        let automata_ident = info.main_state_name();
+                        path.path = ::syn::parse_quote!(#automata_ident<#ident>);
                     }
                 }
-                _ => {}
-            },
-            _ => {}
+            }
         }
     }
 }
@@ -1138,9 +1132,9 @@ enum TypestateError {
     UnusedTransition(Ident),
 }
 
-impl Into<::syn::Error> for TypestateError {
-    fn into(self) -> ::syn::Error {
-        match self {
+impl From<TypestateError> for syn::Error {
+    fn from(err: TypestateError) -> Self {
+        match err {
             TypestateError::MissingAutomata => Error::new(Span::call_site(), "Missing `#[automata]` struct."),
             TypestateError::NonProductiveState(ident) => Error::new_spanned(ident, "Non-productive state. For a state to be productive, a path from the state to a final state is required to exist."),
             TypestateError::NonUsefulState(ident) => Error::new_spanned(ident, "Non-useful state. For a state to be useful it must first be productive and a path from initial state to the state is required to exist."),
@@ -1156,7 +1150,7 @@ impl Into<::syn::Error> for TypestateError {
             TypestateError::UnsupportedStruct(item_struct) => Error::new_spanned(&item_struct, "Tuple structures are not supported."),
             TypestateError::UnsupportedState(ident) => Error::new_spanned(&ident, "`enum` variants cannot refer to other `enum`s."),
             TypestateError::UnusedTransition(ident) => Error::new_spanned(&ident, "Unused transitions are not allowed."),
-}
+        }
     }
 }
 
