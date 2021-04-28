@@ -221,6 +221,6 @@ This is the list of attributes that can be used along `#[typestate]`:
 ## Features
 The cargo features you can enable:
 - `typestate_debug` will generate a `.dot` file of your state machine.
-  - You can then render the file to a variety of formats, one of
+  - You can then render the file to a variety of formats like `.png` and `.svg`.
 
 ![](assets/SmartBulb.svg)
