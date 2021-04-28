@@ -225,10 +225,10 @@ The cargo features you can enable:
 
 ## Typestate Visualization
 
-- `examples/light_bulb.rs`
+- [`examples/light_bulb.rs`](examples/light_bulb.rs)
 
 ![](assets/LightBulb.svg)
 
-- `examples/smart_bulb.rs`
+- [`examples/smart_bulb.rs`](examples/smart_bulb.rs)
 
 ![](assets/SmartBulb.svg)
