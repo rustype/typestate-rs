@@ -80,7 +80,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "digraph Automata {{")?;
-        writeln!(f, "graph [pad=\"0.75\", nodesep=\"0.75\", ranksep=\"1\"];")?;
+        writeln!(f, "graph [pad=\"0.25\", nodesep=\"0.75\", ranksep=\"1\"];")?;
         for (i, (node, label)) in self.initial_states.iter().enumerate() {
             f.write_fmt(format_args!(
                 "\t_initial_{} [label=\"\", shape=\"plaintext\"];\n",
