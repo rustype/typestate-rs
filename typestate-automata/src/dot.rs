@@ -1,4 +1,4 @@
-use crate::{DFA, NFA};
+use crate::{Dfa, Nfa};
 use std::{fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
 
 /// A labeled directed edge in a DOT graph.
@@ -99,12 +99,12 @@ where
     }
 }
 
-impl<Node, Label> From<DFA<Node, Label>> for Dot<Node, Label>
+impl<Node, Label> From<Dfa<Node, Label>> for Dot<Node, Label>
 where
     Node: Eq + Hash + Clone + Display,
     Label: Eq + Hash + Clone + Display,
 {
-    fn from(dfa: DFA<Node, Label>) -> Self {
+    fn from(dfa: Dfa<Node, Label>) -> Self {
         let mut dot = Dot::new();
         for (node, transitions) in dfa.initial_states {
             transitions
@@ -126,12 +126,12 @@ where
     }
 }
 
-impl<Node, Label> From<NFA<Node, Label>> for Dot<Node, Label>
+impl<Node, Label> From<Nfa<Node, Label>> for Dot<Node, Label>
 where
     Node: Eq + Hash + Clone + Display,
     Label: Eq + Hash + Clone + Display,
 {
-    fn from(nfa: NFA<Node, Label>) -> Self {
+    fn from(nfa: Nfa<Node, Label>) -> Self {
         let mut dot = Dot::new();
         for (node, transitions) in nfa.initial_states {
             transitions
