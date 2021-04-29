@@ -57,7 +57,6 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
     }
 }
 
-// TODO does not need to be mut
 impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
     fn visit_item_enum_mut(&mut self, i: &mut ItemEnum) {
         for variant in &mut i.variants {
