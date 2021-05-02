@@ -4,7 +4,7 @@ use crate::{StateMachineInfo, TypestateError};
 
 use parse::Parser;
 use syn::{
-    parse, parse_quote, visit_mut::VisitMut, Attribute, Error, Field, Fields, Ident, Item, ItemMod,
+    parse, visit_mut::VisitMut, Attribute, Error, Field, Fields, Ident, Item, ItemMod,
     ItemStruct, Path,
 };
 
@@ -218,7 +218,7 @@ impl ExpandStateConstructors for Vec<Item> {
             let field_ident = named.named.iter().map(|field| &field.ident);
             let field_ident2 = named.named.iter().map(|field| &field.ident); // HACK
             let field_ty = named.named.iter().map(|field| &field.ty);
-            let tokens = ::quote::quote! {
+            self.push(::syn::parse_quote! {
                 impl #struct_ident {
                     pub fn #constructor_ident(#(#field_ident: #field_ty,)*) -> Self {
                         Self {
@@ -226,8 +226,7 @@ impl ExpandStateConstructors for Vec<Item> {
                         }
                     }
                 }
-            };
-            self.push(parse_quote!(#tokens));
+            });
         }
     }
 }
