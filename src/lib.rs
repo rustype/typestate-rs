@@ -18,13 +18,11 @@ use typestate_automata::{Dfa, Nfa};
 const CRATE_NAME: &str = env!("CARGO_CRATE_NAME");
 const GENERATED_ATTR_IDENT: &str = "generated";
 
-
 #[doc(hidden)]
 #[proc_macro_attribute]
 pub fn generated(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
-
 
 #[proc_macro_attribute]
 pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -60,24 +58,11 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let mut state_machine_info = StateMachineInfo::new();
 
-    let (sealed_trait, errors) = visitors::det::visit_states(
+    bail_if_any!(visitors::det::visit_states(
         &mut module,
         &mut state_machine_info,
         state_constructors_ident,
-    );
-    bail_if_any!(errors);
-
-    // appending new code should happen after all other code is processed
-    // since this adds the sealed pattern traits and those aren't valid states
-    // if this is done before visiting transitions the generated code is flagged as invalid transitions
-    // TODO solution -> annotated generated code with #[typestate::do_not_parse]
-    match &mut module.content {
-        Some((_, v)) => {
-            v.append(&mut sealed_trait.unwrap().into()); // HACK unwrap is safe because otherwise errors would've bailed
-        }
-        None => {}
-    }
-    // eprintln!("{:#?}", module);
+    ));
 
     // Visit non-deterministic transitions
     bail_if_any!(visitors::non_det::visit_non_deterministic(
@@ -258,7 +243,6 @@ impl FromMeta for TOption<String> {
         Ok(Self::Default)
     }
 }
-
 
 #[derive(Debug, FromMeta)]
 struct MacroAttributeArguments {

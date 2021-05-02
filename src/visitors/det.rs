@@ -18,13 +18,13 @@ pub(crate) fn visit_states(
     module: &mut ItemMod,
     state_machine_info: &mut StateMachineInfo,
     constructor_ident: Option<Ident>,
-) -> (Option<SealedPattern>, Vec<Error>) {
+) -> Vec<Error> {
     // start visitor
     let mut state_visitor = DeterministicStateVisitor::new(state_machine_info, constructor_ident);
     state_visitor.visit_item_mod_mut(module);
     // report state_visitor errors and return
     if !state_visitor.errors.is_empty() {
-        return (None, state_visitor.errors);
+        return state_visitor.errors;
     }
 
     let mut constructors = state_visitor.constructors;
@@ -34,9 +34,17 @@ pub(crate) fn visit_states(
 
     let sealed_trait = state_visitor.sealed_trait;
     if sealed_trait.trait_ident.is_none() {
-        return (None, vec![TypestateError::MissingAutomata.into()]);
+        return vec![TypestateError::MissingAutomata.into()];
     }
-    (Some(sealed_trait), vec![])
+
+    match &mut module.content {
+        Some((_, v)) => {
+            v.append(&mut sealed_trait.into()); // HACK unwrap is safe because otherwise errors would've bailed
+        }
+        None => {}
+    }
+
+    vec![]
 }
 
 struct DeterministicStateVisitor<'sm> {
