@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::{StateMachineInfo, Transition, TypestateError};
+use crate::{StateMachineInfo, Transition, TypestateError, CRATE_NAME, GENERATED_ATTR_IDENT};
 use syn::{
     visit_mut::VisitMut, Error, FnArg, Ident, ItemMod, ItemTrait, Receiver, ReturnType, Signature,
     TraitItemMethod, Type,
@@ -62,6 +62,19 @@ impl<'sm> TransitionVisitor<'sm> {
 
 impl<'sm> VisitMut for TransitionVisitor<'sm> {
     fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
+        let attributes = &i.attrs;
+        if attributes.iter().any(|attr| {
+            let segments = &attr.path.segments;
+            let segments = segments.iter().collect::<Vec<_>>();
+            if segments.len() == 2 {
+                segments[0].ident == CRATE_NAME && segments[1].ident == GENERATED_ATTR_IDENT
+            } else {
+                false
+            }
+        }) {
+            return;
+        }
+
         let ident = &i.ident;
 
         if self

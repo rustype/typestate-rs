@@ -4,8 +4,8 @@ use crate::{StateMachineInfo, TypestateError};
 
 use parse::Parser;
 use syn::{
-    parse, visit_mut::VisitMut, Attribute, Error, Field, Fields, Ident, Item, ItemMod,
-    ItemStruct, Path,
+    parse, visit_mut::VisitMut, Attribute, Error, Field, Fields, Ident, Item, ItemMod, ItemStruct,
+    Path,
 };
 
 const AUTOMATA_ATTR_IDENT: &str = "automata";
@@ -108,17 +108,22 @@ impl From<SealedPattern> for Vec<Item> {
         let mut ret = vec![
             // Sealed trait
             ::syn::parse_quote! {
+                #[::typestate::generated]
                 /* private */ mod #private_mod_ident {
+                    /* to avoid the nested item being processed */
+                    #[::typestate::generated]
                     pub trait #private_mod_trait {}
                 }
             },
             // State trait
             ::syn::parse_quote! {
+                #[::typestate::generated]
                 pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
             },
             // Blanket impl of state trait from sealed implementors
             // This frees us from having to provide concrete impls for each type.
             ::syn::parse_quote! {
+                #[::typestate::generated]
                 impl<__T : ?::core::marker::Sized> #trait_ident
                     for __T
                 where
@@ -127,9 +132,12 @@ impl From<SealedPattern> for Vec<Item> {
             },
         ];
 
+        // eprint!("{:#?}", ret);
+
         // Sealed trait impls
         ret.extend(states.iter().map(|each_state| {
             ::syn::parse_quote! {
+                #[::typestate::generated]
                 impl #private_mod_ident::#private_mod_trait for #each_state {}
             }
         }));
@@ -219,6 +227,7 @@ impl ExpandStateConstructors for Vec<Item> {
             let field_ident2 = named.named.iter().map(|field| &field.ident); // HACK
             let field_ty = named.named.iter().map(|field| &field.ty);
             self.push(::syn::parse_quote! {
+                #[::typestate::generated]
                 impl #struct_ident {
                     pub fn #constructor_ident(#(#field_ident: #field_ty,)*) -> Self {
                         Self {
