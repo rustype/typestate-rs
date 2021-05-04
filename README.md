@@ -17,7 +17,7 @@ Typestates allow you to define *safe* usage protocols for your objects.
 The compiler will help you on your journey and disallow errors on given states.
 You will no longer be able to try and read from closed streams.
 
-`#[typestate]` build on ideas from the [`state_machine_future`](https://github.com/fitzgen/state_machine_future) crate.
+`#[typestate]` builds on ideas from the [`state_machine_future`](https://github.com/fitzgen/state_machine_future) crate.
 If typestates are so useful, why not use them with limit them to `Future`s?
 
 ### Typestates in Rust
@@ -93,7 +93,7 @@ trait Red {
 }
 ```
 
-> *Before we go further, a quick review:*
+*Before we go further, a quick review:*
 > - The module is annotated with `#[typestate]` enabling the DSL.
 > - To declare the main automaton we attach `#[automata]` to a structure.
 > - The states are declared by attaching `#[state]`.
