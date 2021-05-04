@@ -1,4 +1,4 @@
-//! [<img alt="github" src="https://img.shields.io/badge/github-rustype/typestate-8da0cb?style=flat-square&logo=github" height="20">](https://github.com/rustype/typestate-rs)
+//! [<img alt="github" src="https://img.shields.io/badge/github-rustype/typestate-8da0cb?style=flat-square&logo=github">](https://github.com/rustype/typestate-rs)
 //! [<img alt="docs" src="https://img.shields.io/badge/docs.rs-typestate-success?style=flat-square">](https://docs.rs/typestate)
 //! [<img alt="crates" src="https://img.shields.io/crates/v/typestate?style=flat-square">](https://crates.io/crates/typestate)
 //!
