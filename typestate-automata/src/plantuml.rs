@@ -1,12 +1,19 @@
 use crate::{Dfa, Nfa, TryWriteFile};
-use std::{collections::HashSet, fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
+use std::{
+    collections::HashSet,
+    fmt::{Display, Write as FmtWrite},
+    fs::File,
+    hash::Hash,
+    io::Write,
+    path::Path,
+};
 
 /// A labeled directed edge in a DOT graph.
 ///
 /// It is the same as writing `Source -> Destination [label=Label]`.
 struct PlantUmlEdge<Node, Label>
 where
-    Node: Display,
+    Node: Display + PartialEq,
     Label: Display,
 {
     /// Edge source node.
@@ -19,7 +26,7 @@ where
 
 impl<Node, Label> PlantUmlEdge<Node, Label>
 where
-    Node: Display,
+    Node: Display + PartialEq,
     Label: Display,
 {
     /// Construct a new labeled DOT edge.
@@ -34,14 +41,18 @@ where
 
 impl<Node, Label> Display for PlantUmlEdge<Node, Label>
 where
-    Node: Display,
+    Node: Display + PartialEq,
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "{} --> {} : {}\n",
-            self.source, self.destination, self.label
-        ))
+        if self.source == self.destination {
+            f.write_fmt(format_args!("{} : {}\n", self.source, self.label))
+        } else {
+            f.write_fmt(format_args!(
+                "{} --> {} : {}\n",
+                self.source, self.destination, self.label
+            ))
+        }
     }
 }
 
@@ -82,21 +93,26 @@ where
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("state c{} <<choice>>\n", self.source))?;
+        f.write_fmt(format_args!("state C_{} <<choice>>\n", self.source))?;
+        f.write_fmt(format_args!(
+            "{} --> C_{}: {}\n",
+            self.source, self.source, self.label
+        ))?;
         for destination in self.destinations.iter() {
             f.write_fmt(format_args!(
-                "c{} --> {}\n",
-                self.source, destination //, self.label
+                "C_{} --> {}\n",
+                self.source,
+                destination //, self.label
             ))?;
         }
-        f.write_fmt(format_args!("{} --> c{}: {}\n", self.source, self.source, self.label))
+        f.write_char('\n')
     }
 }
 
 /// The list of directed edges in the DOT graph.
 pub struct PlantUml<Node, Label>
 where
-    Node: Display,
+    Node: Display + PartialEq,
     Label: Display,
 {
     /// List of [PlantUmlEdge].
@@ -111,7 +127,7 @@ where
 
 impl<Node, Label> PlantUml<Node, Label>
 where
-    Node: Display,
+    Node: Display + PartialEq,
     Label: Display,
 {
     fn new() -> Self {
@@ -126,7 +142,7 @@ where
 
 impl<Node, Label> Display for PlantUml<Node, Label>
 where
-    Node: Display,
+    Node: Display + PartialEq,
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -219,7 +235,7 @@ where
 
 impl<Node, Label> TryWriteFile for PlantUml<Node, Label>
 where
-    Node: Display,
+    Node: Display + PartialEq,
     Label: Display,
 {
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File> {
