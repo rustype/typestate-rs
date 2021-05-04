@@ -1,5 +1,5 @@
 use crate::{Dfa, Nfa, TryWriteFile};
-use std::{fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
+use std::{collections::HashSet, fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
 
 /// A labeled directed edge in a DOT graph.
 ///
@@ -45,14 +45,64 @@ where
     }
 }
 
+/// A labeled directed edge in a DOT graph.
+///
+/// It is the same as writing `Source -> Destination [label=Label]`.
+struct PlantUmlChoiceEdge<Node, Label>
+where
+    Node: Display,
+    Label: Display,
+{
+    /// Edge source node.
+    source: Node,
+    /// Edge label.
+    label: Label,
+    /// Edge destination node.
+    destinations: HashSet<Node>,
+}
+
+impl<Node, Label> PlantUmlChoiceEdge<Node, Label>
+where
+    Node: Display,
+    Label: Display,
+{
+    /// Construct a new labeled DOT edge.
+    fn new(source: Node, label: Label, destinations: HashSet<Node>) -> Self {
+        Self {
+            source,
+            label,
+            destinations,
+        }
+    }
+}
+
+impl<Node, Label> Display for PlantUmlChoiceEdge<Node, Label>
+where
+    Node: Display,
+    Label: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("state c{} <<choice>>\n", self.source))?;
+        for destination in self.destinations.iter() {
+            f.write_fmt(format_args!(
+                "c{} --> {}\n",
+                self.source, destination //, self.label
+            ))?;
+        }
+        f.write_fmt(format_args!("{} --> c{}: {}\n", self.source, self.source, self.label))
+    }
+}
+
 /// The list of directed edges in the DOT graph.
 pub struct PlantUml<Node, Label>
 where
     Node: Display,
     Label: Display,
 {
-    /// List of [DotEdge].
+    /// List of [PlantUmlEdge].
     edges: Vec<PlantUmlEdge<Node, Label>>,
+    /// List of [PlantUmlChoiceEdge]
+    choices: Vec<PlantUmlChoiceEdge<Node, Label>>,
     /// List of initial state nodes.
     initial_states: Vec<(Node, Label)>,
     /// List of final state nodes.
@@ -67,6 +117,7 @@ where
     fn new() -> Self {
         Self {
             edges: vec![],
+            choices: vec![],
             initial_states: vec![],
             final_states: vec![],
         }
@@ -89,6 +140,9 @@ where
         }
         for edge in self.edges.iter() {
             f.write_fmt(format_args!("{}", edge))?;
+        }
+        for choice in self.choices.iter() {
+            f.write_fmt(format_args!("{}", choice))?;
         }
         writeln!(f, "@enduml")
     }
@@ -140,9 +194,22 @@ where
         }
         for (source, transitions) in nfa.delta {
             for (label, destinations) in transitions {
-                for destination in destinations {
-                    dot.edges
-                        .push(PlantUmlEdge::new(source.clone(), label.clone(), destination))
+                if destinations.len() > 1 {
+                    dot.choices.push(PlantUmlChoiceEdge::new(
+                        source.clone(),
+                        label.clone(),
+                        destinations,
+                    ))
+                } else {
+                    // destinations is an hashset so to get the elements we need to use the for
+                    // this could also be done with extend and map
+                    for destination in destinations {
+                        dot.edges.push(PlantUmlEdge::new(
+                            source.clone(),
+                            label.clone(),
+                            destination,
+                        ))
+                    }
                 }
             }
         }
