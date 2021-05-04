@@ -211,7 +211,8 @@
 //!
 //! ## Features
 //! The cargo features you can enable:
-//! - `typestate_debug` will generate a `.dot` file of your state machine.
+//! - `debug_dot` will generate a `.dot` file of your state machine.
+//! - `debug_plantuml` will generate a `.uml` file of your state machine.
 
 mod visitors;
 use darling::FromMeta;
@@ -226,8 +227,6 @@ use syn::{
     parse_macro_input, Attribute, AttributeArgs, Error, Ident, Item, ItemEnum, ItemMod, ItemStruct,
     ItemTrait, Variant,
 };
-#[cfg(feature = "typestate_debug")]
-use typestate_automata::dot::*;
 use typestate_automata::{Dfa, Nfa};
 
 const CRATE_NAME: &str = env!("CARGO_CRATE_NAME");
@@ -298,10 +297,18 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     // TODO handle the duplicate code inside
     macro_rules! handle_automata {
         ($name:ident, $automata:ident) => {
-            #[cfg(feature = "typestate_debug")]
+            #[cfg(feature = "debug_dot")]
             {
+                use typestate_automata::{dot::*, TryWriteFile};
                 let dot = Dot::from($automata.clone());
                 dot.try_write_file(format!("./{}.dot", $name))
+                    .expect("failed to write automata to file");
+            }
+            #[cfg(feature = "debug_plantuml")]
+            {
+                use typestate_automata::{plantuml::*, TryWriteFile};
+                let uml = PlantUml::from($automata.clone());
+                uml.try_write_file(format!("./{}.uml", $name))
                     .expect("failed to write automata to file");
             }
 
