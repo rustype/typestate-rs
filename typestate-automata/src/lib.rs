@@ -1,4 +1,9 @@
-use std::{collections::{HashMap, HashSet, VecDeque}, fs::File, hash::Hash, path::Path};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    fs::File,
+    hash::Hash,
+    path::Path,
+};
 
 #[cfg(feature = "dot")]
 pub mod dot;
