@@ -225,7 +225,11 @@ This is the list of attributes that can be used along `#[typestate]`:
 ## Features
 The cargo features you can enable:
 - `debug_dot` will generate a `.dot` file of your state machine.
-- `debug_plantuml` will generate a `.uml` file of your state machine.
+  - This feature can be customized through the following environment variables (taken from the [DOT documentation](https://graphviz.org/doc/info/attrs.html)):
+    - `DOT_PAD` - Specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.
+    - `DOT_NODESEP` - In `dot`, `nodesep` specifies the minimum space between two adjacent nodes in the same rank, in inches.
+    - `DOT_RANKSEP` - In `dot`, sets the desired rank separation, in inches.
+- `debug_plantuml` will generate a PlantUML state diagram (`.uml` file) of your state machine.
 
 
 ## Typestate Visualization
