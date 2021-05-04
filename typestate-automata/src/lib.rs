@@ -1,10 +1,18 @@
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    hash::Hash,
-};
+use std::{collections::{HashMap, HashSet, VecDeque}, fs::File, hash::Hash, path::Path};
 
 #[cfg(feature = "dot")]
 pub mod dot;
+
+#[cfg(feature = "plantuml")]
+pub mod plantuml;
+
+/// Write to file operation.
+pub trait TryWriteFile {
+    /// Try to write `self` to the file in `path`.
+    /// This operation uses the `Display` representation for its output.
+    /// If successful, returns the written [File], otherwise, an [std::io::Error] is returned.
+    fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File>;
+}
 
 /// Type alias for the transition "minigraph".
 type Deltas<State, Transition> = HashMap<State, HashMap<Transition, HashSet<State>>>;

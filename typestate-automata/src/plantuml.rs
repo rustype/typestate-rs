@@ -4,7 +4,7 @@ use std::{fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
 /// A labeled directed edge in a DOT graph.
 ///
 /// It is the same as writing `Source -> Destination [label=Label]`.
-struct DotEdge<Node, Label>
+struct PlantUmlEdge<Node, Label>
 where
     Node: Display,
     Label: Display,
@@ -17,7 +17,7 @@ where
     destination: Node,
 }
 
-impl<Node, Label> DotEdge<Node, Label>
+impl<Node, Label> PlantUmlEdge<Node, Label>
 where
     Node: Display,
     Label: Display,
@@ -32,34 +32,34 @@ where
     }
 }
 
-impl<Node, Label> Display for DotEdge<Node, Label>
+impl<Node, Label> Display for PlantUmlEdge<Node, Label>
 where
     Node: Display,
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "{} -> {} [label={}];\n",
+            "{} --> {} : {}\n",
             self.source, self.destination, self.label
         ))
     }
 }
 
 /// The list of directed edges in the DOT graph.
-pub struct Dot<Node, Label>
+pub struct PlantUml<Node, Label>
 where
     Node: Display,
     Label: Display,
 {
     /// List of [DotEdge].
-    edges: Vec<DotEdge<Node, Label>>,
+    edges: Vec<PlantUmlEdge<Node, Label>>,
     /// List of initial state nodes.
     initial_states: Vec<(Node, Label)>,
     /// List of final state nodes.
     final_states: Vec<(Node, Label)>,
 }
 
-impl<Node, Label> Dot<Node, Label>
+impl<Node, Label> PlantUml<Node, Label>
 where
     Node: Display,
     Label: Display,
@@ -73,39 +73,34 @@ where
     }
 }
 
-impl<Node, Label> Display for Dot<Node, Label>
+impl<Node, Label> Display for PlantUml<Node, Label>
 where
     Node: Display,
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "digraph Automata {{")?;
-        writeln!(f, "graph [pad=\"0.25\", nodesep=\"0.75\", ranksep=\"1\"];")?;
-        for (i, (node, label)) in self.initial_states.iter().enumerate() {
-            f.write_fmt(format_args!(
-                "\t_initial_{} [label=\"\", shape=\"plaintext\"];\n",
-                i
-            ))?;
-            f.write_fmt(format_args!("\t_initial_{} -> {} [label=\"{}\"];\n", i, node, label))?;
+        writeln!(f, "@startuml")?;
+        writeln!(f, "hide empty description")?;
+        for (node, label) in self.initial_states.iter() {
+            f.write_fmt(format_args!("[*] --> {} : {}\n", node, label))?;
         }
         for (node, label) in self.final_states.iter() {
-            f.write_fmt(format_args!("\t{} [style=\"bold\"];\n", node))?;
-            f.write_fmt(format_args!("\t{} -> {} [label=\"{}\", style=dashed];\n", node, node, label))?;
+            f.write_fmt(format_args!("{} --> [*] : {}\n", node, label))?;
         }
         for edge in self.edges.iter() {
             f.write_fmt(format_args!("\t{}", edge))?;
         }
-        writeln!(f, "}}")
+        writeln!(f, "@enduml")
     }
 }
 
-impl<Node, Label> From<Dfa<Node, Label>> for Dot<Node, Label>
+impl<Node, Label> From<Dfa<Node, Label>> for PlantUml<Node, Label>
 where
     Node: Eq + Hash + Clone + Display,
     Label: Eq + Hash + Clone + Display,
 {
     fn from(dfa: Dfa<Node, Label>) -> Self {
-        let mut dot = Dot::new();
+        let mut dot = PlantUml::new();
         for (node, transitions) in dfa.initial_states {
             transitions
                 .into_iter()
@@ -119,20 +114,20 @@ where
         for (source, transitions) in dfa.delta {
             for (label, destination) in transitions {
                 dot.edges
-                    .push(DotEdge::new(source.clone(), label, destination))
+                    .push(PlantUmlEdge::new(source.clone(), label, destination))
             }
         }
         dot
     }
 }
 
-impl<Node, Label> From<Nfa<Node, Label>> for Dot<Node, Label>
+impl<Node, Label> From<Nfa<Node, Label>> for PlantUml<Node, Label>
 where
     Node: Eq + Hash + Clone + Display,
     Label: Eq + Hash + Clone + Display,
 {
     fn from(nfa: Nfa<Node, Label>) -> Self {
-        let mut dot = Dot::new();
+        let mut dot = PlantUml::new();
         for (node, transitions) in nfa.initial_states {
             transitions
                 .into_iter()
@@ -147,7 +142,7 @@ where
             for (label, destinations) in transitions {
                 for destination in destinations {
                     dot.edges
-                        .push(DotEdge::new(source.clone(), label.clone(), destination))
+                        .push(PlantUmlEdge::new(source.clone(), label.clone(), destination))
                 }
             }
         }
@@ -155,7 +150,7 @@ where
     }
 }
 
-impl<Node, Label> TryWriteFile for Dot<Node, Label>
+impl<Node, Label> TryWriteFile for PlantUml<Node, Label>
 where
     Node: Display,
     Label: Display,
