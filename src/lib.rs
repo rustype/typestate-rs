@@ -34,7 +34,7 @@
 //! we can turn it on and off and cycle between Green, Yellow and Red.
 //!
 //! We first declare a module with the `#[typestate]` macro attached to it.
-//! ```rust
+//! ```rust,ignore
 //! #[typestate]
 //! mod traffic_light {}
 //! ```
@@ -44,14 +44,14 @@
 //!
 //! And so, our next task is to do that.
 //! Inside our `traffic_light` module we declare a structure annotated with `#[automata]`.
-//! ```rust
+//! ```rust,ignore
 //! #[automata]
 //! pub struct TrafficLight;
 //! ```
 //!
 //! Our next step is to declare the states.
 //! We declare three empty structures annotated with `"[state]`.
-//! ```rust
+//! ```rust,ignore
 //! #[state] pub struct Green;
 //! #[state] pub struct Yellow;
 //! #[state] pub struct Red;
@@ -69,7 +69,7 @@
 //! - Functions that take a valid state (i.e. `self`) and *do not* return a valid state, describe a final state.
 //!
 //! So we write the following function signatures:
-//! ```rust
+//! ```rust,ignore
 //! fn turn_on() -> Red;
 //! fn turn_off(self);
 //! ```
@@ -77,7 +77,7 @@
 //! However, these are *free* functions, meaning that `self` relates to nothing.
 //! To attach them to a state we wrap them around a `trait` with the name of the state they are supposed to be attached to.
 //! So our previous example becomes:
-//! ```rust
+//! ```rust,ignore
 //! trait Red {
 //!     fn turn_on() -> Red;
 //!     fn turn_off(self);
@@ -96,14 +96,14 @@
 //! such reader would be 100% correct.
 //!
 //! For example, to transition between the `Red` state and the `Green` we do:
-//! ```rust
+//! ```rust,ignore
 //! trait Red {
 //!     fn to_green(self) -> Green;
 //! }
 //! ```
 //!
 //! Building on this we can finish the other states:
-//! ```rust
+//! ```rust,ignore
 //! pub trait Green {
 //!     fn to_yellow(self) -> Yellow;
 //! }
@@ -121,7 +121,7 @@
 //!
 //! And the full code becomes:
 //!
-//! ```rust
+//! ```rust,ignore
 //! #[typestate]
 //! mod traffic_light {
 //!     #[automata]
@@ -166,7 +166,7 @@
 //! Consider the following example where we have a flag that can be up or not.
 //! We have two functions, one checks if the flag is up, the other, sets the flag up.
 //!
-//! ```rust
+//! ```rust,ignore
 //! #[state] struct Flag {
 //!     up: bool
 //! }
@@ -186,7 +186,7 @@
 //! - An `Error` state along with the other states.
 //! - An `enum` to represent the bifurcation of states.
 //!
-//! ```rust
+//! ```rust,ignore
 //! #[state] struct Error {
 //!     message: String
 //! }
