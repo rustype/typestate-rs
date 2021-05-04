@@ -88,7 +88,7 @@ where
             f.write_fmt(format_args!("{} --> [*] : {}\n", node, label))?;
         }
         for edge in self.edges.iter() {
-            f.write_fmt(format_args!("\t{}", edge))?;
+            f.write_fmt(format_args!("{}", edge))?;
         }
         writeln!(f, "@enduml")
     }
