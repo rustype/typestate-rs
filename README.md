@@ -230,6 +230,9 @@ The cargo features you can enable:
     - `DOT_NODESEP` - In `dot`, `nodesep` specifies the minimum space between two adjacent nodes in the same rank, in inches.
     - `DOT_RANKSEP` - In `dot`, sets the desired rank separation, in inches.
 - `debug_plantuml` will generate a PlantUML state diagram (`.uml` file) of your state machine.
+  - This feature can be customized through the following environment variables (taken from the [PlantUML Hitchhiker's Guide](https://crashedmind.github.io/PlantUMLHitchhikersGuide/layout/layout.html#nodesep-and-ranksep))
+    - `PLANTUML_NODESEP` - `nodesep` specifies the minimum space between two adjacent nodes in the same rank.
+    - `PLANTUML_RANKSEP` - Sets the desired rank separation.
 
 
 ## Typestate Visualization
