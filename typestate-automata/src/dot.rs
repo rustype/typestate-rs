@@ -79,18 +79,38 @@ where
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO make this have defaults in case std is not present
+        macro_rules! var_or_default {
+            ($var_name:literal, $var_default:literal) => {
+                ::std::env::var_os($var_name)
+                    .and_then(|s| s.into_string().ok())
+                    .unwrap_or($var_default.to_string())
+            };
+        }
+
         writeln!(f, "digraph Automata {{")?;
-        writeln!(f, "graph [pad=\"0.25\", nodesep=\"0.75\", ranksep=\"1\"];")?;
+        f.write_fmt(format_args!(
+            "graph [pad=\"{}\", nodesep=\"{}\", ranksep=\"{}\"];",
+            var_or_default!("DOT_PAD", "0.25"),
+            var_or_default!("DOT_NODESEP", "0.75"),
+            var_or_default!("DOT_RANKSEP", "1"),
+        ))?;
         for (i, (node, label)) in self.initial_states.iter().enumerate() {
             f.write_fmt(format_args!(
                 "\t_initial_{} [label=\"\", shape=\"plaintext\"];\n",
                 i
             ))?;
-            f.write_fmt(format_args!("\t_initial_{} -> {} [label=\"{}\"];\n", i, node, label))?;
+            f.write_fmt(format_args!(
+                "\t_initial_{} -> {} [label=\"{}\"];\n",
+                i, node, label
+            ))?;
         }
         for (node, label) in self.final_states.iter() {
             f.write_fmt(format_args!("\t{} [style=\"bold\"];\n", node))?;
-            f.write_fmt(format_args!("\t{} -> {} [label=\"{}\", style=dashed];\n", node, node, label))?;
+            f.write_fmt(format_args!(
+                "\t{} -> {} [label=\"{}\", style=dashed];\n",
+                node, node, label
+            ))?;
         }
         for edge in self.edges.iter() {
             f.write_fmt(format_args!("\t{}", edge))?;
