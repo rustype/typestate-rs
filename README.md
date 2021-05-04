@@ -224,15 +224,13 @@ This is the list of attributes that can be used along `#[typestate]`:
 
 ## Features
 The cargo features you can enable:
-- `typestate_debug` will generate a `.dot` file of your state machine.
+- `debug_dot` will generate a `.dot` file of your state machine.
+- `debug_plantuml` will generate a `.uml` file of your state machine.
 
 
 ## Typestate Visualization
 
-- [`examples/light_bulb.rs`](examples/light_bulb.rs)
-
-![](assets/LightBulb.svg)
-
-- [`examples/smart_bulb.rs`](examples/smart_bulb.rs)
-
-![](assets/SmartBulb.svg)
+|          | `LightBulb`                                          | `SmartBulb`                                          |
+| -------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| DOT      | ![`examples/light_bulb.rs`](assets/DotLightBulb.svg) | ![`examples/smart_bulb.rs`](assets/DotSmartBulb.svg) |
+| PlantUML | ![`examples/light_bulb.rs`](assets/UmlLightBulb.svg) | ![`examples/smart_bulb.rs`](assets/UmlSmartBulb.svg) |
