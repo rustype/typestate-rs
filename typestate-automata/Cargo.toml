@@ -1,6 +1,6 @@
 [package]
 name = "typestate-automata"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
 description = "An automata library for the typestate crate"
