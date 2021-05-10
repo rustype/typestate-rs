@@ -37,6 +37,4 @@ darling = "0.12"
 typestate-automata = { version = "0.4.2", path = "typestate-automata" }
 
 [workspace]
-members = [
-    "typestate-automata"
-]
+members = ["typestate-automata"]
