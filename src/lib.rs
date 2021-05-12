@@ -219,6 +219,10 @@
 //! - `debug_plantuml` will generate a PlantUML state diagram (`.uml` file) of your state machine.
 
 mod visitors;
+
+#[cfg(feature = "debug_mermaid")]
+pub use ::aquamarine;
+
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
@@ -298,6 +302,12 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
 
+    module = ::syn::parse_quote!(
+        /// TEST
+        #module
+    );
+
+
     // TODO handle the duplicate code inside
     macro_rules! handle_automata {
         ($name:ident, $automata:ident) => {
@@ -314,6 +324,15 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
                 let uml = PlantUml::from($automata.clone());
                 uml.try_write_file(format!("./{}.uml", $name))
                     .expect("failed to write automata to file");
+            }
+
+            #[cfg(feature = "debug_mermaid")]
+            {
+                use typestate_automata::{mermaid::*, TryWriteFile};
+                let uml = Mermaid::from($automata.clone());
+                uml.try_write_file(format!("./{}.mer", $name))
+                    .expect("failed to write automata to file");
+
             }
 
             let errors: Vec<Error> = $automata

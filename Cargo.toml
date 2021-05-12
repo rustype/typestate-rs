@@ -17,6 +17,7 @@ default = ["std"]
 std = []
 debug_dot = ["typestate-automata/dot"]
 debug_plantuml = ["typestate-automata/plantuml"]
+debug_mermaid = ["typestate-automata/mermaid", "aquamarine"]
 
 [lib]
 proc-macro = true
@@ -33,6 +34,8 @@ quote = "1.0"
 syn = { version = "1.0", features = ["extra-traits", "visit-mut", "parsing", "full"] }
 proc-macro2 = "1.0"
 darling = "0.12"
+
+aquamarine = { version = "0.1", optional = true }
 
 typestate-automata = { version = "0.4.2", path = "typestate-automata" }
 
