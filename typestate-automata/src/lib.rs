@@ -11,6 +11,10 @@ pub mod dot;
 #[cfg(feature = "plantuml")]
 pub mod plantuml;
 
+// #[cfg(feature = "mermaid")]
+pub mod mermaid;
+
+
 /// Write to file operation.
 pub trait TryWriteFile {
     /// Try to write `self` to the file in `path`.

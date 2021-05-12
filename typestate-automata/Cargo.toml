@@ -16,5 +16,6 @@ autotests = false
 [features]
 dot = []
 plantuml = []
+mermaid = []
 
 [dependencies]
