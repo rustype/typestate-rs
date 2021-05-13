@@ -1,6 +1,6 @@
 [package]
 name = "typestate-proc-macro"
-version = "0.0.1"
+version = "0.6.2"
 edition = "2018"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 description = "A proc macro DSL for typestates"
@@ -14,7 +14,7 @@ autotests = false
 [features]
 dot = ["typestate-automata/dot"]
 plantuml = ["typestate-automata/plantuml"]
-mermaid = ["typestate-automata/mermaid", "aquamarine"]
+mermaid = ["typestate-automata/mermaid"]
 
 [lib]
 proc-macro = true
@@ -32,6 +32,4 @@ syn = { version = "1.0", features = ["extra-traits", "visit-mut", "parsing", "fu
 proc-macro2 = "1.0"
 darling = "0.12"
 
-aquamarine = { version = "0.1", optional = true }
-
-typestate-automata = { version = "0.4.2", path = "../typestate-automata" }
+typestate-automata = { version = "0.4.3", path = "../typestate-automata" }
