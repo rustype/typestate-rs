@@ -309,11 +309,6 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
 
-    module = ::syn::parse_quote!(
-        /// TEST
-        #module
-    );
-
     // TODO handle the duplicate code inside
     macro_rules! handle_automata {
         ($name:ident, $automata:ident) => {
@@ -335,9 +330,19 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             #[cfg(feature = "mermaid")]
             {
                 use typestate_automata::{mermaid::*, TryWriteFile};
-                let uml = Mermaid::from($automata.clone());
-                uml.try_write_file(format!("./{}.mer", $name))
+                let mer = Mermaid::from($automata.clone());
+                let diagram = mer.to_string();
+
+                mer.try_write_file(format!("./{}.mer", $name))
                     .expect("failed to write automata to file");
+
+                module = ::syn::parse_quote!(
+                    #[cfg_attr(doc, ::aquamarine::aquamarine)]
+                    #[doc = "```mermaid"]
+                    #[doc = #diagram]
+                    #[doc = "```"]
+                    #module
+                );
             }
 
             let errors: Vec<Error> = $automata
