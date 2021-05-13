@@ -119,6 +119,7 @@ impl From<SealedPattern> for Vec<Item> {
             // Sealed trait
             ::syn::parse_quote! {
                 #generated_attr
+                #[doc(hidden)]
                 /* private */ mod #private_mod_ident {
                     /* to avoid the nested item being processed */
                     #generated_attr
