@@ -15,9 +15,9 @@ autotests = false
 [features]
 default = ["std"]
 std = []
-debug_dot = ["typestate-proc-macro/debug_dot"]
-debug_plantuml = ["typestate-proc-macro/debug_plantuml"]
-debug_mermaid = ["typestate-proc-macro/debug_mermaid"]
+debug_dot = ["typestate-proc-macro/dot"]
+debug_plantuml = ["typestate-proc-macro/plantuml"]
+debug_mermaid = ["typestate-proc-macro/mermaid"]
 
 [dependencies]
 typestate-proc-macro = { version = "0.0.1", path = "typestate-proc-macro" }

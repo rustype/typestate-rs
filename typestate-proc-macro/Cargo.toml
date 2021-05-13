@@ -12,9 +12,9 @@ repository = "https://github.com/rustype/typestate-rs"
 autotests = false
 
 [features]
-debug_dot = ["typestate-automata/dot"]
-debug_plantuml = ["typestate-automata/plantuml"]
-debug_mermaid = ["typestate-automata/mermaid", "aquamarine"]
+dot = ["typestate-automata/dot"]
+plantuml = ["typestate-automata/plantuml"]
+mermaid = ["typestate-automata/mermaid", "aquamarine"]
 
 [lib]
 proc-macro = true
