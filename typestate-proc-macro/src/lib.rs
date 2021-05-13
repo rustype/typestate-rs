@@ -317,14 +317,14 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     // TODO handle the duplicate code inside
     macro_rules! handle_automata {
         ($name:ident, $automata:ident) => {
-            #[cfg(feature = "debug_dot")]
+            #[cfg(feature = "dot")]
             {
                 use typestate_automata::{dot::*, TryWriteFile};
                 let dot = Dot::from($automata.clone());
                 dot.try_write_file(format!("./{}.dot", $name))
                     .expect("failed to write automata to file");
             }
-            #[cfg(feature = "debug_plantuml")]
+            #[cfg(feature = "plantuml")]
             {
                 use typestate_automata::{plantuml::*, TryWriteFile};
                 let uml = PlantUml::from($automata.clone());
@@ -332,7 +332,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
                     .expect("failed to write automata to file");
             }
 
-            #[cfg(feature = "debug_mermaid")]
+            #[cfg(feature = "mermaid")]
             {
                 use typestate_automata::{mermaid::*, TryWriteFile};
                 let uml = Mermaid::from($automata.clone());
