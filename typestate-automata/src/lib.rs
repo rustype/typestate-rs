@@ -11,7 +11,7 @@ pub mod dot;
 #[cfg(feature = "plantuml")]
 pub mod plantuml;
 
-// #[cfg(feature = "mermaid")]
+#[cfg(feature = "mermaid")]
 pub mod mermaid;
 
 

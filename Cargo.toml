@@ -1,8 +1,8 @@
 [package]
 name = "typestate"
 version = "0.6.2"
-authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 edition = "2018"
+authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 description = "A proc macro DSL for typestates"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
@@ -15,29 +15,12 @@ autotests = false
 [features]
 default = ["std"]
 std = []
-debug_dot = ["typestate-automata/dot"]
-debug_plantuml = ["typestate-automata/plantuml"]
-debug_mermaid = ["typestate-automata/mermaid", "aquamarine"]
-
-[lib]
-proc-macro = true
-
-[[test]]
-name = "tests"
-path = "tests/macro_tests.rs"
-
-[dev-dependencies]
-trybuild = { version = "1.0", features = ["diff"] }
+debug_dot = ["typestate-proc-macro/debug_dot"]
+debug_plantuml = ["typestate-proc-macro/debug_plantuml"]
+debug_mermaid = ["typestate-proc-macro/debug_mermaid"]
 
 [dependencies]
-quote = "1.0"
-syn = { version = "1.0", features = ["extra-traits", "visit-mut", "parsing", "full"] }
-proc-macro2 = "1.0"
-darling = "0.12"
-
-aquamarine = { version = "0.1", optional = true }
-
-typestate-automata = { version = "0.4.2", path = "typestate-automata" }
+typestate-proc-macro = { version = "0.0.1", path = "typestate-proc-macro" }
 
 [workspace]
-members = ["typestate-automata"]
+members = ["typestate-automata", "typestate-proc-macro"]

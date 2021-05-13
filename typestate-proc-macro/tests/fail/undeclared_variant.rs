@@ -1,9 +1,9 @@
-use typestate::typestate;
+use typestate_proc_macro::typestate;
 
 fn main() {}
 
 #[typestate]
-mod invalid_variant {
+mod undeclared_variant {
     #[automata]
     pub struct A;
 
@@ -16,6 +16,6 @@ mod invalid_variant {
 
     enum E {
         First,
-        Second(B)
+        Second
     }
 }
