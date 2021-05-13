@@ -12,6 +12,8 @@ repository = "https://github.com/rustype/typestate-rs"
 autotests = false
 
 [features]
+default = ["std"]
+std = []
 dot = ["typestate-automata/dot"]
 plantuml = ["typestate-automata/plantuml"]
 mermaid = ["typestate-automata/mermaid"]

@@ -13,8 +13,6 @@ repository = "https://github.com/rustype/typestate-rs"
 autotests = false
 
 [features]
-default = ["std"]
-std = []
 debug_dot = ["typestate-proc-macro/dot"]
 debug_plantuml = ["typestate-proc-macro/plantuml"]
 debug_mermaid = ["typestate-proc-macro/mermaid", "aquamarine"]
