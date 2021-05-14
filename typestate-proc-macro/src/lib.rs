@@ -90,6 +90,23 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     // TODO handle the duplicate code inside
     macro_rules! handle_automata {
         ($name:ident, $automata:ident) => {
+            let errors: Vec<Error> = $automata
+                .non_productive_states()
+                .into_iter()
+                .map(|ident| TypestateError::NonProductiveState(ident.clone()).into())
+                .collect();
+            bail_if_any!(errors);
+
+            let errors: Vec<Error> = $automata
+                .non_useful_states()
+                .into_iter()
+                .map(|ident| TypestateError::NonUsefulState(ident.clone()).into())
+                .collect();
+            bail_if_any!(errors);
+
+            // do not parse more code
+            // only generate from here
+
             #[cfg(feature = "dot")]
             {
                 use typestate_automata::{dot::*, TryWriteFile};
@@ -120,23 +137,6 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
                     #module
                 );
             }
-
-            let errors: Vec<Error> = $automata
-                .non_productive_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonProductiveState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            let errors: Vec<Error> = $automata
-                .non_useful_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonUsefulState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            // do not parse more code
-            // only generate from here
 
             let states = $automata.states.iter().collect::<Vec<_>>();
 
