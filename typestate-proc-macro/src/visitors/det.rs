@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{StateMachineInfo, TypestateError};
+use crate::{StateMachineInfo, TypestateError, generated_attr};
 
 use parse::Parser;
 use syn::{
@@ -112,26 +112,29 @@ impl From<SealedPattern> for Vec<Item> {
         // take into account that `trait_ident` may have already been used
         let private_mod_trait = &trait_ident;
 
+        let generated_attr = generated_attr();
+
         let states = &sealed_pattern.state_idents;
         let mut ret = vec![
             // Sealed trait
             ::syn::parse_quote! {
-                #[::typestate::generated]
+                #generated_attr
+                #[doc(hidden)]
                 /* private */ mod #private_mod_ident {
                     /* to avoid the nested item being processed */
-                    #[::typestate::generated]
+                    #generated_attr
                     pub trait #private_mod_trait {}
                 }
             },
             // State trait
             ::syn::parse_quote! {
-                #[::typestate::generated]
+                #generated_attr
                 pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
             },
             // Blanket impl of state trait from sealed implementors
             // This frees us from having to provide concrete impls for each type.
             ::syn::parse_quote! {
-                #[::typestate::generated]
+                #generated_attr
                 impl<__T : ?::core::marker::Sized> #trait_ident
                     for __T
                 where
@@ -140,15 +143,14 @@ impl From<SealedPattern> for Vec<Item> {
             },
         ];
 
-        // eprint!("{:#?}", ret);
-
         // Sealed trait impls
         ret.extend(states.iter().map(|each_state| {
             ::syn::parse_quote! {
-                #[::typestate::generated]
+                #generated_attr
                 impl #private_mod_ident::#private_mod_trait for #each_state {}
             }
         }));
+
 
         ret
     }
