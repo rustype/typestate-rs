@@ -224,6 +224,7 @@ This is the list of attributes that can be used along `#[typestate]`:
 
 ## Features
 The cargo features you can enable:
+- `doc_mermaid` will generate [Mermaid.js](https://mermaid-js.github.io/mermaid/#/) state diagrams embedded in your documentation. It is *not* set by default.
 - `debug_dot` will generate a `.dot` file of your state machine.
   - This feature can be customized through the following environment variables (taken from the [DOT documentation](https://graphviz.org/doc/info/attrs.html)):
     - `DOT_PAD` - Specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.
