@@ -107,7 +107,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
             #[cfg(feature = "mermaid")]
             {
-                use typestate_automata::{mermaid::*, TryWriteFile};
+                use typestate_automata::{mermaid::*};
                 let mer = Mermaid::from($automata.clone());
                 let diagram = mer.to_string();
                 let doc_strings = diagram.split("\n").filter(|s| !s.is_empty()).into_iter();
