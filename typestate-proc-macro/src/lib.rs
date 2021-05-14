@@ -332,14 +332,12 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
                 use typestate_automata::{mermaid::*, TryWriteFile};
                 let mer = Mermaid::from($automata.clone());
                 let diagram = mer.to_string();
-
-                mer.try_write_file(format!("./{}.mer", $name))
-                    .expect("failed to write automata to file");
+                let doc_strings = diagram.split("\n").filter(|s| !s.is_empty()).into_iter();
 
                 module = ::syn::parse_quote!(
                     #[cfg_attr(doc, ::aquamarine::aquamarine)]
                     #[doc = "```mermaid"]
-                    #[doc = #diagram]
+                    #(#[doc = #doc_strings])*
                     #[doc = "```"]
                     #module
                 );
