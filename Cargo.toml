@@ -15,12 +15,12 @@ autotests = false
 [features]
 debug_dot = ["typestate-proc-macro/dot"]
 debug_plantuml = ["typestate-proc-macro/plantuml"]
-debug_mermaid = ["typestate-proc-macro/mermaid", "aquamarine"]
+doc_mermaid = ["typestate-proc-macro/mermaid", "aquamarine"]
 
 [dependencies]
 typestate-proc-macro = { version = "0.6.2", path = "typestate-proc-macro", package = "typestate-proc-macro" }
 
-aquamarine = { version = "0.1", optional = true }
+aquamarine = { version = "0.1", path = "/home/jmgduarte/Documents/msc/rust-crates/aquamarine", optional = true }
 
 [workspace]
 members = ["typestate-automata", "typestate-proc-macro"]
