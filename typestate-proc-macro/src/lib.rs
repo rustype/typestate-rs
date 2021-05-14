@@ -113,7 +113,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
                 let doc_strings = diagram.split("\n").filter(|s| !s.is_empty()).into_iter();
 
                 module = ::syn::parse_quote!(
-                    #[cfg_attr(doc, ::aquamarine::aquamarine)]
+                    #[cfg_attr(doc, ::typestate::__private__::aquamarine::aquamarine)]
                     #[doc = "```mermaid"]
                     #(#[doc = #doc_strings])*
                     #[doc = "```"]
