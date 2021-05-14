@@ -45,14 +45,10 @@ where
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.source == self.destination {
-            f.write_fmt(format_args!("{} : {}\n", self.source, self.label))
-        } else {
-            f.write_fmt(format_args!(
-                "{} --> {} : {}\n",
-                self.source, self.destination, self.label
-            ))
-        }
+        f.write_fmt(format_args!(
+            "{} --> {} : {}\n",
+            self.source, self.destination, self.label
+        ))
     }
 }
 
@@ -95,12 +91,12 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("state C_{} <<choice>>\n", self.source))?;
         f.write_fmt(format_args!(
-            "\t{} --> C_{}: {}\n",
+            "  {} --> C_{}: {}\n",
             self.source, self.source, self.label
         ))?;
         for destination in self.destinations.iter() {
             f.write_fmt(format_args!(
-                "\tC_{} --> {}\n",
+                "  C_{} --> {}\n",
                 self.source,
                 destination //, self.label
             ))?;
@@ -148,16 +144,16 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "stateDiagram-v2")?;
         for (node, label) in self.initial_states.iter() {
-            f.write_fmt(format_args!("\t[*] --> {} : {}\n", node, label))?;
+            f.write_fmt(format_args!("  [*] --> {} : {}\n", node, label))?;
         }
         for (node, label) in self.final_states.iter() {
-            f.write_fmt(format_args!("\t{} --> [*] : {}\n", node, label))?;
+            f.write_fmt(format_args!("  {} --> [*] : {}\n", node, label))?;
         }
         for edge in self.edges.iter() {
-            f.write_fmt(format_args!("\t{}", edge))?;
+            f.write_fmt(format_args!("  {}\n", edge))?;
         }
         for choice in self.choices.iter() {
-            f.write_fmt(format_args!("\t{}", choice))?;
+            f.write_fmt(format_args!("  {}\n", choice))?;
         }
         Ok(())
     }
