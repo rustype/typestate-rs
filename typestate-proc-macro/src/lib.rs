@@ -221,9 +221,6 @@
 
 mod visitors;
 
-#[cfg(feature = "debug_mermaid")]
-pub use ::aquamarine;
-
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
