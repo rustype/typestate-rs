@@ -51,7 +51,7 @@ impl<'sm> TransitionVisitor<'sm> {
     /// Add `unknown state` error to the error vector.
     fn push_unknown_state_error(&mut self, ident: &Ident) {
         self.errors
-            .push(TypestateError::UnknownState(ident.to_owned()).into());
+            .push(TypestateError::UnknownState(ident.clone()).into());
     }
 
     fn push_invalid_trait_error(&mut self, it: &ItemTrait) {
