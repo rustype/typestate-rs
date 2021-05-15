@@ -235,7 +235,7 @@ where
 {
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File> {
         let mut file = File::create(path)?;
-        file.write(self.to_string().as_bytes())?;
+        file.write_all(self.to_string().as_bytes())?;
         Ok(file)
     }
 }

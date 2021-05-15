@@ -151,13 +151,13 @@ where
         if let Some(s) = ::std::env::var_os("PLANTUML_NODESEP") {
             f.write_fmt(format_args!(
                 "skinparam nodesep {}\n",
-                s.into_string().unwrap_or("30".to_string())
+                s.into_string().unwrap_or_else(|| "30".to_string())
             ))?;
         }
         if let Some(s) = ::std::env::var_os("PLANTUML_RANKSEP") {
             f.write_fmt(format_args!(
                 "skinparam ranksep {}\n",
-                s.into_string().unwrap_or("30".to_string())
+                s.into_string().unwrap_or_else(|| "30".to_string())
             ))?;
         }
         for (node, label) in self.initial_states.iter() {
@@ -252,7 +252,7 @@ where
 {
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File> {
         let mut file = File::create(path)?;
-        file.write(self.to_string().as_bytes())?;
+        file.write_all(self.to_string().as_bytes())?;
         Ok(file)
     }
 }

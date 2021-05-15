@@ -5,7 +5,7 @@ use std::{fmt::Display, fs::File, hash::Hash, io::Write, path::Path};
 fn var_or_default(var_name: &str, var_default: &str) -> String {
     ::std::env::var_os(var_name)
         .and_then(|s| s.into_string().ok())
-        .unwrap_or(var_default.to_string())
+        .unwrap_or_else(|| var_default.to_string())
 }
 
 /// A labeled directed edge in a DOT graph.
@@ -180,7 +180,7 @@ where
 {
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File> {
         let mut file = File::create(path)?;
-        file.write(self.to_string().as_bytes())?;
+        file.write_all(self.to_string().as_bytes())?;
         Ok(file)
     }
 }
