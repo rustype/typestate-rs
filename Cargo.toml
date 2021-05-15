@@ -1,6 +1,6 @@
 [package]
 name = "typestate"
-version = "0.7.0-rc3"
+version = "0.7.0-rc4"
 edition = "2018"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 description = "A proc macro DSL for typestates"
@@ -17,10 +17,13 @@ debug_dot = ["typestate-proc-macro/dot"]
 debug_plantuml = ["typestate-proc-macro/plantuml"]
 doc_mermaid = ["typestate-proc-macro/mermaid", "aquamarine"]
 
-[dependencies]
-typestate-proc-macro = { version = "0.7.0-rc3", path = "typestate-proc-macro", package = "typestate-proc-macro" }
+[dependencies.typestate-proc-macro]
+version = "0.7.0-rc4"
+path = "typestate-proc-macro"
+package = "typestate-proc-macro"
 
-aquamarine = { version = "0.1", path = "/home/jmgduarte/Documents/msc/rust-crates/aquamarine", optional = true }
+[dependencies]
+aquamarine = { version = "^0.1.9", optional = true }
 
 [workspace]
 members = ["typestate-automata", "typestate-proc-macro"]
