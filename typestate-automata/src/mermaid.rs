@@ -94,7 +94,7 @@ where
             "  {} --> C_{}: {}\n",
             self.source, self.source, self.label
         ))?;
-        for destination in self.destinations.iter() {
+        for destination in &self.destinations {
             f.write_fmt(format_args!(
                 "  C_{} --> {}\n",
                 self.source,
@@ -143,16 +143,16 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "stateDiagram-v2")?;
-        for (node, label) in self.initial_states.iter() {
+        for (node, label) in &self.initial_states {
             f.write_fmt(format_args!("  [*] --> {} : {}\n", node, label))?;
         }
-        for (node, label) in self.final_states.iter() {
+        for (node, label) in &self.final_states {
             f.write_fmt(format_args!("  {} --> [*] : {}\n", node, label))?;
         }
-        for edge in self.edges.iter() {
+        for edge in &self.edges {
             f.write_fmt(format_args!("  {}\n", edge))?;
         }
-        for choice in self.choices.iter() {
+        for choice in &self.choices {
             f.write_fmt(format_args!("  {}\n", choice))?;
         }
         Ok(())

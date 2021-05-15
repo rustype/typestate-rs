@@ -18,8 +18,11 @@ pub mod mermaid;
 /// Write to file operation.
 pub trait TryWriteFile {
     /// Try to write `self` to the file in `path`.
-    /// This operation uses the `Display` representation for its output.
-    /// If successful, returns the written [File], otherwise, an [std::io::Error] is returned.
+    /// This operation uses the [`core::fmt::Display`] representation for its output.
+    /// If successful, returns the written [`std::fs::File`], otherwise, an [`std::io::Error`] is returned.
+    /// # Errors
+    ///
+    /// Will return `Err` if one of the file operations fails.
     fn try_write_file<P: AsRef<Path>>(self, path: P) -> std::io::Result<File>;
 }
 

@@ -98,7 +98,7 @@ where
             "{} --> C_{}: {}\n",
             self.source, self.source, self.label
         ))?;
-        for destination in self.destinations.iter() {
+        for destination in &self.destinations {
             f.write_fmt(format_args!(
                 "C_{} --> {}\n",
                 self.source,
@@ -151,25 +151,25 @@ where
         if let Some(s) = ::std::env::var_os("PLANTUML_NODESEP") {
             f.write_fmt(format_args!(
                 "skinparam nodesep {}\n",
-                s.into_string().unwrap_or_else(|| "30".to_string())
+                s.into_string().unwrap_or_else(|_| "30".to_string())
             ))?;
         }
         if let Some(s) = ::std::env::var_os("PLANTUML_RANKSEP") {
             f.write_fmt(format_args!(
                 "skinparam ranksep {}\n",
-                s.into_string().unwrap_or_else(|| "30".to_string())
+                s.into_string().unwrap_or_else(|_| "30".to_string())
             ))?;
         }
-        for (node, label) in self.initial_states.iter() {
+        for (node, label) in &self.initial_states {
             f.write_fmt(format_args!("[*] --> {} : {}\n", node, label))?;
         }
-        for (node, label) in self.final_states.iter() {
+        for (node, label) in &self.final_states {
             f.write_fmt(format_args!("{} --> [*] : {}\n", node, label))?;
         }
-        for edge in self.edges.iter() {
+        for edge in &self.edges {
             f.write_fmt(format_args!("{}", edge))?;
         }
-        for choice in self.choices.iter() {
+        for choice in &self.choices {
             f.write_fmt(format_args!("{}", choice))?;
         }
         writeln!(f, "@enduml")

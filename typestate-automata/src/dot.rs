@@ -103,14 +103,14 @@ where
                 i, node, label
             ))?;
         }
-        for (node, label) in self.final_states.iter() {
+        for (node, label) in &self.final_states {
             f.write_fmt(format_args!("\t{} [style=\"bold\"];\n", node))?;
             f.write_fmt(format_args!(
                 "\t{} -> {} [label=\"{}\", style=dashed];\n",
                 node, node, label
             ))?;
         }
-        for edge in self.edges.iter() {
+        for edge in &self.edges {
             f.write_fmt(format_args!("\t{}", edge))?;
         }
         writeln!(f, "}}")
