@@ -32,6 +32,7 @@ fn generated_attr() -> TokenStream2 {
 }
 
 /// See the module documentation for a full featured tutorial on how to use `#[typestate]`.
+#[allow(clippy::clippy::too_many_lines)] // TODO handle this
 #[proc_macro_attribute]
 pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     macro_rules! bail_if_any {
@@ -276,6 +277,7 @@ impl FromMeta for TOption<String> {
     }
 }
 
+// TODO check why -Dclippy::pedantic complains
 #[derive(Debug, FromMeta)]
 struct MacroAttributeArguments {
     /// Optional arguments.
