@@ -13,11 +13,11 @@ repository = "https://github.com/rustype/typestate-rs"
 autotests = false
 
 [features]
-default = ["std", "doc_mermaid"]
+default = ["std", "mermaid-docs"]
 std = ["typestate-proc-macro/std"]
-debug_dot = ["typestate-proc-macro/dot"]
-debug_plantuml = ["typestate-proc-macro/plantuml"]
-doc_mermaid = ["typestate-proc-macro/mermaid", "aquamarine"]
+dot-export = ["typestate-proc-macro/dot"]
+plantuml-export = ["typestate-proc-macro/plantuml"]
+mermaid-docs = ["typestate-proc-macro/mermaid", "aquamarine"]
 
 [dependencies.typestate-proc-macro]
 version = "0.7.0-rc4"
