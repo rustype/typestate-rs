@@ -2,7 +2,7 @@ use typestate::typestate;
 
 #[typestate]
 mod smart_bulb {
-    #[automata]
+    #[automaton]
     struct SmartBulb {
         cycles: u64
     }

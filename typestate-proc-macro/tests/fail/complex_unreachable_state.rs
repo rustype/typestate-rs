@@ -2,7 +2,7 @@ use typestate_proc_macro::typestate;
 
 #[typestate]
 mod traffic_light {
-    #[automata]
+    #[automaton]
     pub struct TrafficLight {
         pub cycles: u64,
     }

@@ -2,7 +2,7 @@ use typestate::typestate;
 
 #[typestate]
 mod light_bulb {
-    #[automata]
+    #[automaton]
     struct LightBulb;
 
     #[state] struct Off;

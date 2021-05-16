@@ -1,5 +1,5 @@
 error: Duplicate attribute.
  --> $DIR/duplicate_automata_attr.rs:6:5
   |
-6 |     #[automata]
-  |     ^^^^^^^^^^^
+6 |     #[automaton]
+  |     ^^^^^^^^^^^^

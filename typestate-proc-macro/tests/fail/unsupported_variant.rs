@@ -4,7 +4,7 @@ fn main() {}
 
 #[typestate]
 mod invalid_variant {
-    #[automata]
+    #[automaton]
     pub struct A;
 
     #[state]

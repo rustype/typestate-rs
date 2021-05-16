@@ -17,14 +17,14 @@ fn main() {
 
 // #[typestate]
 // mod test {
-//     #[automata]
+//     #[automaton]
 //     pub struct Automata {}
 // }
 
 // #[typestate]
 // mod maintenance {
 //     use super::traffic_light::*;
-//     #[automata]
+//     #[automaton]
 //     pub struct Maintenance {
 //         pub tl: TrafficLight<Red>,
 //     }
@@ -74,7 +74,7 @@ fn main() {
 #[typestate(enumerate, state_constructors)]
 mod traffic_light {
     #[derive(Debug)]
-    #[automata]
+    #[automaton]
     pub struct TrafficLight {
         pub cycles: u64,
     }

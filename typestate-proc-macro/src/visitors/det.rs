@@ -8,7 +8,7 @@ use syn::{
     Path,
 };
 
-pub(crate) const AUTOMATA_ATTR_IDENT: &str = "automata";
+pub(crate) const AUTOMATA_ATTR_IDENT: &str = "automaton";
 pub(crate) const STATE_ATTR_IDENT: &str = "state";
 
 type Result<Ok, Err = Error> = ::core::result::Result<Ok, Err>;

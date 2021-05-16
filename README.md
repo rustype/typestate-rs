@@ -56,9 +56,9 @@ This of course does nothing, in fact it will provide you an error,
 saying that we haven't declared an *automata*.
 
 And so, our next task is to do that.
-Inside our `traffic_light` module we declare a structure annotated with `#[automata]`.
+Inside our `traffic_light` module we declare a structure annotated with `#[automaton]`.
 ```rust
-#[automata]
+#[automaton]
 pub struct TrafficLight;
 ```
 
@@ -99,7 +99,7 @@ trait Red {
 
 *Before we go further, a quick review:*
 > - The module is annotated with `#[typestate]` enabling the DSL.
-> - To declare the main automaton we attach `#[automata]` to a structure.
+> - To declare the main automaton we attach `#[automaton]` to a structure.
 > - The states are declared by attaching `#[state]`.
 > - State functions are declared through traits that share the same name.
 > - Initial and final states are declared by functions with a "special" signature.
@@ -137,7 +137,7 @@ And the full code becomes:
 ```rust
 #[typestate]
 mod traffic_light {
-    #[automata]
+    #[automaton]
     pub struct TrafficLight {
         pub cycles: u64,
     }
