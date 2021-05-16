@@ -1,5 +1,6 @@
-// 1.51 because that is around when the crate's development started
-#[rustversion::stable(1.51)]
+// this stable means like "the latest stable"
+// minimum ensured so far is 1.51
+#[rustversion::stable]
 #[test]
 fn compile() {
     let t = trybuild::TestCases::new();
