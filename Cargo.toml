@@ -1,6 +1,6 @@
 [package]
 name = "typestate"
-version = "0.7.0-rc5"
+version = "0.7.0-rc6"
 edition = "2018"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 description = "A proc macro DSL for typestates"
@@ -20,7 +20,7 @@ plantuml-export = ["typestate-proc-macro/plantuml"]
 mermaid-docs = ["typestate-proc-macro/mermaid", "aquamarine"]
 
 [dependencies.typestate-proc-macro]
-version = "0.7.0-rc5"
+version = "0.7.0-rc6"
 path = "typestate-proc-macro"
 package = "typestate-proc-macro"
 

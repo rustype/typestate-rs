@@ -8,7 +8,7 @@ This library provides developers with a macro to design typestated objects.
 
 ```toml
 [dependencies]
-typestate = "0.7.0-rc5"
+typestate = "0.7.0-rc6"
 ```
 
 *Compiler support: requires rustc 1.42+*
