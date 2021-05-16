@@ -53,7 +53,7 @@ mod traffic_light {}
 ```
 
 This of course does nothing, in fact it will provide you an error,
-saying that we haven't declared an *automata*.
+saying that we haven't declared an *automaton*.
 
 And so, our next task is to do that.
 Inside our `traffic_light` module we declare a structure annotated with `#[automaton]`.
