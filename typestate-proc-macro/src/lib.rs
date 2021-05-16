@@ -16,6 +16,8 @@ use syn::{
 };
 use typestate_automata::{Dfa, Nfa};
 
+use crate::visitors::det::AUTOMATA_ATTR_IDENT;
+
 const CRATE_NAME: &str = "typestate_proc_macro";
 const GENERATED_ATTR_IDENT: &str = "generated";
 
@@ -544,14 +546,14 @@ enum TypestateError {
 impl From<TypestateError> for syn::Error {
     fn from(err: TypestateError) -> Self {
         match err {
-            TypestateError::MissingAutomata => Error::new(Span::call_site(), "Missing `#[automata]` struct."),
+            TypestateError::MissingAutomata => Error::new(Span::call_site(), format!("Missing `#[{}]` struct.", AUTOMATA_ATTR_IDENT)),
             TypestateError::NonProductiveState(ident) => Error::new_spanned(ident, "Non-productive state. For a state to be productive, a path from the state to a final state is required to exist."),
             TypestateError::NonUsefulState(ident) => Error::new_spanned(ident, "Non-useful state. For a state to be useful it must first be productive and a path from initial state to the state is required to exist."),
             TypestateError::MissingInitialState => Error::new(Span::call_site(), "Missing initial state. To declare an initial state you can use a function with signature like `fn f() -> T` where `T` is a declared state."),
             TypestateError::MissingFinalState => Error::new(Span::call_site(), "Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state."),
             TypestateError::ConflictingAttributes(attr) => Error::new_spanned(attr, "Conflicting attributes are declared."), // TODO add which attributes are conflicting
             TypestateError::DuplicateAttributes(attr) => Error::new_spanned(attr, "Duplicate attribute."),
-            TypestateError::AutomataRedefinition(item_struct) => Error::new_spanned(item_struct, "`#[automata]` redefinition here."),
+            TypestateError::AutomataRedefinition(item_struct) => Error::new_spanned(item_struct, format!("`#[{}]` redefinition here.", AUTOMATA_ATTR_IDENT)),
             TypestateError::UndeclaredVariant(ident) => Error::new_spanned(&ident, "`enum` variant is not a declared state."),
             TypestateError::UnsupportedVariant(variant) => Error::new_spanned(&variant, "Only unit (C-like) `enum` variants are supported."),
             TypestateError::UnknownState(ident) => Error::new_spanned(&ident, format!("`{}` is not a declared state.", ident)),
