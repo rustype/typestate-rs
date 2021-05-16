@@ -11,7 +11,7 @@ This library provides developers with a macro to design typestated objects.
 typestate = "0.7.0-rc5"
 ```
 
-*Compiler support: requires rustc 1.51+*
+*Compiler support: requires rustc 1.42+*
 
 ## Introduction
 
