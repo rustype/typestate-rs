@@ -236,8 +236,9 @@ impl ExpandStateConstructors for Vec<Item> {
             let field_ident = named.named.iter().map(|field| &field.ident);
             let field_ident2 = named.named.iter().map(|field| &field.ident); // HACK
             let field_ty = named.named.iter().map(|field| &field.ty);
+            let generated_attr = generated_attr();
             self.push(::syn::parse_quote! {
-                #[::typestate::generated]
+                #generated_attr
                 impl #struct_ident {
                     pub fn #constructor_ident(#(#field_ident: #field_ty,)*) -> Self {
                         Self {

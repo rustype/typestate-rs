@@ -16,7 +16,7 @@ use syn::{
 };
 use typestate_automata::{Dfa, Nfa};
 
-const CRATE_NAME: &str = "typestate";
+const CRATE_NAME: &str = "typestate_proc_macro";
 const GENERATED_ATTR_IDENT: &str = "generated";
 
 #[doc(hidden)]
