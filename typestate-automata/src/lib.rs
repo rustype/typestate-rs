@@ -264,7 +264,7 @@ mod dfa_tests {
     #[test]
     fn test_add_state() {
         let dfa = setup_automata();
-        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
+        let expected_states = vec![1, 2, 3, 4, 5, 6, 7].into_hash_set();
         let result_states = dfa.states;
         assert_eq!(expected_states, result_states);
     }
@@ -272,7 +272,7 @@ mod dfa_tests {
     #[test]
     fn test_add_initial_state() {
         let dfa = setup_automata();
-        let expected_states = [1].into_hash_set();
+        let expected_states = vec![1].into_hash_set();
         let result_states: HashSet<i32> = dfa.initial_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
@@ -280,7 +280,7 @@ mod dfa_tests {
     #[test]
     fn test_add_final_state() {
         let dfa = setup_automata();
-        let expected_states = [7].into_hash_set();
+        let expected_states = vec![7].into_hash_set();
         let result_states: HashSet<i32> = dfa.final_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
@@ -617,7 +617,7 @@ mod nfa_tests {
     #[test]
     fn test_add_state() {
         let nfa = setup_automata();
-        let expected_states = [1, 2, 3, 4, 5, 6, 7].into_hash_set();
+        let expected_states = vec![1, 2, 3, 4, 5, 6, 7].into_hash_set();
         let result_states = nfa.states;
         assert_eq!(expected_states, result_states);
     }
@@ -625,7 +625,7 @@ mod nfa_tests {
     #[test]
     fn test_add_initial_state() {
         let nfa = setup_automata();
-        let expected_states = [1].into_hash_set();
+        let expected_states = vec![1].into_hash_set();
         let result_states: HashSet<i32> = nfa.initial_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
@@ -633,7 +633,7 @@ mod nfa_tests {
     #[test]
     fn test_add_final_state() {
         let nfa = setup_automata();
-        let expected_states = [7].into_hash_set();
+        let expected_states = vec![7].into_hash_set();
         let result_states: HashSet<i32> = nfa.final_states.keys().map(|i| *i).collect();
         assert_eq!(expected_states, result_states);
     }
@@ -786,8 +786,8 @@ mod test_traits {
         fn into_hash_set(self) -> HashSet<T>;
     }
 
-    /// Implementation of [IntoHashSet<T>] for a slice of `i32` integers.
-    impl<const N: usize> IntoHashSet<i32> for [i32; N] {
+    /// Implementation of [IntoHashSet<T>] for a `Vec<i32>`.
+    impl IntoHashSet<i32> for Vec<i32> {
         fn into_hash_set(self) -> HashSet<i32> {
             self.iter().map(|t| t.to_owned()).collect()
         }
