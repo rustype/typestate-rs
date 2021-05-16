@@ -1,3 +1,5 @@
+// 1.51 because that is around when the crate's development started
+#[rustversion::stable(1.51)]
 #[test]
 fn compile() {
     let t = trybuild::TestCases::new();

@@ -27,6 +27,7 @@ path = "tests/macro_tests.rs"
 
 [dev-dependencies]
 trybuild = { version = "1.0", features = ["diff"] }
+rustversion = "1.0"
 
 [dependencies]
 quote = "1.0"
