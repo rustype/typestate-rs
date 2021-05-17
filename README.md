@@ -225,15 +225,17 @@ This is the list of attributes that can be used along `#[typestate]`:
 ## Features
 The cargo features you can enable:
 - `mermaid-docs` will generate [Mermaid.js](https://mermaid-js.github.io/mermaid/#/) state diagrams embedded in your documentation. This feature is set by default.
-- `dot-export` will generate a `.dot` file of your state machine.
+- `export-dot` will generate a `.dot` file of your state machine.
   - This feature can be customized through the following environment variables (taken from the [DOT documentation](https://graphviz.org/doc/info/attrs.html)):
     - `DOT_PAD` - Specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.
     - `DOT_NODESEP` - In `dot`, `nodesep` specifies the minimum space between two adjacent nodes in the same rank, in inches.
     - `DOT_RANKSEP` - In `dot`, sets the desired rank separation, in inches.
-- `plantuml-export` will generate a PlantUML state diagram (`.uml` file) of your state machine.
+    - `EXPORT_FOLDER` - Declare the target folder for exported files.
+- `export-plantuml` will generate a PlantUML state diagram (`.uml` file) of your state machine.
   - This feature can be customized through the following environment variables (taken from the [PlantUML Hitchhiker's Guide](https://crashedmind.github.io/PlantUMLHitchhikersGuide/layout/layout.html#nodesep-and-ranksep))
     - `PLANTUML_NODESEP` - `nodesep` specifies the minimum space between two adjacent nodes in the same rank.
     - `PLANTUML_RANKSEP` - Sets the desired rank separation.
+    - `EXPORT_FOLDER` - Declare the target folder for exported files.
 
 
 ## Typestate Visualization
