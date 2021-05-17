@@ -113,15 +113,25 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             #[cfg(feature = "dot")]
             {
                 use typestate_automata::{dot::*, TryWriteFile};
+
+                let folder_path = ::std::env::var_os("EXPORT_FOLDER")
+                    .and_then(|s| s.into_string().ok())
+                    .unwrap_or_else(|| "./".to_string());
+
                 let dot = Dot::from($automata.clone());
-                dot.try_write_file(format!("./{}.dot", $name))
+                dot.try_write_file(format!("{}{}.dot", folder_path, $name))
                     .expect("failed to write automata to file");
             }
             #[cfg(feature = "plantuml")]
             {
                 use typestate_automata::{plantuml::*, TryWriteFile};
+
+                let folder_path = ::std::env::var_os("EXPORT_FOLDER")
+                    .and_then(|s| s.into_string().ok())
+                    .unwrap_or_else(|| "./".to_string());
+
                 let uml = PlantUml::from($automata.clone());
-                uml.try_write_file(format!("./{}.uml", $name))
+                uml.try_write_file(format!("{}{}.uml", folder_path, $name))
                     .expect("failed to write automata to file");
             }
 
