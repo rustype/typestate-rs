@@ -15,8 +15,8 @@ autotests = false
 [features]
 default = ["std", "mermaid-docs"]
 std = ["typestate-proc-macro/std"]
-dot-export = ["typestate-proc-macro/dot"]
-plantuml-export = ["typestate-proc-macro/plantuml"]
+export-dot = ["typestate-proc-macro/dot"]
+export-plantuml = ["typestate-proc-macro/plantuml"]
 mermaid-docs = ["typestate-proc-macro/mermaid", "aquamarine"]
 
 [dependencies.typestate-proc-macro]
