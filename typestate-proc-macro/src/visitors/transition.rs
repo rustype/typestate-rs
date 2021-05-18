@@ -67,7 +67,13 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             let segments = &attr.path.segments;
             let segments = segments.iter().collect::<Vec<_>>();
             if segments.len() == 2 {
+                // support ::typestate_proc_macro::generated
                 segments[0].ident == CRATE_NAME && segments[1].ident == GENERATED_ATTR_IDENT
+            } else if segments.len() == 3 {
+                // support ::typestate::typestate_proc_macro::generated
+                segments[0].ident == "typestate"
+                    && segments[1].ident == CRATE_NAME
+                    && segments[2].ident == GENERATED_ATTR_IDENT
             } else {
                 false
             }

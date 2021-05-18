@@ -218,13 +218,12 @@
 //!     - `DOT_RANKSEP` - In `dot`, sets the desired rank separation, in inches.
 //! - `debug_plantuml` will generate a PlantUML state diagram (`.uml` file) of your state machine.
 
-extern crate typestate_proc_macro;
+pub extern crate typestate_proc_macro;
 
-pub use ::typestate_proc_macro::{generated, typestate};
+pub use ::typestate_proc_macro::typestate;
 
 #[doc(hidden)]
 pub mod __private__ {
     #[cfg(feature = "mermaid-docs")]
     pub use ::aquamarine;
 }
-

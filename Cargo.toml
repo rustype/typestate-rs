@@ -19,6 +19,14 @@ export-dot = ["typestate-proc-macro/dot"]
 export-plantuml = ["typestate-proc-macro/plantuml"]
 mermaid-docs = ["typestate-proc-macro/mermaid", "aquamarine"]
 
+[[test]]
+name = "tests"
+path = "tests/macro_tests.rs"
+
+[dev-dependencies]
+trybuild = { version = "1.0", features = ["diff"] }
+rustversion = "1.0"
+
 [dependencies.typestate-proc-macro]
 version = "0.7.1"
 path = "typestate-proc-macro"

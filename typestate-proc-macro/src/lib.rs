@@ -30,7 +30,7 @@ pub fn generated(_: TokenStream, input: TokenStream) -> TokenStream {
 fn generated_attr() -> TokenStream2 {
     let crate_ident = ::quote::format_ident!("{}", crate::CRATE_NAME);
     let generated_ident = ::quote::format_ident!("{}", crate::GENERATED_ATTR_IDENT);
-    ::quote::quote!(#[::#crate_ident::#generated_ident])
+    ::quote::quote!(#[::typestate::#crate_ident::#generated_ident])
 }
 
 /// See the module documentation for a full featured tutorial on how to use `#[typestate]`.
