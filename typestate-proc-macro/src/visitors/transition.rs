@@ -1,11 +1,10 @@
 use std::collections::HashSet;
 
-use crate::{StateMachineInfo, Transition, TypestateError, CRATE_NAME, GENERATED_ATTR_IDENT};
+use crate::{CRATE_NAME, GENERATED_ATTR_IDENT, StateMachineInfo, Transition, TypestateError, intermediate_graph::Node};
 use syn::{
     visit_mut::VisitMut, Error, FnArg, Ident, ItemMod, ItemTrait, Receiver, ReturnType, Signature,
     TraitItemMethod, Type,
 };
-use typestate_automata::intermediate_graph::Node;
 
 macro_rules! bail_if_any {
     ( $errors:expr ) => {

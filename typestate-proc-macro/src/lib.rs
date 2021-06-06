@@ -19,7 +19,7 @@ use syn::{
 };
 use typestate_automata::{Dfa, Nfa};
 
-use crate::visitors::det::AUTOMATA_ATTR_IDENT;
+use crate::visitors::state::AUTOMATA_ATTR_IDENT;
 
 const CRATE_NAME: &str = "typestate_proc_macro";
 const GENERATED_ATTR_IDENT: &str = "generated";
@@ -72,14 +72,14 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let mut state_machine_info = StateMachineInfo::new();
 
-    bail_if_any!(visitors::det::visit_states(
+    bail_if_any!(visitors::state::visit_states(
         &mut module,
         &mut state_machine_info,
         state_constructors_ident,
     ));
 
     // Visit non-deterministic transitions
-    bail_if_any!(visitors::non_det::visit_non_deterministic(
+    bail_if_any!(visitors::decision::visit_non_deterministic(
         &mut module,
         &mut state_machine_info
     ));
