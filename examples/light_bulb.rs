@@ -41,5 +41,4 @@ fn main() {
     let bulb = LightBulb::<Off>::screw();
     let bulb = bulb.turn_on();
     let bulb = bulb.turn_off();
-    let _ = bulb.turn_off();
 }
