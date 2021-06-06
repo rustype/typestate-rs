@@ -5,6 +5,7 @@ use syn::{
     visit_mut::VisitMut, Error, FnArg, Ident, ItemMod, ItemTrait, Receiver, ReturnType, Signature,
     TraitItemMethod, Type,
 };
+use typestate_automata::intermediate_graph::Node;
 
 macro_rules! bail_if_any {
     ( $errors:expr ) => {
@@ -125,6 +126,12 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
 
         match fn_kind {
             FnKind::Initial(return_ty_ident) => {
+                // add a transition to an initial state
+                // BOOK
+                self.state_machine_info
+                    .intermediate_automaton
+                    .add_transition(None, fn_ident.clone(), return_ty_ident.clone().into());
+
                 self.state_machine_info
                     .insert_initial(return_ty_ident, fn_ident);
             }
@@ -132,13 +139,29 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                 // add #[must_use]
                 // attrs.push(::syn::parse_quote!(#[must_use]));
                 let state = self.current_state.as_ref().unwrap().clone();
+
+                // BOOK
+                self.state_machine_info
+                    .intermediate_automaton
+                    .add_transition(Some(state.clone()), fn_ident.clone(), Node::State(None));
+
                 self.state_machine_info.insert_final(state, fn_ident);
             }
             FnKind::Transition(return_ty_ident) => {
                 // add #[must_use]
                 attrs.push(::syn::parse_quote!(#[must_use]));
-                let state = self.current_state.as_ref().unwrap().clone();
-                let transition = Transition::new(state, return_ty_ident.clone(), fn_ident);
+                let source = self.current_state.as_ref().unwrap().clone();
+                // BOOK
+                self.state_machine_info
+                    .intermediate_automaton
+                    .add_transition(
+                        source.clone().into(),
+                        fn_ident.clone(),
+                        return_ty_ident.clone().into(),
+                    );
+
+                let transition = Transition::new(source, return_ty_ident.clone(), fn_ident);
+
                 self.state_machine_info.transitions.insert(transition);
                 // mark non det transition as used
                 if self
@@ -153,6 +176,12 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             }
             FnKind::SelfTransition => {
                 let state = self.current_state.as_ref().unwrap().clone();
+
+                // BOOK
+                self.state_machine_info
+                    .intermediate_automaton
+                    .add_transition(state.clone().into(), fn_ident.clone(), state.clone().into());
+
                 let transition = Transition::new(state.clone(), state.clone(), fn_ident);
                 self.state_machine_info.transitions.insert(transition);
                 // mark non det transition as used

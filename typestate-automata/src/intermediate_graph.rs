@@ -10,7 +10,7 @@ pub enum Node<S>
 where
     S: Hash + Eq + Debug + Clone,
 {
-    State(S),
+    State(Option<S>),
     Decision(Vec<S>),
 }
 
@@ -19,7 +19,7 @@ where
     S: Hash + Eq + Debug + Clone,
 {
     fn from(s: S) -> Self {
-        Node::State(s)
+        Node::State(Some(s))
     }
 }
 

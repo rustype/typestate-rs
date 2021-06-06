@@ -151,7 +151,7 @@ impl From<SealedPattern> for Vec<Item> {
             }
         }));
 
-
+        // TODO: this can probably be turned into a single parse_quote!
         ret
     }
 }
@@ -193,12 +193,12 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
         match main_attr {
             Some(TypestateAttr::Automata) => {
                 // check for multiple automata definitions
-                match self.state_machine_info.main_struct {
+                match self.state_machine_info.automaton_ident {
                     Some(_) => {
                         self.push_multiple_automata_decl_error(it_struct);
                         return;
                     }
-                    None => self.state_machine_info.main_struct = Some(it_struct.clone()),
+                    None => self.state_machine_info.automaton_ident = Some(it_struct.clone()),
                 };
                 match it_struct.expand_state_type_parameter() {
                     Ok(bound_ident) => match self.sealed_trait.trait_ident {
@@ -211,6 +211,10 @@ impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
                 }
             }
             Some(TypestateAttr::State) => {
+                // BOOK: intermediate_automaton.add_state
+                self.state_machine_info.intermediate_automaton.add_state(it_struct.ident.clone());
+
+                // TODO: remove the call below
                 self.state_machine_info.add_state(it_struct.clone().into());
                 self.sealed_trait.state_idents.push(it_struct.ident.clone());
                 if let Some(ident) = &self.constructor_ident {

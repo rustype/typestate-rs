@@ -1,3 +1,5 @@
+use proc_macro2::Span;
+use quote::format_ident;
 use syn::{visit_mut::VisitMut, Error, Fields, Ident, ItemEnum, ItemMod, Variant};
 
 use crate::{StateMachineInfo, TypestateError};
@@ -87,6 +89,20 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
         }
         if self.errors.is_empty() {
             let enum_ident = i.ident.clone();
+            let destination_idents: Vec<Ident> =
+                i.variants.iter().cloned().map(|v| v.ident).collect();
+            // TODO: implement https://github.com/rustype/typestate-rs/issues/3
+            // NOTE: this could be `Option<Ident>`
+            let transition = format_ident!("");
+
+            self.state_machine_info
+                .intermediate_automaton
+                .add_transition(
+                    Some(enum_ident.clone()),
+                    transition,
+                    destination_idents.into(),
+                );
+
             // self.state_machine_info.add_state(i.clone().into());
             self.state_machine_info
                 .non_det_transitions

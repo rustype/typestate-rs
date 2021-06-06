@@ -14,7 +14,7 @@ use syn::{
     parse_macro_input, Attribute, AttributeArgs, Error, Ident, Item, ItemEnum, ItemMod, ItemStruct,
     ItemTrait, Variant,
 };
-use typestate_automata::{Dfa, Nfa};
+use typestate_automata::{Dfa, Nfa, intermediate_graph::IntermediateAutomaton};
 
 use crate::visitors::det::AUTOMATA_ATTR_IDENT;
 
@@ -343,6 +343,7 @@ impl Transition {
 /// Extracted information from the states
 #[derive(Debug, Clone)]
 struct StateMachineInfo {
+
     /// Main structure (aka Automata ?)
     // TODO: convert to ident
     automaton_ident: Option<ItemStruct>, // late init
@@ -368,6 +369,8 @@ struct StateMachineInfo {
     /// Set of final states.
     /// Extracted from functions with a signature like `(State) -> ()`.
     final_states: HashMap<Ident, HashSet<Ident>>,
+
+    pub intermediate_automaton: IntermediateAutomaton<Ident, Ident>,
 }
 
 impl StateMachineInfo {
@@ -375,6 +378,7 @@ impl StateMachineInfo {
     fn new() -> Self {
         Self {
             automaton_ident: None,
+            intermediate_automaton: IntermediateAutomaton::new(),
             det_states: HashMap::new(),
             non_det_transitions: HashMap::new(),
             used_non_det_transitions: HashSet::new(),
