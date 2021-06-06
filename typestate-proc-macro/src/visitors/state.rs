@@ -20,7 +20,7 @@ pub(crate) fn visit_states(
     constructor_ident: Option<Ident>,
 ) -> Vec<Error> {
     // start visitor
-    let mut state_visitor = DeterministicStateVisitor::new(state_machine_info, constructor_ident);
+    let mut state_visitor = StateVisitor::new(state_machine_info, constructor_ident);
     state_visitor.visit_item_mod_mut(module);
     // report state_visitor errors and return
     if !state_visitor.errors.is_empty() {
@@ -47,7 +47,7 @@ pub(crate) fn visit_states(
     vec![]
 }
 
-struct DeterministicStateVisitor<'sm> {
+struct StateVisitor<'sm> {
     /// State machine required information
     state_machine_info: &'sm mut StateMachineInfo,
     /// Sealed trait information
@@ -60,7 +60,7 @@ struct DeterministicStateVisitor<'sm> {
     errors: Vec<Error>,
 }
 
-impl<'sm> DeterministicStateVisitor<'sm> {
+impl<'sm> StateVisitor<'sm> {
     fn new(
         state_machine_info: &'sm mut StateMachineInfo,
         constructor_ident: Option<Ident>,
@@ -156,7 +156,7 @@ impl From<SealedPattern> for Vec<Item> {
     }
 }
 
-impl<'sm> VisitMut for DeterministicStateVisitor<'sm> {
+impl<'sm> VisitMut for StateVisitor<'sm> {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
         let attributes = &mut it_struct.attrs;
         let mut main_attr = None;
