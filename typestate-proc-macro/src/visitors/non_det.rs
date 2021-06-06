@@ -1,6 +1,7 @@
-use proc_macro2::Span;
-use quote::format_ident;
-use syn::{visit_mut::VisitMut, Error, Fields, Ident, ItemEnum, ItemMod, Variant};
+use proc_macro2::TokenStream as TokenStream2;
+use syn::{
+    parse_macro_input, visit_mut::VisitMut, Error, Fields, Ident, ItemEnum, ItemMod, Variant,
+};
 
 use crate::{StateMachineInfo, TypestateError};
 
@@ -20,19 +21,19 @@ pub(crate) fn visit_non_deterministic(
     module: &mut ItemMod,
     state_machine_info: &mut StateMachineInfo,
 ) -> Vec<Error> {
-    let mut non_det_state_visitor = NonDeterministicStateVisitor::new(state_machine_info);
+    let mut non_det_state_visitor = DecisionVisitor::new(state_machine_info);
     non_det_state_visitor.visit_item_mod_mut(module);
     // report non_det_state_visitor errors and return
     bail_if_any!(non_det_state_visitor.errors);
     vec![]
 }
 
-struct NonDeterministicStateVisitor<'sm> {
+struct DecisionVisitor<'sm> {
     state_machine_info: &'sm mut StateMachineInfo,
     errors: Vec<Error>,
 }
 
-impl<'sm> NonDeterministicStateVisitor<'sm> {
+impl<'sm> DecisionVisitor<'sm> {
     fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
         Self {
             state_machine_info,
@@ -59,9 +60,21 @@ impl<'sm> NonDeterministicStateVisitor<'sm> {
     }
 }
 
-impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
+impl<'sm> VisitMut for DecisionVisitor<'sm> {
     fn visit_item_enum_mut(&mut self, i: &mut ItemEnum) {
         for variant in &mut i.variants {
+            // let attrs = variant.attrs;
+
+            // let mut transition_metadata = None;
+            // for attr in attrs {
+            //     if attr.path.is_ident("metadata") {
+            //         let attr_tokens = attr.into();
+            //         let metadata: TransitionMetadata = parse_macro_input!(attr_tokens);
+            //         transition_metadata = metadata.into();
+            //     }
+            // }
+            // eprintln!("{:#?}", transition_metadata);
+
             // check if the variant is a valid one
             // i.e. unit-style variant
             if let Fields::Unit = &variant.fields {
@@ -93,13 +106,12 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
                 i.variants.iter().cloned().map(|v| v.ident).collect();
             // TODO: implement https://github.com/rustype/typestate-rs/issues/3
             // NOTE: this could be `Option<Ident>`
-            let transition = format_ident!("");
 
             self.state_machine_info
                 .intermediate_automaton
                 .add_transition(
-                    Some(enum_ident.clone()),
-                    transition,
+                    enum_ident.clone().into(),
+                    enum_ident.clone().into(),
                     destination_idents.into(),
                 );
 
