@@ -5,6 +5,8 @@ use std::{
     path::Path,
 };
 
+pub mod intermediate_graph;
+
 #[cfg(feature = "dot")]
 pub mod dot;
 
