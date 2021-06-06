@@ -72,7 +72,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
                 {
                     self.push_unsupported_state_error(ident);
                 } else if self.state_machine_info.det_states.contains_key(ident) {
-                    let automata_ident = self.state_machine_info.main_state_name();
+                    let automata_ident = self.state_machine_info.get_automaton_ident();
                     variant.fields = Fields::Unnamed(::syn::parse_quote!(
                         /* Variant */ (
                             #automata_ident<#ident>

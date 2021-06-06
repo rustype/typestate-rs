@@ -344,7 +344,8 @@ impl Transition {
 #[derive(Debug, Clone)]
 struct StateMachineInfo {
     /// Main structure (aka Automata ?)
-    main_struct: Option<ItemStruct>, // late init
+    // TODO: convert to ident
+    automaton_ident: Option<ItemStruct>, // late init
 
     /// Deterministic states (`struct`s)
     det_states: HashMap<Ident, ItemStruct>,
@@ -373,7 +374,7 @@ impl StateMachineInfo {
     /// Construct a new [`StateMachineInfo`].
     fn new() -> Self {
         Self {
-            main_struct: None,
+            automaton_ident: None,
             det_states: HashMap::new(),
             non_det_transitions: HashMap::new(),
             used_non_det_transitions: HashSet::new(),
@@ -402,8 +403,8 @@ impl StateMachineInfo {
     /// This is an utility function.
     // maybe the unwrap could be converted into a check
     // if none -> comp time error
-    fn main_state_name(&self) -> &Ident {
-        &self.main_struct.as_ref().unwrap().ident
+    fn get_automaton_ident(&self) -> &Ident {
+        &self.automaton_ident.as_ref().unwrap().ident
     }
 
     /// Check for missing initial or final states.
@@ -474,7 +475,7 @@ impl From<StateMachineInfo> for FiniteAutomata<Ident, Ident> {
     fn from(info: StateMachineInfo) -> Self {
         if info.non_det_transitions.is_empty() {
             let mut dfa = Dfa::new();
-            let name = info.main_state_name().clone();
+            let name = info.get_automaton_ident().clone();
             info.det_states
                 .into_iter()
                 .map(|(ident, _)| ident)
@@ -499,7 +500,7 @@ impl From<StateMachineInfo> for FiniteAutomata<Ident, Ident> {
             FiniteAutomata::Deterministic(name, dfa)
         } else {
             let mut nfa = Nfa::new();
-            let name = info.main_state_name().clone();
+            let name = info.get_automaton_ident().clone();
             info.det_states
                 .into_iter()
                 .map(|(ident, _)| ident)

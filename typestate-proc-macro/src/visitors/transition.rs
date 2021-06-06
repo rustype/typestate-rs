@@ -308,7 +308,7 @@ impl SignatureKind for Signature {
             if let Type::Path(ref mut path) = **ty {
                 if let Some(ident) = path.path.get_ident() {
                     if det_states.contains_key(ident) {
-                        let automata_ident = info.main_state_name();
+                        let automata_ident = info.get_automaton_ident();
                         path.path = ::syn::parse_quote!(#automata_ident<#ident>);
                     }
                 }
