@@ -86,10 +86,11 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             }
         }
         if self.errors.is_empty() {
+            let enum_ident = i.ident.clone();
             // self.state_machine_info.add_state(i.clone().into());
             self.state_machine_info
                 .non_det_transitions
-                .insert(i.ident.clone(), i.clone());
+                .insert(enum_ident, i.clone());
         }
     }
 }
