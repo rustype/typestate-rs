@@ -46,14 +46,14 @@ impl<T> Transition<T>
 where
     T: Hash + Eq + Debug + Clone,
 {
-    fn new(transition: T) -> Self {
+    pub fn new(transition: T) -> Self {
         Self {
             transition,
             metadata: None,
         }
     }
 
-    fn with_metadata(transition: T, metadata: TransitionMetadata) -> Self {
+    pub fn _with_metadata(transition: T, metadata: TransitionMetadata) -> Self {
         Self {
             transition,
             metadata: metadata.into(),
