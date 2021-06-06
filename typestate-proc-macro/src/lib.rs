@@ -2,7 +2,10 @@
 
 mod visitors;
 
+mod intermediate_graph;
+
 use darling::FromMeta;
+use intermediate_graph::IntermediateAutomaton;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, ToTokens};
@@ -14,7 +17,7 @@ use syn::{
     parse_macro_input, Attribute, AttributeArgs, Error, Ident, Item, ItemEnum, ItemMod, ItemStruct,
     ItemTrait, Variant,
 };
-use typestate_automata::{Dfa, Nfa, intermediate_graph::IntermediateAutomaton};
+use typestate_automata::{Dfa, Nfa};
 
 use crate::visitors::det::AUTOMATA_ATTR_IDENT;
 
