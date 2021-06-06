@@ -63,6 +63,8 @@ impl<'sm> TransitionVisitor<'sm> {
 impl<'sm> VisitMut for TransitionVisitor<'sm> {
     fn visit_item_trait_mut(&mut self, i: &mut ItemTrait) {
         let attributes = &i.attrs;
+        // check if there is a `#[generated]` attribute
+        // if there is, do not process this trait
         if attributes.iter().any(|attr| {
             let segments = &attr.path.segments;
             let segments = segments.iter().collect::<Vec<_>>();

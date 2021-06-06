@@ -64,6 +64,7 @@ impl<'sm> VisitMut for NonDeterministicStateVisitor<'sm> {
             // i.e. unit-style variant
             if let Fields::Unit = &variant.fields {
                 let ident = &variant.ident;
+                // check if the current ident is a valid state or another decision node
                 if self
                     .state_machine_info
                     .non_det_transitions
