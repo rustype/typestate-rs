@@ -21,7 +21,12 @@ mod smart_bulb {
         fn set_color(self, color: (u8, u8, u8)) -> Unknown;
     }
 
-    enum Unknown { On, Off }
+    enum Unknown {
+        #[metadata(label = "bulb changed color successfully")]
+        On,
+        #[metadata(label = "bulb failed and turned off")]
+        Off
+    }
 }
 
 fn main() {}
