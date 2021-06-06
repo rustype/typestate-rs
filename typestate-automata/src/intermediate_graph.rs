@@ -4,7 +4,6 @@ use std::{
     hash::Hash,
 };
 
-// TODO: implement From<Vec<S>> for Node<S>
 #[derive(Debug, Clone)]
 pub enum Node<S>
 where
