@@ -5,7 +5,6 @@ use std::{
     path::Path,
 };
 
-
 #[cfg(feature = "dot")]
 pub mod dot;
 
@@ -14,7 +13,6 @@ pub mod plantuml;
 
 #[cfg(feature = "mermaid")]
 pub mod mermaid;
-
 
 /// Write to file operation.
 pub trait TryWriteFile {
