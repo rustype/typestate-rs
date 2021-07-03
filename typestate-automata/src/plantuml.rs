@@ -93,15 +93,16 @@ where
     Label: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("state C_{} <<choice>>\n", self.source))?;
+        let choice_state = format!("Choice_{}_{}", self.source, self.label);
+        f.write_fmt(format_args!("state {} <<choice>>\n", choice_state))?;
         f.write_fmt(format_args!(
-            "{} --> C_{}: {}\n",
-            self.source, self.source, self.label
+            "{} --> {}: {}\n",
+            self.source, choice_state, self.label
         ))?;
         for destination in &self.destinations {
             f.write_fmt(format_args!(
-                "C_{} --> {}\n",
-                self.source,
+                "{} --> {}\n",
+                choice_state,
                 destination //, self.label
             ))?;
         }
