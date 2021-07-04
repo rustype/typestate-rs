@@ -86,7 +86,7 @@ where
         }
     }
 
-    pub fn _with_metadata(transition: T, metadata: Metadata) -> Self {
+    pub fn _with_metadata(transition: T, _metadata: Metadata) -> Self {
         Self {
             transition,
             // metadata: metadata.into(),
@@ -247,7 +247,7 @@ pub mod mermaid {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, f: Mermaid) -> Result {
+        fn export<W: std::io::Write>(self, w: &mut W, _: Mermaid) -> Result {
             let src = self.0;
             let t = &self.1.transition;
             let dst = self.2;
@@ -349,7 +349,7 @@ pub mod plantuml {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, f: PlantUml) -> Result {
+        fn export<W: std::io::Write>(self, w: &mut W, _: PlantUml) -> Result {
             let src = self.0;
             let t = &self.1.transition;
             let dst = self.2;
@@ -457,7 +457,7 @@ pub mod dot {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, f: Dot) -> Result {
+        fn export<W: std::io::Write>(self, w: &mut W, _: Dot) -> Result {
             let src = self.0;
             let t = &self.1.transition;
             let dst = self.2;
