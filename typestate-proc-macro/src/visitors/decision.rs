@@ -53,6 +53,7 @@ impl<'sm> VisitMut for DecisionVisitor<'sm> {
             // TODO: implement https://github.com/rustype/typestate-rs/issues/3
             // NOTE: this could be `Option<Ident>`
 
+            self.state_machine_info.intermediate_automaton.add_choice(enum_ident.clone().into());
             self.state_machine_info
                 .intermediate_automaton
                 .add_transition(

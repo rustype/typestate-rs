@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug,
+    fmt::{Debug, Display, Write},
     hash::Hash,
 };
 
@@ -69,7 +69,7 @@ where
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Transition<T>
 where
-    T: Hash + Eq + Debug + Clone,
+    T: Hash + Eq + Debug + Clone + Display,
 {
     transition: T,
     // metadata: Option<Metadata>,
@@ -77,7 +77,7 @@ where
 
 impl<T> Transition<T>
 where
-    T: Hash + Eq + Debug + Clone,
+    T: Hash + Eq + Debug + Clone + Display,
 {
     pub fn new(transition: T) -> Self {
         Self {
@@ -94,9 +94,18 @@ where
     }
 }
 
+impl<T> Display for Transition<T>
+where
+    T: Hash + Eq + Debug + Clone + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.transition))
+    }
+}
+
 impl<T> From<T> for Transition<T>
 where
-    T: Hash + Eq + Debug + Clone,
+    T: Hash + Eq + Debug + Clone + Display,
 {
     fn from(t: T) -> Self {
         Self::new(t)
@@ -134,26 +143,32 @@ where
     // State type parameter.
     S: Hash + Eq + Debug + Clone,
     // Transition type parameter.
-    T: Hash + Eq + Debug + Clone,
+    T: Hash + Eq + Debug + Clone + Display,
 {
     states: HashSet<S>,
+    choices: HashSet<S>,
     delta: HashMap<Option<S>, HashMap<Transition<T>, Node<S>>>,
 }
 
 impl<S, T> IntermediateAutomaton<S, T>
 where
     S: Hash + Eq + Debug + Clone,
-    T: Hash + Eq + Debug + Clone,
+    T: Hash + Eq + Debug + Clone + Display,
 {
     pub fn new() -> Self {
         Self {
             states: HashSet::new(),
+            choices: HashSet::new(),
             delta: HashMap::new(),
         }
     }
 
     pub fn add_state(&mut self, state: S) -> bool {
         self.states.insert(state)
+    }
+
+    pub fn add_choice(&mut self, choice: S) -> bool {
+        self.choices.insert(choice)
     }
 
     pub fn add_transition(
@@ -177,9 +192,105 @@ where
 impl<S, T> Default for IntermediateAutomaton<S, T>
 where
     S: Hash + Eq + Debug + Clone,
-    T: Hash + Eq + Debug + Clone,
+    T: Hash + Eq + Debug + Clone + Display,
 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+pub trait DisplayMermaid {
+    fn into_mermaid(self) -> Result<String>;
+}
+
+impl<S, T> DisplayMermaid for IntermediateAutomaton<S, T>
+where
+    S: Hash + Eq + Debug + Clone + Display,
+    T: Hash + Eq + Debug + Clone + Display,
+{
+    fn into_mermaid(self) -> Result<String> {
+        let mut res = String::new();
+        writeln!(&mut res, "stateDiagram-v2")?;
+        for s in &self.choices {
+            writeln!(&mut res, "state {} <<choice>>", s)?
+        }
+        for s in &self.states {
+            writeln!(&mut res, "state {}", s)?
+        }
+        for (src, v) in &self.delta {
+            for (t, dst) in v {
+                writeln!(&mut res, "{}", (src, t, dst).into_mermaid()?)?
+            }
+        }
+        Ok(res)
+    }
+}
+
+impl<S, T> DisplayMermaid for (&Option<S>, &Transition<T>, &Node<S>)
+where
+    S: Hash + Eq + Debug + Clone + Display,
+    T: Hash + Eq + Debug + Clone + Display,
+{
+    fn into_mermaid(self) -> Result<String> {
+        let src = self.0;
+        let t = &self.1.transition;
+        let dst = self.2;
+        let mut res = String::new();
+
+        if let Some(src) = src {
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => writeln!(&mut res, "{} --> [*] : {}", src, t)?,
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(&mut res, "{} --> {} : {}", src, label, t)?
+                        } else {
+                            writeln!(&mut res, "{} --> {} : {}", src, s, t)?
+                        }
+                    }
+                },
+                Node::Decision(decision) => {
+                    for s in decision {
+                        if let Some(state) = &s.state {
+                            if let Some(label) = &s.metadata.transition_label {
+                                writeln!(&mut res, "{} --> {} : {}", src, state, label)?
+                            } else {
+                                writeln!(&mut res, "{} --> {}", src, state)?
+                            }
+                        } else {
+                            if let Some(label) = &s.metadata.transition_label {
+                                writeln!(&mut res, "{} --> [*] : {}", src, label)?
+                            } else {
+                                writeln!(&mut res, "{} --> [*]", src)?
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => unreachable!("invalid transition: None -> None"),
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(&mut res, "[*] --> {} : {}", label, t)?
+                        } else {
+                            writeln!(&mut res, "[*] --> {} : {}", s, t)?
+                        }
+                    }
+                },
+                Node::Decision(decision) => {
+                    // NOTE: unsure about this
+                    unreachable!("invalid transition: None -> Decision")
+                }
+            }
+        }
+
+        Ok(res)
     }
 }

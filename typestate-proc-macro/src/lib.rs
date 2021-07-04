@@ -5,7 +5,7 @@ mod visitors;
 mod intermediate_graph;
 
 use darling::FromMeta;
-use intermediate_graph::IntermediateAutomaton;
+use intermediate_graph::{IntermediateAutomaton, DisplayMermaid};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, ToTokens};
@@ -91,6 +91,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     ));
 
     println!("{:#?}", state_machine_info.intermediate_automaton);
+    println!("{}", state_machine_info.intermediate_automaton.clone().into_mermaid().unwrap());
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
