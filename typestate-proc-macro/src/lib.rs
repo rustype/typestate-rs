@@ -5,12 +5,12 @@ mod visitors;
 mod intermediate_graph;
 
 use darling::FromMeta;
-use intermediate_graph::{IntermediateAutomaton, IntoMermaid};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
+    fs::File,
     hash::Hash,
 };
 use syn::{
@@ -19,7 +19,12 @@ use syn::{
 };
 use typestate_automata::{Dfa, Nfa};
 
-use crate::{intermediate_graph::{IntoDot, IntoPlantUml}, visitors::state::AUTOMATA_ATTR_IDENT};
+use crate::{
+    intermediate_graph::{
+        dot::Dot, mermaid::Mermaid, plantuml::PlantUml, Export, IntermediateAutomaton,
+    },
+    visitors::state::AUTOMATA_ATTR_IDENT,
+};
 
 const CRATE_NAME: &str = "typestate_proc_macro";
 const GENERATED_ATTR_IDENT: &str = "generated";
@@ -90,8 +95,45 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         &mut state_machine_info
     ));
 
-    println!("{:#?}", state_machine_info.intermediate_automaton);
-    println!("{}", state_machine_info.intermediate_automaton.clone().into_dot().unwrap());
+    let folder_path = ::std::env::var_os("EXPORT_FOLDER")
+        .and_then(|s| s.into_string().ok())
+        .unwrap_or_else(|| "./".to_string());
+
+    let mut f = File::create(format!(
+        "{}{}.dot",
+        folder_path,
+        state_machine_info.automaton_ident.clone().unwrap().ident
+    ))
+    .unwrap();
+    state_machine_info
+        .intermediate_automaton
+        .clone()
+        .export(&mut f, Dot)
+        .unwrap();
+
+    let mut f = File::create(format!(
+        "{}{}.uml",
+        folder_path,
+        state_machine_info.automaton_ident.clone().unwrap().ident
+    ))
+    .unwrap();
+    state_machine_info
+        .intermediate_automaton
+        .clone()
+        .export(&mut f, PlantUml)
+        .unwrap();
+
+    let mut f = File::create(format!(
+        "{}{}.mer",
+        folder_path,
+        state_machine_info.automaton_ident.clone().unwrap().ident
+    ))
+    .unwrap();
+    state_machine_info
+        .intermediate_automaton
+        .clone()
+        .export(&mut f, Mermaid)
+        .unwrap();
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
@@ -349,7 +391,6 @@ impl Transition {
 /// Extracted information from the states
 #[derive(Debug, Clone)]
 struct StateMachineInfo {
-
     /// Main structure (aka Automata ?)
     // TODO: convert to ident
     automaton_ident: Option<ItemStruct>, // late init
