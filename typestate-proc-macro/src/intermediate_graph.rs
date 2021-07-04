@@ -308,6 +308,7 @@ where
     fn into_plantuml(self) -> Result<String> {
         let mut res = String::new();
         writeln!(&mut res, "@startuml")?;
+        // TODO add settings
         for s in &self.choices {
             writeln!(&mut res, "state {} <<choice>>", s)?
         }
@@ -376,6 +377,105 @@ where
                             writeln!(&mut res, "[*] --> {} : {}", label, t)?
                         } else {
                             writeln!(&mut res, "[*] --> {} : {}", s, t)?
+                        }
+                    }
+                },
+                Node::Decision(_) => {
+                    // NOTE: unsure about this
+                    unreachable!("invalid transition: None -> Decision")
+                }
+            }
+        }
+
+        Ok(res)
+    }
+}
+
+const DOT_SPECIAL_NODE: &str = r#"label="", fillcolor=black, fixedsize=true, height=0.25, style=filled"#;
+
+pub trait IntoDot {
+    fn into_dot(self) -> Result<String>;
+}
+
+impl<S, T> IntoDot for IntermediateAutomaton<S, T>
+where
+    S: Hash + Eq + Debug + Clone + Display,
+    T: Hash + Eq + Debug + Clone + Display,
+{
+    fn into_dot(self) -> Result<String> {
+        let mut res = String::new();
+        write!(&mut res, "digraph Automata {{\n")?;
+        // TODO add settings
+
+        write!(&mut res, "  _initial_ [{}, shape=circle];\n", DOT_SPECIAL_NODE)?;
+
+        for s in &self.choices {
+            write!(&mut res, "  {} [shape=diamond];\n", s)?
+        }
+        for (src, v) in &self.delta {
+            for (t, dst) in v {
+                write!(&mut res, "  {}\n", (src, t, dst).into_dot()?)?
+            }
+        }
+        // final is put here to be considered last by the solver
+        write!(&mut res, "  _final_ [{}, shape=doublecircle];\n", DOT_SPECIAL_NODE)?;
+        write!(&mut res, "}}")?;
+        Ok(res)
+    }
+}
+
+impl<S, T> IntoDot for (&Option<S>, &Transition<T>, &Node<S>)
+where
+    S: Hash + Eq + Debug + Clone + Display,
+    T: Hash + Eq + Debug + Clone + Display,
+{
+    fn into_dot(self) -> Result<String> {
+        let src = self.0;
+        let t = &self.1.transition;
+        let dst = self.2;
+        let mut res = String::new();
+
+        if let Some(src) = src {
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => write!(&mut res, "{} -> _final_ [label={}];", src, t)?,
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            write!(&mut res, "{} -> {} [label={}];", src, label, t)?
+                        } else {
+                            write!(&mut res, "{} -> {} [label={}];", src, s, t)?
+                        }
+                    }
+                },
+                Node::Decision(decision) => {
+                    for s in decision {
+                        if let Some(state) = &s.state {
+                            if let Some(label) = &s.metadata.transition_label {
+                                write!(&mut res, "{} -> {} [label={}];", src, state, label)?
+                            } else {
+                                write!(&mut res, "{} -> {};", src, state)?
+                            }
+                        } else {
+                            if let Some(label) = &s.metadata.transition_label {
+                                write!(&mut res, "{} -> _final_ [label={}];", src, label)?
+                            } else {
+                                write!(&mut res, "{} -> _final_;", src)?
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => unreachable!("invalid transition: None -> None"),
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            write!(&mut res, "_initial_ -> {} [label={}];", label, t)?
+                        } else {
+                            write!(&mut res, "_initial_ -> {} [label={}];", s, t)?
                         }
                     }
                 },

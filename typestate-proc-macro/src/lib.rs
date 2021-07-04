@@ -19,7 +19,7 @@ use syn::{
 };
 use typestate_automata::{Dfa, Nfa};
 
-use crate::{intermediate_graph::IntoPlantUml, visitors::state::AUTOMATA_ATTR_IDENT};
+use crate::{intermediate_graph::{IntoDot, IntoPlantUml}, visitors::state::AUTOMATA_ATTR_IDENT};
 
 const CRATE_NAME: &str = "typestate_proc_macro";
 const GENERATED_ATTR_IDENT: &str = "generated";
@@ -91,7 +91,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     ));
 
     println!("{:#?}", state_machine_info.intermediate_automaton);
-    println!("{}", state_machine_info.intermediate_automaton.clone().into_plantuml().unwrap());
+    println!("{}", state_machine_info.intermediate_automaton.clone().into_dot().unwrap());
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
