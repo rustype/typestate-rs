@@ -10,7 +10,6 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, ToTokens};
 use std::{
     collections::{HashMap, HashSet},
-    fs::File,
     hash::Hash,
 };
 use syn::{
@@ -20,9 +19,7 @@ use syn::{
 use typestate_automata::{Dfa, Nfa};
 
 use crate::{
-    intermediate_graph::{
-        dot::Dot, mermaid::Mermaid, plantuml::PlantUml, Export, IntermediateAutomaton,
-    },
+    intermediate_graph::{Export, IntermediateAutomaton},
     visitors::state::AUTOMATA_ATTR_IDENT,
 };
 
@@ -95,45 +92,71 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         &mut state_machine_info
     ));
 
-    let folder_path = ::std::env::var_os("EXPORT_FOLDER")
-        .and_then(|s| s.into_string().ok())
-        .unwrap_or_else(|| "./".to_string());
-
-    let mut f = File::create(format!(
-        "{}{}.dot",
-        folder_path,
-        state_machine_info.automaton_ident.clone().unwrap().ident
-    ))
-    .unwrap();
-    state_machine_info
-        .intermediate_automaton
-        .clone()
-        .export(&mut f, Dot)
+    #[cfg(feature = "dot")]
+    {
+        use intermediate_graph::dot::Dot;
+        use std::fs::File;
+        let folder_path = ::std::env::var_os("EXPORT_FOLDER")
+            .and_then(|s| s.into_string().ok())
+            .unwrap_or_else(|| "./".to_string());
+        let mut f = File::create(format!(
+            "{}{}.dot",
+            folder_path,
+            state_machine_info.automaton_ident.clone().unwrap().ident
+        ))
         .unwrap();
+        println!("{:#?}", f);
+        state_machine_info
+            .intermediate_automaton
+            .clone()
+            .export(&mut f, Dot)
+            .unwrap();
+    }
 
-    let mut f = File::create(format!(
-        "{}{}.uml",
-        folder_path,
-        state_machine_info.automaton_ident.clone().unwrap().ident
-    ))
-    .unwrap();
-    state_machine_info
-        .intermediate_automaton
-        .clone()
-        .export(&mut f, PlantUml)
-        .unwrap();
+    #[cfg(feature = "plantuml")]
+    {
+        use intermediate_graph::plantuml::PlantUml;
+        use std::fs::File;
+        let folder_path = ::std::env::var_os("EXPORT_FOLDER")
+            .and_then(|s| s.into_string().ok())
+            .unwrap_or_else(|| "./".to_string());
 
-    let mut f = File::create(format!(
-        "{}{}.mer",
-        folder_path,
-        state_machine_info.automaton_ident.clone().unwrap().ident
-    ))
-    .unwrap();
-    state_machine_info
-        .intermediate_automaton
-        .clone()
-        .export(&mut f, Mermaid)
+        let mut f = File::create(format!(
+            "{}{}.uml",
+            folder_path,
+            state_machine_info.automaton_ident.clone().unwrap().ident
+        ))
         .unwrap();
+        println!("{:#?}", f);
+        state_machine_info
+            .intermediate_automaton
+            .clone()
+            .export(&mut f, PlantUml)
+            .unwrap();
+    }
+
+    #[cfg(feature = "mermaid")]
+    {
+        use intermediate_graph::mermaid::Mermaid;
+        let mut f = Vec::<u8>::new();
+
+        state_machine_info
+            .intermediate_automaton
+            .clone()
+            .export(&mut f, Mermaid)
+            .unwrap();
+
+        let doc_string = String::from_utf8(f).unwrap();
+        let doc_string_iter = doc_string.split("\n").filter(|s| !s.is_empty()).into_iter();
+
+        module = ::syn::parse_quote!(
+            #[cfg_attr(doc, ::typestate::__private__::aquamarine::aquamarine)]
+            #[doc = "```mermaid"]
+            #(#[doc = #doc_string_iter])*
+            #[doc = "```"]
+            #module
+        );
+    }
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
@@ -157,47 +180,6 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
             // do not parse more code
             // only generate from here
-
-            #[cfg(feature = "dot")]
-            {
-                use typestate_automata::{dot::*, TryWriteFile};
-
-                let folder_path = ::std::env::var_os("EXPORT_FOLDER")
-                    .and_then(|s| s.into_string().ok())
-                    .unwrap_or_else(|| "./".to_string());
-
-                let dot = Dot::from($automata.clone());
-                dot.try_write_file(format!("{}{}.dot", folder_path, $name))
-                    .expect("failed to write automata to file");
-            }
-            #[cfg(feature = "plantuml")]
-            {
-                use typestate_automata::{plantuml::*, TryWriteFile};
-
-                let folder_path = ::std::env::var_os("EXPORT_FOLDER")
-                    .and_then(|s| s.into_string().ok())
-                    .unwrap_or_else(|| "./".to_string());
-
-                let uml = PlantUml::from($automata.clone());
-                uml.try_write_file(format!("{}{}.uml", folder_path, $name))
-                    .expect("failed to write automata to file");
-            }
-
-            #[cfg(feature = "mermaid")]
-            {
-                use typestate_automata::{mermaid::*};
-                let mer = Mermaid::from($automata.clone());
-                let diagram = mer.to_string();
-                let doc_strings = diagram.split("\n").filter(|s| !s.is_empty()).into_iter();
-
-                module = ::syn::parse_quote!(
-                    #[cfg_attr(doc, ::typestate::__private__::aquamarine::aquamarine)]
-                    #[doc = "```mermaid"]
-                    #(#[doc = #doc_strings])*
-                    #[doc = "```"]
-                    #module
-                );
-            }
 
             let states = $automata.states.iter().collect::<Vec<_>>();
 

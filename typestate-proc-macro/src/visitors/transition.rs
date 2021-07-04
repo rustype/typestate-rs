@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    intermediate_graph::Node, StateMachineInfo, Transition, TypestateError, CRATE_NAME,
+    StateMachineInfo, Transition, TypestateError, CRATE_NAME,
     GENERATED_ATTR_IDENT,
 };
 use syn::{
