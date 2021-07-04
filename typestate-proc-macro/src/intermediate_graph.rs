@@ -202,11 +202,11 @@ where
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-pub trait DisplayMermaid {
+pub trait IntoMermaid {
     fn into_mermaid(self) -> Result<String>;
 }
 
-impl<S, T> DisplayMermaid for IntermediateAutomaton<S, T>
+impl<S, T> IntoMermaid for IntermediateAutomaton<S, T>
 where
     S: Hash + Eq + Debug + Clone + Display,
     T: Hash + Eq + Debug + Clone + Display,
@@ -222,14 +222,14 @@ where
         }
         for (src, v) in &self.delta {
             for (t, dst) in v {
-                writeln!(&mut res, "{}", (src, t, dst).into_mermaid()?)?
+                writeln!(&mut res, "{}", (src, t, dst).into_plantuml()?)?
             }
         }
         Ok(res)
     }
 }
 
-impl<S, T> DisplayMermaid for (&Option<S>, &Transition<T>, &Node<S>)
+impl<S, T> IntoMermaid for (&Option<S>, &Transition<T>, &Node<S>)
 where
     S: Hash + Eq + Debug + Clone + Display,
     T: Hash + Eq + Debug + Clone + Display,
@@ -284,7 +284,102 @@ where
                         }
                     }
                 },
+                Node::Decision(_) => {
+                    // NOTE: unsure about this
+                    unreachable!("invalid transition: None -> Decision")
+                }
+            }
+        }
+
+        Ok(res)
+    }
+}
+
+
+pub trait IntoPlantUml {
+    fn into_plantuml(self) -> Result<String>;
+}
+
+impl<S, T> IntoPlantUml for IntermediateAutomaton<S, T>
+where
+    S: Hash + Eq + Debug + Clone + Display,
+    T: Hash + Eq + Debug + Clone + Display,
+{
+    fn into_plantuml(self) -> Result<String> {
+        let mut res = String::new();
+        writeln!(&mut res, "@startuml")?;
+        for s in &self.choices {
+            writeln!(&mut res, "state {} <<choice>>", s)?
+        }
+        for s in &self.states {
+            writeln!(&mut res, "state {}", s)?
+        }
+        for (src, v) in &self.delta {
+            for (t, dst) in v {
+                writeln!(&mut res, "{}", (src, t, dst).into_plantuml()?)?
+            }
+        }
+        writeln!(&mut res, "@end")?;
+        Ok(res)
+    }
+}
+
+impl<S, T> IntoPlantUml for (&Option<S>, &Transition<T>, &Node<S>)
+where
+    S: Hash + Eq + Debug + Clone + Display,
+    T: Hash + Eq + Debug + Clone + Display,
+{
+    fn into_plantuml(self) -> Result<String> {
+        let src = self.0;
+        let t = &self.1.transition;
+        let dst = self.2;
+        let mut res = String::new();
+
+        if let Some(src) = src {
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => writeln!(&mut res, "{} --> [*] : {}", src, t)?,
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(&mut res, "{} --> {} : {}", src, label, t)?
+                        } else {
+                            writeln!(&mut res, "{} --> {} : {}", src, s, t)?
+                        }
+                    }
+                },
                 Node::Decision(decision) => {
+                    for s in decision {
+                        if let Some(state) = &s.state {
+                            if let Some(label) = &s.metadata.transition_label {
+                                writeln!(&mut res, "{} --> {} : {}", src, state, label)?
+                            } else {
+                                writeln!(&mut res, "{} --> {}", src, state)?
+                            }
+                        } else {
+                            if let Some(label) = &s.metadata.transition_label {
+                                writeln!(&mut res, "{} --> [*] : {}", src, label)?
+                            } else {
+                                writeln!(&mut res, "{} --> [*]", src)?
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => unreachable!("invalid transition: None -> None"),
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(&mut res, "[*] --> {} : {}", label, t)?
+                        } else {
+                            writeln!(&mut res, "[*] --> {} : {}", s, t)?
+                        }
+                    }
+                },
+                Node::Decision(_) => {
                     // NOTE: unsure about this
                     unreachable!("invalid transition: None -> Decision")
                 }

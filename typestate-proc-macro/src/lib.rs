@@ -5,7 +5,7 @@ mod visitors;
 mod intermediate_graph;
 
 use darling::FromMeta;
-use intermediate_graph::{IntermediateAutomaton, DisplayMermaid};
+use intermediate_graph::{IntermediateAutomaton, IntoMermaid};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, ToTokens};
@@ -19,7 +19,7 @@ use syn::{
 };
 use typestate_automata::{Dfa, Nfa};
 
-use crate::visitors::state::AUTOMATA_ATTR_IDENT;
+use crate::{intermediate_graph::IntoPlantUml, visitors::state::AUTOMATA_ATTR_IDENT};
 
 const CRATE_NAME: &str = "typestate_proc_macro";
 const GENERATED_ATTR_IDENT: &str = "generated";
@@ -91,7 +91,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     ));
 
     println!("{:#?}", state_machine_info.intermediate_automaton);
-    println!("{}", state_machine_info.intermediate_automaton.clone().into_mermaid().unwrap());
+    println!("{}", state_machine_info.intermediate_automaton.clone().into_plantuml().unwrap());
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
