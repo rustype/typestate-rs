@@ -1,17 +1,32 @@
+use darling::FromMeta;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     hash::Hash,
 };
-use darling::FromMeta;
+
+#[derive(Debug, Clone)]
+pub struct StateNode<S> {
+    state: Option<S>,
+    metadata: Metadata,
+}
+
+impl<S> StateNode<S> {
+    fn new(state: Option<S>) -> Self {
+        Self {
+            state,
+            metadata: Metadata::empty(),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Node<S>
 where
     S: Hash + Eq + Debug + Clone,
 {
-    State(Option<S>),
-    Decision(Vec<S>),
+    State(StateNode<S>),
+    Decision(Vec<StateNode<S>>),
 }
 
 impl<S> From<S> for Node<S>
@@ -19,7 +34,16 @@ where
     S: Hash + Eq + Debug + Clone,
 {
     fn from(s: S) -> Self {
-        Node::State(Some(s))
+        Node::State(StateNode::new(Some(s)))
+    }
+}
+
+impl<S> From<Option<S>> for Node<S>
+where
+    S: Hash + Eq + Debug + Clone,
+{
+    fn from(s: Option<S>) -> Self {
+        Node::State(StateNode::new(s))
     }
 }
 
@@ -28,6 +52,15 @@ where
     S: Hash + Eq + Debug + Clone,
 {
     fn from(s: Vec<S>) -> Self {
+        Node::Decision(s.into_iter().map(|s| StateNode::new(Some(s))).collect())
+    }
+}
+
+impl<S> From<Vec<StateNode<S>>> for Node<S>
+where
+    S: Hash + Eq + Debug + Clone,
+{
+    fn from(s: Vec<StateNode<S>>) -> Self {
         Node::Decision(s)
     }
 }
@@ -39,7 +72,7 @@ where
     T: Hash + Eq + Debug + Clone,
 {
     transition: T,
-    metadata: Option<TransitionMetadata>,
+    // metadata: Option<Metadata>,
 }
 
 impl<T> Transition<T>
@@ -49,14 +82,14 @@ where
     pub fn new(transition: T) -> Self {
         Self {
             transition,
-            metadata: None,
+            // metadata: None,
         }
     }
 
-    pub fn _with_metadata(transition: T, metadata: TransitionMetadata) -> Self {
+    pub fn _with_metadata(transition: T, metadata: Metadata) -> Self {
         Self {
             transition,
-            metadata: metadata.into(),
+            // metadata: metadata.into(),
         }
     }
 }
@@ -71,17 +104,25 @@ where
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, FromMeta)]
-pub struct TransitionMetadata {
-    label: String,
+pub struct Metadata {
+    transition_label: Option<String>,
 }
 
-impl TransitionMetadata {
+impl Metadata {
+    fn empty() -> Self {
+        Self {
+            transition_label: None,
+        }
+    }
+
     fn new(label: String) -> Self {
-        Self { label }
+        Self {
+            transition_label: Some(label),
+        }
     }
 }
 
-impl Default for TransitionMetadata {
+impl Default for Metadata {
     fn default() -> Self {
         Self::new(String::new())
     }

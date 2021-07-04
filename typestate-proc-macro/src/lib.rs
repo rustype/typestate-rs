@@ -90,7 +90,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         &mut state_machine_info
     ));
 
-    // println!("{:#?}", state_machine_info.intermediate_automaton);
+    println!("{:#?}", state_machine_info.intermediate_automaton);
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);

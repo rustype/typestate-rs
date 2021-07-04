@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use crate::{CRATE_NAME, GENERATED_ATTR_IDENT, StateMachineInfo, Transition, TypestateError, intermediate_graph::Node};
+use crate::{
+    intermediate_graph::Node, StateMachineInfo, Transition, TypestateError, CRATE_NAME,
+    GENERATED_ATTR_IDENT,
+};
 use syn::{
     visit_mut::VisitMut, Error, FnArg, Ident, ItemMod, ItemTrait, Receiver, ReturnType, Signature,
     TraitItemMethod, Type,
@@ -129,7 +132,11 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                 // BOOK
                 self.state_machine_info
                     .intermediate_automaton
-                    .add_transition(None, fn_ident.clone().into(), return_ty_ident.clone().into());
+                    .add_transition(
+                        None,
+                        fn_ident.clone().into(),
+                        return_ty_ident.clone().into(),
+                    );
 
                 self.state_machine_info
                     .insert_initial(return_ty_ident, fn_ident);
@@ -142,7 +149,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                 // BOOK
                 self.state_machine_info
                     .intermediate_automaton
-                    .add_transition(Some(state.clone()), fn_ident.clone().into(), Node::State(None));
+                    .add_transition(Some(state.clone()), fn_ident.clone().into(), None.into());
 
                 self.state_machine_info.insert_final(state, fn_ident);
             }
@@ -179,7 +186,11 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                 // BOOK
                 self.state_machine_info
                     .intermediate_automaton
-                    .add_transition(state.clone().into(), fn_ident.clone().into(), state.clone().into());
+                    .add_transition(
+                        state.clone().into(),
+                        fn_ident.clone().into(),
+                        state.clone().into(),
+                    );
 
                 let transition = Transition::new(state.clone(), state.clone(), fn_ident);
                 self.state_machine_info.transitions.insert(transition);

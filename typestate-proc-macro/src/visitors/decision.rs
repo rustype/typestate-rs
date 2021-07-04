@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use syn::{visit_mut::VisitMut, Error, Fields, Ident, ItemEnum, ItemMod, Variant};
 
-use crate::{intermediate_graph::TransitionMetadata, StateMachineInfo, TypestateError};
+use crate::{intermediate_graph::Metadata, StateMachineInfo, TypestateError};
 
 macro_rules! bail_if_any {
     ( $errors:expr ) => {
@@ -73,7 +73,7 @@ impl<'sm> VisitMut for DecisionVisitor<'sm> {
 
 struct DecisionVariantVisitor<'a> {
     info: &'a mut StateMachineInfo,
-    metadata: Option<TransitionMetadata>,
+    metadata: Option<Metadata>,
     errors: Vec<Error>,
 }
 
@@ -90,7 +90,7 @@ impl<'sm> DecisionVariantVisitor<'sm> {
         variant.attrs.retain(|attr| {
             if attr.path.is_ident("metadata") {
                 match attr.parse_meta() {
-                    Ok(meta) => match TransitionMetadata::from_meta(&meta) {
+                    Ok(meta) => match Metadata::from_meta(&meta) {
                         Ok(metadata) => self.metadata = Some(metadata),
                         // TODO
                         Err(_err) => todo!("make enum for the errors or something"),
