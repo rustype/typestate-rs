@@ -1,5 +1,3 @@
-#![macro_use]
-
 mod visitors;
 
 mod intermediate_graph;
