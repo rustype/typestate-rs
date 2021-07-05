@@ -106,6 +106,7 @@ where
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, FromMeta)]
 pub struct Metadata {
+    #[darling(rename="label")]
     transition_label: Option<String>,
 }
 

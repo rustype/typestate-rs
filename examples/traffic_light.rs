@@ -85,7 +85,6 @@ mod traffic_light {
     #[state]
     pub struct Red;
 
-    // #[transition]
     pub trait Green {
         fn to_yellow(self) -> Yellow;
     }
@@ -100,6 +99,7 @@ mod traffic_light {
     }
 
     pub enum Either {
+        #[metadata(transition_label="test")]
         Yellow,
         Red,
     }
