@@ -12,11 +12,15 @@ pub struct StateNode<S> {
 }
 
 impl<S> StateNode<S> {
-    fn new(state: Option<S>) -> Self {
+    pub fn new(state: Option<S>) -> Self {
         Self {
             state,
             metadata: Metadata::empty(),
         }
+    }
+
+    pub fn update_metadata(&mut self, metadata: Metadata) {
+        self.metadata = metadata;
     }
 }
 
@@ -80,10 +84,6 @@ where
     pub fn new(transition: T) -> Self {
         Self { transition }
     }
-
-    pub fn _with_metadata(transition: T, _metadata: Metadata) -> Self {
-        Self { transition }
-    }
 }
 
 impl<T> Display for Transition<T>
@@ -115,17 +115,11 @@ impl Metadata {
             transition_label: None,
         }
     }
-
-    fn new(label: String) -> Self {
-        Self {
-            transition_label: Some(label),
-        }
-    }
 }
 
 impl Default for Metadata {
     fn default() -> Self {
-        Self::new(String::new())
+        Self::empty()
     }
 }
 
