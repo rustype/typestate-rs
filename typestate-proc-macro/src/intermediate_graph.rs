@@ -186,11 +186,15 @@ where
     }
 }
 
+/// Type alias for `()` or [`std::error::Error`].
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
+/// Blanket trait for [`Export`] implementations.
 pub trait Format {}
 
+/// Used to declare output formats for the [`IntermediateAutomaton`].
 pub trait Export<F: Format> {
+    /// Export the implementing type as format `F` to the output stream `w`.
     fn export<W: std::io::Write>(self, w: &mut W, format: F) -> Result;
 }
 
@@ -202,9 +206,11 @@ pub mod mermaid {
         hash::Hash,
     };
 
+    /// The mermaid format struct.
     #[derive(Clone, Copy)]
     pub struct Mermaid;
 
+    /// Blanket implementation for the [`Mermaid`] format.
     impl super::Format for Mermaid {}
 
     impl<S, T> Export<Mermaid> for IntermediateAutomaton<S, T>
