@@ -138,6 +138,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     #[cfg(feature = "mermaid")]
     {
         use intermediate_graph::mermaid::Mermaid;
+        // NOTE: hacky bypass to avoid rewriting the ::Write
         let mut f = Vec::<u8>::new();
 
         state_machine_info
