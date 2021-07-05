@@ -65,14 +65,12 @@ where
     }
 }
 
-// TODO: consider whether `Hash`, `PartialEq` & `Eq` should only take `transition` into account.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Transition<T>
 where
     T: Hash + Eq + Debug + Clone + Display,
 {
     transition: T,
-    // metadata: Option<Metadata>,
 }
 
 impl<T> Transition<T>
@@ -80,17 +78,11 @@ where
     T: Hash + Eq + Debug + Clone + Display,
 {
     pub fn new(transition: T) -> Self {
-        Self {
-            transition,
-            // metadata: None,
-        }
+        Self { transition }
     }
 
     pub fn _with_metadata(transition: T, _metadata: Metadata) -> Self {
-        Self {
-            transition,
-            // metadata: metadata.into(),
-        }
+        Self { transition }
     }
 }
 
@@ -307,7 +299,7 @@ pub mod mermaid {
         }
     }
 }
-// #[cfg(feature = "plantuml")]
+#[cfg(feature = "plantuml")]
 pub mod plantuml {
     use super::{Export, IntermediateAutomaton, Node, Result, Transition};
     use std::{
@@ -410,7 +402,7 @@ pub mod plantuml {
     }
 }
 
-// #[cfg(feature = "dot")]
+#[cfg(feature = "dot")]
 pub mod dot {
     use super::{Export, IntermediateAutomaton, Node, Result, Transition};
     use std::{
