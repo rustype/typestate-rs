@@ -105,7 +105,6 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             state_machine_info.automaton_ident.clone().unwrap().ident
         ))
         .unwrap();
-        println!("{:#?}", f);
         state_machine_info
             .intermediate_automaton
             .clone()
@@ -127,7 +126,6 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             state_machine_info.automaton_ident.clone().unwrap().ident
         ))
         .unwrap();
-        println!("{:#?}", f);
         state_machine_info
             .intermediate_automaton
             .clone()
