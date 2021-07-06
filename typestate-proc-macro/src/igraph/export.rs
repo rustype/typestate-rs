@@ -1,6 +1,7 @@
 // TODO: document module
 
 /// Type alias for `()` or [`std::error::Error`].
+#[allow(dead_code)]
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 /// Blanket trait for [`Export`] implementations.

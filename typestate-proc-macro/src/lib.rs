@@ -17,7 +17,6 @@ use syn::{
 
 use crate::{
     igraph::{
-        export::Export,
         validate::{GenericAutomaton, NonProductiveStates, NonUsefulStates, Validate},
         IntermediateAutomaton,
     },
@@ -98,7 +97,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     #[cfg(feature = "mermaid")]
     {
-        use igraph::export::mermaid::Mermaid;
+        use igraph::export::{Export, mermaid::Mermaid};
         // NOTE: hacky bypass to avoid rewriting the ::Write
         let mut f = Vec::<u8>::new();
 
@@ -167,6 +166,8 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[cfg(any(feature = "dot", feature = "plantuml"))]
 fn export_diagram_files(state_machine_info: &StateMachineInfo) {
+    use igraph::export::Export;
+
     let folder_path = ::std::env::var_os("EXPORT_FOLDER")
         .and_then(|s| s.into_string().ok())
         .unwrap_or_else(|| "./".to_string());
