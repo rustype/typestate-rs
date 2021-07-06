@@ -1,6 +1,6 @@
 [package]
 name = "typestate-proc-macro"
-version = "0.7.3"
+version = "0.8.0-rc1"
 edition = "2018"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 description = "A proc macro DSL for typestates"
