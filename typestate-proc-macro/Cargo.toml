@@ -23,8 +23,8 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0"
-syn = { version = "1.0", features = ["extra-traits", "visit-mut", "parsing", "full"] }
+syn = { version="1.0", features=["extra-traits", "visit-mut", "parsing", "full"] }
 proc-macro2 = "1.0"
 darling = "0.13"
 
-typestate-automata = { version = "0.4.4", path = "../typestate-automata" }
+typestate-automata = { version="0.4.4", path="../typestate-automata" }
