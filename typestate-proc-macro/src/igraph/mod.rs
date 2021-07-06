@@ -1,4 +1,5 @@
 pub mod export;
+pub mod validate;
 
 use darling::FromMeta;
 use std::{
@@ -32,7 +33,7 @@ where
     S: Hash + Eq + Debug + Clone + Display,
 {
     State(StateNode<S>),
-    Decision(Vec<StateNode<S>>),
+    Decision(Vec<StateNode<S>>), // NOTE: instead of Vec<_>, HashSet<_> would probably be better
 }
 
 impl<S> From<S> for Node<S>
@@ -189,39 +190,3 @@ where
         Self::new()
     }
 }
-
-pub trait Property {}
-
-pub trait Validate<P: Property> {
-    type Out;
-    fn validate(&self, _: P) -> Self::Out;
-}
-
-struct UsefulStates;
-
-impl Property for UsefulStates {}
-
-// TODO: this would be better done for a specialized automaton instead of IntermediateAutomaton
-impl<S, T> Validate<UsefulStates> for IntermediateAutomaton<S, T>
-where
-    S: Hash + Eq + Debug + Clone + Display,
-    T: Hash + Eq + Debug + Clone + Display,
-{
-    type Out = ();
-
-    fn validate(&self, _: UsefulStates) -> Self::Out {
-        todo!()
-    }
-}
-
-// struct AutomatonAdjacencies<S, T>
-// where
-//     S: Hash + Eq + Debug + Clone + Display,
-//     T: Hash + Eq + Debug + Clone + Display,
-// {
-//     initial_states: HashSet<S>,
-//     final_states: HashSet<S>,
-//     states: HashSet<S>,
-//     delta: HashMap<Option<S>, HashMap<Transition<T>, Node<S>>>
-// }
-

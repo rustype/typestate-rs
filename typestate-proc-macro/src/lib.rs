@@ -17,7 +17,11 @@ use syn::{
 use typestate_automata::{Dfa, Nfa};
 
 use crate::{
-    igraph::{export::Export, IntermediateAutomaton},
+    igraph::{
+        export::Export,
+        validate::{GenericAutomaton, NonProductiveStates, NonUsefulStates, Validate},
+        IntermediateAutomaton,
+    },
     visitors::state::AUTOMATA_ATTR_IDENT,
 };
 
@@ -154,6 +158,24 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
             #module
         );
     }
+
+    let ga = GenericAutomaton::from(state_machine_info.intermediate_automaton.clone());
+    let errors: Vec<Error> = ga
+        .validate(NonProductiveStates)
+        .into_iter()
+        .map(|ident| TypestateError::NonProductiveState(ident).into())
+        .collect();
+    bail_if_any!(errors);
+
+    let errors: Vec<Error> = ga
+        .validate(NonUsefulStates)
+        .into_iter()
+        .map(|ident| TypestateError::NonUsefulState(ident).into())
+        .collect();
+    bail_if_any!(errors);
+
+    eprintln!("OOPS");
+
 
     let fa: FiniteAutomata<_, _> = state_machine_info.into();
     // eprintln!("{:#?}", fa);
