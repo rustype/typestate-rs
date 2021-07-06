@@ -2,7 +2,7 @@ use darling::FromMeta;
 use syn::{visit_mut::VisitMut, Error, Fields, Ident, ItemEnum, ItemMod, Variant};
 
 use crate::{
-    intermediate_graph::{Metadata, StateNode},
+    igraph::{Metadata, StateNode},
     StateMachineInfo, TypestateError,
 };
 

@@ -1,6 +1,6 @@
 mod visitors;
 
-mod intermediate_graph;
+mod igraph;
 
 use darling::FromMeta;
 use proc_macro::TokenStream;
@@ -17,7 +17,7 @@ use syn::{
 use typestate_automata::{Dfa, Nfa};
 
 use crate::{
-    intermediate_graph::{Export, IntermediateAutomaton},
+    igraph::{export::Export, IntermediateAutomaton},
     visitors::state::AUTOMATA_ATTR_IDENT,
 };
 
@@ -92,7 +92,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     #[cfg(feature = "dot")]
     {
-        use intermediate_graph::dot::Dot;
+        use igraph::export::dot::Dot;
         use std::fs::File;
         let folder_path = ::std::env::var_os("EXPORT_FOLDER")
             .and_then(|s| s.into_string().ok())
@@ -112,7 +112,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     #[cfg(feature = "plantuml")]
     {
-        use intermediate_graph::plantuml::PlantUml;
+        use igraph::export::plantuml::PlantUml;
         use std::fs::File;
         let folder_path = ::std::env::var_os("EXPORT_FOLDER")
             .and_then(|s| s.into_string().ok())
@@ -133,7 +133,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     #[cfg(feature = "mermaid")]
     {
-        use intermediate_graph::mermaid::Mermaid;
+        use igraph::export::mermaid::Mermaid;
         // NOTE: hacky bypass to avoid rewriting the ::Write
         let mut f = Vec::<u8>::new();
 
