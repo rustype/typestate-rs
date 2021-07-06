@@ -94,46 +94,8 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         &mut state_machine_info
     ));
 
-    #[cfg(feature = "dot")]
-    {
-        use igraph::export::dot::Dot;
-        use std::fs::File;
-        let folder_path = ::std::env::var_os("EXPORT_FOLDER")
-            .and_then(|s| s.into_string().ok())
-            .unwrap_or_else(|| "./".to_string());
-        let mut f = File::create(format!(
-            "{}{}.dot",
-            folder_path,
-            state_machine_info.automaton_ident.clone().unwrap().ident
-        ))
-        .unwrap();
-        state_machine_info
-            .intermediate_automaton
-            .clone()
-            .export(&mut f, Dot)
-            .unwrap();
-    }
-
-    #[cfg(feature = "plantuml")]
-    {
-        use igraph::export::plantuml::PlantUml;
-        use std::fs::File;
-        let folder_path = ::std::env::var_os("EXPORT_FOLDER")
-            .and_then(|s| s.into_string().ok())
-            .unwrap_or_else(|| "./".to_string());
-
-        let mut f = File::create(format!(
-            "{}{}.uml",
-            folder_path,
-            state_machine_info.automaton_ident.clone().unwrap().ident
-        ))
-        .unwrap();
-        state_machine_info
-            .intermediate_automaton
-            .clone()
-            .export(&mut f, PlantUml)
-            .unwrap();
-    }
+    #[cfg(any(feature = "dot", feature = "plantuml"))]
+    export_diagram_files(&state_machine_info);
 
     #[cfg(feature = "mermaid")]
     {
@@ -159,6 +121,9 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         );
     }
 
+    // TODO: deal with the unwrap later
+    let automata_ident = state_machine_info.automaton_ident.unwrap();
+
     let ga = GenericAutomaton::from(state_machine_info.intermediate_automaton.clone());
     let errors: Vec<Error> = ga
         .validate(NonProductiveStates)
@@ -174,69 +139,76 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         .collect();
     bail_if_any!(errors);
 
-    eprintln!("OOPS");
+    let states = ga.states.iter().collect::<Vec<_>>();
 
+    // check the option triplet and convert it into a normal `Option<T>`
+    let enumerate_ident = match args.enumerate {
+        TOption::Some(string) => Some(format_ident!("{}", string)),
+        TOption::Default => Some(format_ident!("E{}", &automata_ident.ident)),
+        TOption::None => None,
+    };
 
-    let fa: FiniteAutomata<_, _> = state_machine_info.into();
-    // eprintln!("{:#?}", fa);
-
-    // TODO handle the duplicate code inside
-    macro_rules! handle_automata {
-        ($name:ident, $automata:ident) => {
-            let errors: Vec<Error> = $automata
-                .non_productive_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonProductiveState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            let errors: Vec<Error> = $automata
-                .non_useful_states()
-                .into_iter()
-                .map(|ident| TypestateError::NonUsefulState(ident.clone()).into())
-                .collect();
-            bail_if_any!(errors);
-
-            // do not parse more code
-            // only generate from here
-
-            let states = $automata.states.iter().collect::<Vec<_>>();
-
-            // check the option triplet and convert it into a normal `Option<T>`
-            let enumerate_ident = match args.enumerate {
-                TOption::Some(string) => Some(format_ident!("{}", string)),
-                TOption::Default => Some(format_ident!("E{}", $name)),
-                TOption::None => None,
-            };
-
-            // match the `Option<Ident>`
-            let mut enumerate_tokens = match enumerate_ident {
-                Some(enumerate_ident) => {
-                    let mut res: Vec<Item> = vec![];
-                    res.expand_enumerate(&$name, &enumerate_ident, &states);
-                    res
-                }
-                None => vec![],
-            };
-
-            if let Some((_, v)) = &mut module.content {
-                v.append(&mut enumerate_tokens);
-            }
-        };
-    }
-
-    match fa {
-        // TODO add explanations to the non-productive state and non-useful state
-        FiniteAutomata::Deterministic(name, dfa) => {
-            handle_automata!(name, dfa);
+    // match the `Option<Ident>`
+    let mut enumerate_tokens = match enumerate_ident {
+        Some(enumerate_ident) => {
+            let mut res: Vec<Item> = vec![];
+            res.expand_enumerate(&automata_ident.ident, &enumerate_ident, &states);
+            res
         }
-        FiniteAutomata::NonDeterministic(name, nfa) => {
-            handle_automata!(name, nfa);
-        }
+        None => vec![],
+    };
+
+    if let Some((_, v)) = &mut module.content {
+        v.append(&mut enumerate_tokens);
     }
 
     // if errors do not exist, return the token stream
     module.into_token_stream().into()
+}
+
+#[cfg(any(feature = "dot", feature = "plantuml"))]
+fn export_diagram_files(state_machine_info: &StateMachineInfo) {
+    let folder_path = ::std::env::var_os("EXPORT_FOLDER")
+        .and_then(|s| s.into_string().ok())
+        .unwrap_or_else(|| "./".to_string());
+
+    #[cfg(feature = "dot")]
+    {
+        use igraph::export::dot::Dot;
+        use std::fs::File;
+
+        let mut f = File::create(format!(
+            "{}{}.dot",
+            folder_path,
+            state_machine_info.automaton_ident.clone().unwrap().ident
+        ))
+        .unwrap();
+
+        state_machine_info
+            .intermediate_automaton
+            .clone()
+            .export(&mut f, Dot)
+            .unwrap();
+    }
+
+    #[cfg(feature = "plantuml")]
+    {
+        use igraph::export::plantuml::PlantUml;
+        use std::fs::File;
+
+        let mut f = File::create(format!(
+            "{}{}.uml",
+            folder_path,
+            state_machine_info.automaton_ident.clone().unwrap().ident
+        ))
+        .unwrap();
+
+        state_machine_info
+            .intermediate_automaton
+            .clone()
+            .export(&mut f, PlantUml)
+            .unwrap();
+    }
 }
 
 trait ExpandEnumerate {
