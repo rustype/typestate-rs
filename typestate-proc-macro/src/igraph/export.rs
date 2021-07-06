@@ -9,6 +9,7 @@ pub trait Format {}
 /// Used to declare output formats for the [`IntermediateAutomaton`].
 pub trait Export<F: Format> {
     /// Export the implementing type as format `F` to the output stream `w`.
+    // TODO: this can be &self
     fn export<W: std::io::Write>(self, w: &mut W, _: F) -> Result;
 }
 
