@@ -14,7 +14,6 @@ use syn::{
     parse_macro_input, Attribute, AttributeArgs, Error, Ident, Item, ItemEnum, ItemMod, ItemStruct,
     ItemTrait, Variant,
 };
-use typestate_automata::{Dfa, Nfa};
 
 use crate::{
     igraph::{
