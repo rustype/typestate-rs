@@ -99,7 +99,7 @@ mod traffic_light {
     }
 
     pub enum Either {
-        #[metadata(transition_label="test")]
+        #[metadata(label="test")]
         Yellow,
         Red,
     }
