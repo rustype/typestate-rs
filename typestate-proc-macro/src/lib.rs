@@ -1,7 +1,13 @@
+mod igraph;
 mod visitors;
 
-mod igraph;
-
+use crate::{
+    igraph::{
+        validate::{GenericAutomaton, NonProductiveStates, NonUsefulStates, Validate},
+        IntermediateAutomaton,
+    },
+    visitors::state::AUTOMATA_ATTR_IDENT,
+};
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
@@ -13,14 +19,6 @@ use std::{
 use syn::{
     parse_macro_input, Attribute, AttributeArgs, Error, Ident, Item, ItemEnum, ItemMod, ItemStruct,
     ItemTrait, Variant,
-};
-
-use crate::{
-    igraph::{
-        validate::{GenericAutomaton, NonProductiveStates, NonUsefulStates, Validate},
-        IntermediateAutomaton,
-    },
-    visitors::state::AUTOMATA_ATTR_IDENT,
 };
 
 const CRATE_NAME: &str = "typestate_proc_macro";
@@ -97,7 +95,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     #[cfg(feature = "mermaid")]
     {
-        use igraph::export::{Export, mermaid::Mermaid};
+        use igraph::export::{mermaid::Mermaid, Export};
         // NOTE: hacky bypass to avoid rewriting the ::Write
         let mut f = Vec::<u8>::new();
 
