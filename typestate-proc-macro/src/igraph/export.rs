@@ -140,7 +140,18 @@ pub mod plantuml {
     {
         fn export<W: std::io::Write>(self, w: &mut W, f: PlantUml) -> Result {
             writeln!(w, "@startuml")?;
-            // TODO add settings
+            if let Some(s) = ::std::env::var_os("PLANTUML_NODESEP") {
+                w.write_fmt(format_args!(
+                    "skinparam nodesep {}\n",
+                    s.into_string().unwrap_or_else(|_| "30".to_string())
+                ))?;
+            }
+            if let Some(s) = ::std::env::var_os("PLANTUML_RANKSEP") {
+                w.write_fmt(format_args!(
+                    "skinparam ranksep {}\n",
+                    s.into_string().unwrap_or_else(|_| "30".to_string())
+                ))?;
+            }
             for s in &self.choices {
                 writeln!(w, "state {} <<choice>>", s)?
             }
@@ -233,6 +244,12 @@ pub mod dot {
         hash::Hash,
     };
 
+    fn var_or_default(var_name: &str, var_default: &str) -> String {
+        ::std::env::var_os(var_name)
+            .and_then(|s| s.into_string().ok())
+            .unwrap_or_else(|| var_default.to_string())
+    }
+
     #[derive(Clone, Copy)]
     pub struct Dot;
 
@@ -248,7 +265,13 @@ pub mod dot {
     {
         fn export<W: std::io::Write>(self, w: &mut W, f: Dot) -> Result {
             write!(w, "digraph Automata {{\n")?;
-            // TODO add settings
+
+            w.write_fmt(format_args!(
+                "  graph [pad=\"{}\", nodesep=\"{}\", ranksep=\"{}\"];\n",
+                var_or_default("DOT_PAD", "0.25"),
+                var_or_default("DOT_NODESEP", "0.75"),
+                var_or_default("DOT_RANKSEP", "1"),
+            ))?;
 
             write!(w, "  _initial_ [{}, shape=circle];\n", DOT_SPECIAL_NODE)?;
             write!(w, "  _final_ [{}, shape=doublecircle];\n", DOT_SPECIAL_NODE)?;
