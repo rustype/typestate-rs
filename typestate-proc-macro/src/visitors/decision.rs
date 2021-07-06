@@ -60,8 +60,11 @@ impl<'sm> DecisionVisitor<'sm> {
                         match attr.parse_meta() {
                             Ok(meta) => match Metadata::from_meta(&meta) {
                                 Ok(metadata) => state.update_metadata(metadata),
-                                // TODO
-                                Err(_err) => todo!("make enum for the errors or something"),
+                                Err(err) => {
+                                    // TODO fix this hack
+                                    // HACK
+                                    self.errors.push(Error::new_spanned(attr, err.to_string()))
+                                }
                             },
                             Err(err) => self.errors.push(err),
                         }
