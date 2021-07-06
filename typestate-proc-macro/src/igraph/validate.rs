@@ -23,7 +23,8 @@ where
 {
     initial_states: HashSet<S>,
     final_states: HashSet<S>,
-    states: HashSet<S>,
+    // TODO: consider if making this pub is a decent solution
+    pub states: HashSet<S>,
     delta: Delta<S, T>,
     idelta: Delta<S, T>,
 }
