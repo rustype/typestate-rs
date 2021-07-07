@@ -1,9 +1,6 @@
 use std::collections::HashSet;
 
-use crate::{
-    StateMachineInfo, Transition, TypestateError, CRATE_NAME,
-    GENERATED_ATTR_IDENT,
-};
+use crate::{StateMachineInfo, Transition, TypestateError, CRATE_NAME, GENERATED_ATTR_IDENT};
 use syn::{
     visit_mut::VisitMut, Error, FnArg, Ident, ItemMod, ItemTrait, Receiver, ReturnType, Signature,
     TraitItemMethod, Type,
