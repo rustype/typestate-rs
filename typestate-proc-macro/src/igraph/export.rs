@@ -300,13 +300,13 @@ pub mod dot {
             if let Some(src) = src {
                 match dst {
                     Node::State(state) => match &state.state {
-                        None => writeln!(w, "  {} -> _final_ [label={}];", src, t)?,
+                        None => writeln!(w, "  {} -> _final_ [label=\"{}\"];", src, t)?,
                         Some(s) => {
                             // if there is a transition label, use that instead of the existing label
                             if let Some(label) = &state.metadata.transition_label {
-                                writeln!(w, "  {} -> {} [label={}];", src, label, t)?
+                                writeln!(w, "  {} -> {} [label=\"{}\"];", src, label, t)?
                             } else {
-                                writeln!(w, "  {} -> {} [label={}];", src, s, t)?
+                                writeln!(w, "  {} -> {} [label=\"{}\"];", src, s, t)?
                             }
                         }
                     },
@@ -314,12 +314,12 @@ pub mod dot {
                         for s in decision {
                             if let Some(state) = &s.state {
                                 if let Some(label) = &s.metadata.transition_label {
-                                    writeln!(w, "  {} -> {} [label={}];", src, state, label)?
+                                    writeln!(w, "  {} -> {} [label=\"{}\"];", src, state, label)?
                                 } else {
                                     writeln!(w, "  {} -> {};", src, state)?
                                 }
                             } else if let Some(label) = &s.metadata.transition_label {
-                                writeln!(w, "  {} -> _final_ [label={}];", src, label)?
+                                writeln!(w, "  {} -> _final_ [label=\"{}\"];", src, label)?
                             } else {
                                 writeln!(w, "  {} -> _final_;", src)?
                             }
@@ -333,9 +333,9 @@ pub mod dot {
                         Some(s) => {
                             // if there is a transition label, use that instead of the existing label
                             if let Some(label) = &state.metadata.transition_label {
-                                writeln!(w, "  _initial_ -> {} [label={}];", label, t)?
+                                writeln!(w, "  _initial_ -> {} [label=\"{}\"];", label, t)?
                             } else {
-                                writeln!(w, "  _initial_ -> {} [label={}];", s, t)?
+                                writeln!(w, "  _initial_ -> {} [label=\"{}\"];", s, t)?
                             }
                         }
                     },
