@@ -101,12 +101,11 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
         state_machine_info
             .intermediate_automaton
-            .clone()
             .export(&mut f, Mermaid)
             .unwrap();
 
         let doc_string = String::from_utf8(f).unwrap();
-        let doc_string_iter = doc_string.split("\n").filter(|s| !s.is_empty()).into_iter();
+        let doc_string_iter = doc_string.split('\n').filter(|s| !s.is_empty());
 
         module = ::syn::parse_quote!(
             #[cfg_attr(doc, ::typestate::__private__::aquamarine::aquamarine)]
@@ -120,7 +119,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     // TODO: deal with the unwrap later
     let automata_ident = state_machine_info.automaton_ident.unwrap();
 
-    let ga = GenericAutomaton::from(state_machine_info.intermediate_automaton.clone());
+    let ga = GenericAutomaton::from(state_machine_info.intermediate_automaton);
     let errors: Vec<Error> = ga
         .validate(NonProductiveStates)
         .into_iter()

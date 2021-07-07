@@ -91,12 +91,14 @@ where
     T: Hash + Eq + Debug + Clone + Display,
 {
     fn from(i: IntermediateAutomaton<S, T>) -> Self {
-        let mut s = Self::default();
+        let mut s = Self {
+            states: i.states,
+            ..GenericAutomaton::default()
+        };
         // NOTE: maybe add the choices
-        s.states = i.states;
         for (src, sigmas) in i.delta {
             for (sigma, dst) in sigmas {
-                match (&src, dst) {
+                match (src.clone(), dst) {
                     (None, super::Node::State(state)) => {
                         // safety: if src == None then state.state != None
                         s.initial_states.insert(state.state.unwrap());
@@ -106,9 +108,9 @@ where
                     }
                     (Some(src), super::Node::State(state)) => match state.state {
                         None => {
-                            s.final_states.insert(src.clone());
+                            s.final_states.insert(src);
                         }
-                        Some(dst) => s.add_transition(src.clone(), sigma, dst),
+                        Some(dst) => s.add_transition(src, sigma, dst),
                     },
                     (Some(src), super::Node::Decision(states)) => {
                         states.into_iter().for_each(|state| {

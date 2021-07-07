@@ -126,7 +126,7 @@ impl<'sm> VisitMut for DecisionVisitor<'sm> {
         if let Some(dest) = destination_idents {
             self.state_machine_info
                 .intermediate_automaton
-                .add_choice(enum_ident.clone().into());
+                .add_choice(enum_ident.clone());
             self.state_machine_info
                 .intermediate_automaton
                 .add_transition(

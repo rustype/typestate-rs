@@ -11,7 +11,7 @@ pub trait Format {}
 pub trait Export<F: Format> {
     /// Export the implementing type as format `F` to the output stream `w`.
     // TODO: this can be &self
-    fn export<W: std::io::Write>(self, w: &mut W, _: F) -> Result;
+    fn export<W: std::io::Write>(&self, w: &mut W, _: F) -> Result;
 }
 
 /// The Mermaid format module, containing the marker type and implementation for the respective export trait.
@@ -36,7 +36,7 @@ pub mod mermaid {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, f: Mermaid) -> Result {
+        fn export<W: std::io::Write>(&self, w: &mut W, f: Mermaid) -> Result {
             writeln!(w, "stateDiagram-v2")?;
             for s in &self.choices {
                 writeln!(w, "state {} <<choice>>", s)?
@@ -58,7 +58,7 @@ pub mod mermaid {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, _: Mermaid) -> Result {
+        fn export<W: std::io::Write>(&self, w: &mut W, _: Mermaid) -> Result {
             let src = self.0;
             let t = &self.1.transition;
             let dst = self.2;
@@ -84,12 +84,10 @@ pub mod mermaid {
                                 } else {
                                     writeln!(w, "{} --> {}", src, state)?
                                 }
+                            } else if let Some(label) = &s.metadata.transition_label {
+                                writeln!(w, "{} --> [*] : {}", src, label)?
                             } else {
-                                if let Some(label) = &s.metadata.transition_label {
-                                    writeln!(w, "{} --> [*] : {}", src, label)?
-                                } else {
-                                    writeln!(w, "{} --> [*]", src)?
-                                }
+                                writeln!(w, "{} --> [*]", src)?
                             }
                         }
                     }
@@ -120,7 +118,7 @@ pub mod mermaid {
 }
 
 /// The PlantUML format module, containing the marker type and implementation for the respective export trait.
-#[cfg(feature = "plantuml")]
+// #[cfg(feature = "plantuml")]
 pub mod plantuml {
     use super::{Export, Result};
     use crate::igraph::{IntermediateAutomaton, Node, Transition};
@@ -139,7 +137,7 @@ pub mod plantuml {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, f: PlantUml) -> Result {
+        fn export<W: std::io::Write>(&self, w: &mut W, f: PlantUml) -> Result {
             writeln!(w, "@startuml")?;
             if let Some(s) = ::std::env::var_os("PLANTUML_NODESEP") {
                 w.write_fmt(format_args!(
@@ -174,7 +172,7 @@ pub mod plantuml {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, _: PlantUml) -> Result {
+        fn export<W: std::io::Write>(&self, w: &mut W, _: PlantUml) -> Result {
             let src = self.0;
             let t = &self.1.transition;
             let dst = self.2;
@@ -200,12 +198,10 @@ pub mod plantuml {
                                 } else {
                                     writeln!(w, "{} --> {}", src, state)?
                                 }
+                            } else if let Some(label) = &s.metadata.transition_label {
+                                writeln!(w, "{} --> [*] : {}", src, label)?
                             } else {
-                                if let Some(label) = &s.metadata.transition_label {
-                                    writeln!(w, "{} --> [*] : {}", src, label)?
-                                } else {
-                                    writeln!(w, "{} --> [*]", src)?
-                                }
+                                writeln!(w, "{} --> [*]", src)?
                             }
                         }
                     }
@@ -236,7 +232,7 @@ pub mod plantuml {
 }
 
 /// The DOT format module, containing the marker type and implementation for the respective export trait.
-#[cfg(feature = "dot")]
+// #[cfg(feature = "dot")]
 pub mod dot {
     use super::{Export, Result};
     use crate::igraph::{IntermediateAutomaton, Node, Transition};
@@ -264,8 +260,8 @@ pub mod dot {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, f: Dot) -> Result {
-            write!(w, "digraph Automata {{\n")?;
+        fn export<W: std::io::Write>(&self, w: &mut W, f: Dot) -> Result {
+            writeln!(w, "digraph Automata {{")?;
 
             w.write_fmt(format_args!(
                 "  graph [pad=\"{}\", nodesep=\"{}\", ranksep=\"{}\"];\n",
@@ -274,11 +270,11 @@ pub mod dot {
                 var_or_default("DOT_RANKSEP", "1"),
             ))?;
 
-            write!(w, "  _initial_ [{}, shape=circle];\n", DOT_SPECIAL_NODE)?;
-            write!(w, "  _final_ [{}, shape=doublecircle];\n", DOT_SPECIAL_NODE)?;
+            writeln!(w, "  _initial_ [{}, shape=circle];", DOT_SPECIAL_NODE)?;
+            writeln!(w, "  _final_ [{}, shape=doublecircle];", DOT_SPECIAL_NODE)?;
 
             for s in &self.choices {
-                write!(w, "  {} [shape=diamond];\n", s)?
+                writeln!(w, "  {} [shape=diamond];", s)?
             }
             for (src, v) in &self.delta {
                 for (t, dst) in v {
@@ -296,7 +292,7 @@ pub mod dot {
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
     {
-        fn export<W: std::io::Write>(self, w: &mut W, _: Dot) -> Result {
+        fn export<W: std::io::Write>(&self, w: &mut W, _: Dot) -> Result {
             let src = self.0;
             let t = &self.1.transition;
             let dst = self.2;
@@ -304,13 +300,13 @@ pub mod dot {
             if let Some(src) = src {
                 match dst {
                     Node::State(state) => match &state.state {
-                        None => write!(w, "  {} -> _final_ [label={}];\n", src, t)?,
+                        None => writeln!(w, "  {} -> _final_ [label={}];", src, t)?,
                         Some(s) => {
                             // if there is a transition label, use that instead of the existing label
                             if let Some(label) = &state.metadata.transition_label {
-                                write!(w, "  {} -> {} [label={}];\n", src, label, t)?
+                                writeln!(w, "  {} -> {} [label={}];", src, label, t)?
                             } else {
-                                write!(w, "  {} -> {} [label={}];\n", src, s, t)?
+                                writeln!(w, "  {} -> {} [label={}];", src, s, t)?
                             }
                         }
                     },
@@ -318,16 +314,14 @@ pub mod dot {
                         for s in decision {
                             if let Some(state) = &s.state {
                                 if let Some(label) = &s.metadata.transition_label {
-                                    write!(w, "  {} -> {} [label={}];\n", src, state, label)?
+                                    writeln!(w, "  {} -> {} [label={}];", src, state, label)?
                                 } else {
-                                    write!(w, "  {} -> {};\n", src, state)?
+                                    writeln!(w, "  {} -> {};", src, state)?
                                 }
+                            } else if let Some(label) = &s.metadata.transition_label {
+                                writeln!(w, "  {} -> _final_ [label={}];", src, label)?
                             } else {
-                                if let Some(label) = &s.metadata.transition_label {
-                                    write!(w, "  {} -> _final_ [label={}];\n", src, label)?
-                                } else {
-                                    write!(w, "  {} -> _final_;\n", src)?
-                                }
+                                writeln!(w, "  {} -> _final_;", src)?
                             }
                         }
                     }
@@ -339,9 +333,9 @@ pub mod dot {
                         Some(s) => {
                             // if there is a transition label, use that instead of the existing label
                             if let Some(label) = &state.metadata.transition_label {
-                                write!(w, "  _initial_ -> {} [label={}];\n", label, t)?
+                                writeln!(w, "  _initial_ -> {} [label={}];", label, t)?
                             } else {
-                                write!(w, "  _initial_ -> {} [label={}];\n", s, t)?
+                                writeln!(w, "  _initial_ -> {} [label={}];", s, t)?
                             }
                         }
                     },
