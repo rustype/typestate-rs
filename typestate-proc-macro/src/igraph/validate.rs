@@ -50,6 +50,7 @@ where
     S: Hash + Eq + Debug + Clone + Display,
     T: Hash + Eq + Debug + Clone + Display,
 {
+    #[allow(clippy::shadow_unrelated)]
     fn add_transition(&mut self, src: S, transition: Transition<T>, dst: S) {
         // HACK: since `delta` and `idelta` are inside `self`, use the macro to as a "function"
         macro_rules! add_transition {
