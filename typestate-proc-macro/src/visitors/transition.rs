@@ -124,7 +124,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
             });
         let fn_kind = sig.extract_signature_kind(&states);
         let fn_ident = sig.ident.clone();
-        sig.expand_signature_state(&self.state_machine_info); // TODO check for correct expansion
+        sig.expand_signature_state(self.state_machine_info); // TODO check for correct expansion
 
         match fn_kind {
             FnKind::Initial(return_ty_ident) => {
