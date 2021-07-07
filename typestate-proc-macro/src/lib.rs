@@ -99,6 +99,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         // NOTE: hacky bypass to avoid rewriting the ::Write
         let mut f = Vec::<u8>::new();
 
+        // TODO: handle the unwrap
         state_machine_info
             .intermediate_automaton
             .export(&mut f, Mermaid)
