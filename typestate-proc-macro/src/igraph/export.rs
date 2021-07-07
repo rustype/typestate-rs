@@ -118,7 +118,7 @@ pub mod mermaid {
 }
 
 /// The PlantUML format module, containing the marker type and implementation for the respective export trait.
-// #[cfg(feature = "plantuml")]
+#[cfg(feature = "plantuml")]
 pub mod plantuml {
     use super::{Export, Result};
     use crate::igraph::{IntermediateAutomaton, Node, Transition};
@@ -232,7 +232,7 @@ pub mod plantuml {
 }
 
 /// The DOT format module, containing the marker type and implementation for the respective export trait.
-// #[cfg(feature = "dot")]
+#[cfg(feature = "dot")]
 pub mod dot {
     use super::{Export, Result};
     use crate::igraph::{IntermediateAutomaton, Node, Transition};
