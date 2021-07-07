@@ -120,7 +120,6 @@ impl<'sm> VisitMut for DecisionVisitor<'sm> {
             .map(|v| self.visit_variant_mut(v))
             .collect();
 
-        // TODO: implement https://github.com/rustype/typestate-rs/issues/3
         // NOTE: this could be `Option<Ident>`
 
         if let Some(dest) = destination_idents {
