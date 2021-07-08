@@ -45,6 +45,10 @@ pub mod mermaid {
                 }
             }
 
+            for choice in &self.choices {
+                writeln!(w, "state {} <<choice>>", choice)?;
+            }
+
             for (src, v) in &self.delta {
                 if let Some(src) = src {
                     for (t, dst) in v {
@@ -111,7 +115,6 @@ pub mod mermaid {
                     }
                 },
                 Node::Decision(decision) => {
-                    writeln!(w, "state {} <<choice>>", src)?;
                     for s in decision {
                         if let Some(state) = &s.state {
                             if let Some(label) = &s.metadata.transition_label {
@@ -134,7 +137,7 @@ pub mod mermaid {
 }
 
 /// The PlantUML format module, containing the marker type and implementation for the respective export trait.
-#[cfg(feature = "plantuml")]
+// #[cfg(feature = "plantuml")]
 pub mod plantuml {
     use super::{Export, Result};
     use crate::igraph::{IntermediateAutomaton, Node, Transition};
@@ -175,6 +178,10 @@ pub mod plantuml {
                 for (t, dst) in v {
                     (t, dst).export(w, f)?
                 }
+            }
+
+            for choice in &self.choices {
+                writeln!(w, "state {} <<choice>>", choice)?;
             }
 
             for (src, v) in &self.delta {
@@ -245,7 +252,6 @@ pub mod plantuml {
                     }
                 },
                 Node::Decision(decision) => {
-                    writeln!(w, "state {} <<choice>>", src)?;
                     for s in decision {
                         if let Some(state) = &s.state {
                             if let Some(label) = &s.metadata.transition_label {
