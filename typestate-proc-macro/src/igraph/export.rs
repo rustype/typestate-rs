@@ -155,6 +155,7 @@ pub mod plantuml {
     {
         fn export<W: std::io::Write>(&self, w: &mut W, f: PlantUml) -> Result {
             writeln!(w, "@startuml")?;
+            writeln!(w, "hide empty description")?;
 
             if let Some(s) = ::std::env::var_os("PLANTUML_NODESEP") {
                 w.write_fmt(format_args!(
