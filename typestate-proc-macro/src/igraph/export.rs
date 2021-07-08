@@ -38,22 +38,57 @@ pub mod mermaid {
     {
         fn export<W: std::io::Write>(&self, w: &mut W, f: Mermaid) -> Result {
             writeln!(w, "stateDiagram-v2")?;
-            for s in &self.choices {
-                writeln!(w, "state {} <<choice>>", s)?
-            }
-            for s in &self.states {
-                writeln!(w, "state {}", s)?
-            }
-            for (src, v) in &self.delta {
+
+            if let Some(v) = self.delta.get(&None) {
                 for (t, dst) in v {
-                    (src, t, dst).export(w, f)?
+                    (t, dst).export(w, f)?
+                }
+            }
+
+            for (src, v) in &self.delta {
+                if let Some(src) = src {
+                    for (t, dst) in v {
+                        (src, t, dst).export(w, f)?
+                    }
+                }
+            }
+
+            Ok(())
+        }
+    }
+    // TODO: divide the export into two categories
+    // TODO: Transition<T>, Node<S>
+    // TODO: S, Transition<T>, Node<S>
+    impl<S, T> Export<Mermaid> for (&Transition<T>, &Node<S>)
+    where
+        S: Hash + Eq + Debug + Clone + Display,
+        T: Hash + Eq + Debug + Clone + Display,
+    {
+        fn export<W: std::io::Write>(&self, w: &mut W, _: Mermaid) -> Result {
+            let t = &self.0.transition;
+            let dst = self.1;
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => unreachable!("invalid transition: None -> None"),
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(w, "[*] --> {} : {}", label, t)?
+                        } else {
+                            writeln!(w, "[*] --> {} : {}", s, t)?
+                        }
+                    }
+                },
+                Node::Decision(_) => {
+                    // NOTE: unsure about this
+                    unreachable!("invalid transition: None -> Decision")
                 }
             }
             Ok(())
         }
     }
 
-    impl<S, T> Export<Mermaid> for (&Option<S>, &Transition<T>, &Node<S>)
+    impl<S, T> Export<Mermaid> for (&S, &Transition<T>, &Node<S>)
     where
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
@@ -63,51 +98,32 @@ pub mod mermaid {
             let t = &self.1.transition;
             let dst = self.2;
 
-            if let Some(src) = src {
-                match dst {
-                    Node::State(state) => match &state.state {
-                        None => writeln!(w, "{} --> [*] : {}", src, t)?,
-                        Some(s) => {
-                            // if there is a transition label, use that instead of the existing label
-                            if let Some(label) = &state.metadata.transition_label {
-                                writeln!(w, "{} --> {} : {}", src, label, t)?
-                            } else {
-                                writeln!(w, "{} --> {} : {}", src, s, t)?
-                            }
-                        }
-                    },
-                    Node::Decision(decision) => {
-                        for s in decision {
-                            if let Some(state) = &s.state {
-                                if let Some(label) = &s.metadata.transition_label {
-                                    writeln!(w, "{} --> {} : {}", src, state, label)?
-                                } else {
-                                    writeln!(w, "{} --> {}", src, state)?
-                                }
-                            } else if let Some(label) = &s.metadata.transition_label {
-                                writeln!(w, "{} --> [*] : {}", src, label)?
-                            } else {
-                                writeln!(w, "{} --> [*]", src)?
-                            }
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => writeln!(w, "{} --> [*] : {}", src, t)?,
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(w, "{} --> {} : {}", src, label, t)?
+                        } else {
+                            writeln!(w, "{} --> {} : {}", src, s, t)?
                         }
                     }
-                }
-            } else {
-                match dst {
-                    Node::State(state) => match &state.state {
-                        None => unreachable!("invalid transition: None -> None"),
-                        Some(s) => {
-                            // if there is a transition label, use that instead of the existing label
-                            if let Some(label) = &state.metadata.transition_label {
-                                writeln!(w, "[*] --> {} : {}", label, t)?
+                },
+                Node::Decision(decision) => {
+                    writeln!(w, "state {} <<choice>>", src)?;
+                    for s in decision {
+                        if let Some(state) = &s.state {
+                            if let Some(label) = &s.metadata.transition_label {
+                                writeln!(w, "{} --> {} : {}", src, state, label)?
                             } else {
-                                writeln!(w, "[*] --> {} : {}", s, t)?
+                                writeln!(w, "{} --> {}", src, state)?
                             }
+                        } else if let Some(label) = &s.metadata.transition_label {
+                            writeln!(w, "{} --> [*] : {}", src, label)?
+                        } else {
+                            writeln!(w, "{} --> [*]", src)?
                         }
-                    },
-                    Node::Decision(_) => {
-                        // NOTE: unsure about this
-                        unreachable!("invalid transition: None -> Decision")
                     }
                 }
             }
@@ -139,35 +155,73 @@ pub mod plantuml {
     {
         fn export<W: std::io::Write>(&self, w: &mut W, f: PlantUml) -> Result {
             writeln!(w, "@startuml")?;
+
             if let Some(s) = ::std::env::var_os("PLANTUML_NODESEP") {
                 w.write_fmt(format_args!(
                     "skinparam nodesep {}\n",
                     s.into_string().unwrap_or_else(|_| "30".to_string())
                 ))?;
             }
+
             if let Some(s) = ::std::env::var_os("PLANTUML_RANKSEP") {
                 w.write_fmt(format_args!(
                     "skinparam ranksep {}\n",
                     s.into_string().unwrap_or_else(|_| "30".to_string())
                 ))?;
             }
-            for s in &self.choices {
-                writeln!(w, "state {} <<choice>>", s)?
-            }
-            for s in &self.states {
-                writeln!(w, "state {}", s)?
-            }
-            for (src, v) in &self.delta {
+
+            if let Some(v) = self.delta.get(&None) {
                 for (t, dst) in v {
-                    (src, t, dst).export(w, f)?
+                    (t, dst).export(w, f)?
                 }
             }
+
+            for (src, v) in &self.delta {
+                if let Some(src) = src {
+                    for (t, dst) in v {
+                        (src, t, dst).export(w, f)?
+                    }
+                }
+            }
+
             writeln!(w, "@end")?;
+
             Ok(())
         }
     }
 
-    impl<S, T> Export<PlantUml> for (&Option<S>, &Transition<T>, &Node<S>)
+    impl<S, T> Export<PlantUml> for (&Transition<T>, &Node<S>)
+    where
+        S: Hash + Eq + Debug + Clone + Display,
+        T: Hash + Eq + Debug + Clone + Display,
+    {
+        fn export<W: std::io::Write>(&self, w: &mut W, _: PlantUml) -> Result {
+            let t = &self.0.transition;
+            let dst = self.1;
+
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => unreachable!("invalid transition: None -> None"),
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(w, "[*] --> {} : {}", label, t)?
+                        } else {
+                            writeln!(w, "[*] --> {} : {}", s, t)?
+                        }
+                    }
+                },
+                Node::Decision(_) => {
+                    // NOTE: unsure about this
+                    unreachable!("invalid transition: None -> Decision")
+                }
+            }
+
+            Ok(())
+        }
+    }
+
+    impl<S, T> Export<PlantUml> for (&S, &Transition<T>, &Node<S>)
     where
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
@@ -177,51 +231,32 @@ pub mod plantuml {
             let t = &self.1.transition;
             let dst = self.2;
 
-            if let Some(src) = src {
-                match dst {
-                    Node::State(state) => match &state.state {
-                        None => writeln!(w, "{} --> [*] : {}", src, t)?,
-                        Some(s) => {
-                            // if there is a transition label, use that instead of the existing label
-                            if let Some(label) = &state.metadata.transition_label {
-                                writeln!(w, "{} --> {} : {}", src, label, t)?
-                            } else {
-                                writeln!(w, "{} --> {} : {}", src, s, t)?
-                            }
-                        }
-                    },
-                    Node::Decision(decision) => {
-                        for s in decision {
-                            if let Some(state) = &s.state {
-                                if let Some(label) = &s.metadata.transition_label {
-                                    writeln!(w, "{} --> {} : {}", src, state, label)?
-                                } else {
-                                    writeln!(w, "{} --> {}", src, state)?
-                                }
-                            } else if let Some(label) = &s.metadata.transition_label {
-                                writeln!(w, "{} --> [*] : {}", src, label)?
-                            } else {
-                                writeln!(w, "{} --> [*]", src)?
-                            }
+            match dst {
+                Node::State(state) => match &state.state {
+                    None => writeln!(w, "{} --> [*] : {}", src, t)?,
+                    Some(s) => {
+                        // if there is a transition label, use that instead of the existing label
+                        if let Some(label) = &state.metadata.transition_label {
+                            writeln!(w, "{} --> {} : {}", src, label, t)?
+                        } else {
+                            writeln!(w, "{} --> {} : {}", src, s, t)?
                         }
                     }
-                }
-            } else {
-                match dst {
-                    Node::State(state) => match &state.state {
-                        None => unreachable!("invalid transition: None -> None"),
-                        Some(s) => {
-                            // if there is a transition label, use that instead of the existing label
-                            if let Some(label) = &state.metadata.transition_label {
-                                writeln!(w, "[*] --> {} : {}", label, t)?
+                },
+                Node::Decision(decision) => {
+                    writeln!(w, "state {} <<choice>>", src)?;
+                    for s in decision {
+                        if let Some(state) = &s.state {
+                            if let Some(label) = &s.metadata.transition_label {
+                                writeln!(w, "{} --> {} : {}", src, state, label)?
                             } else {
-                                writeln!(w, "[*] --> {} : {}", s, t)?
+                                writeln!(w, "{} --> {}", src, state)?
                             }
+                        } else if let Some(label) = &s.metadata.transition_label {
+                            writeln!(w, "{} --> [*] : {}", src, label)?
+                        } else {
+                            writeln!(w, "{} --> [*]", src)?
                         }
-                    },
-                    Node::Decision(_) => {
-                        // NOTE: unsure about this
-                        unreachable!("invalid transition: None -> Decision")
                     }
                 }
             }
