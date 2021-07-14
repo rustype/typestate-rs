@@ -130,7 +130,7 @@ impl Default for Metadata {
 }
 
 #[derive(Debug, Clone)]
-pub struct IntermediateAutomaton<S, T>
+pub struct IntermediateGraph<S, T>
 where
     // State type parameter.
     S: Hash + Eq + Debug + Clone + Display,
@@ -142,7 +142,7 @@ where
     delta: HashMap<Option<S>, HashMap<Transition<T>, Node<S>>>,
 }
 
-impl<S, T> IntermediateAutomaton<S, T>
+impl<S, T> IntermediateGraph<S, T>
 where
     S: Hash + Eq + Debug + Clone + Display,
     T: Hash + Eq + Debug + Clone + Display,
@@ -181,7 +181,7 @@ where
     }
 }
 
-impl<S, T> Default for IntermediateAutomaton<S, T>
+impl<S, T> Default for IntermediateGraph<S, T>
 where
     S: Hash + Eq + Debug + Clone + Display,
     T: Hash + Eq + Debug + Clone + Display,

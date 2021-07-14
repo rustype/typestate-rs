@@ -18,7 +18,7 @@ pub trait Export<F: Format> {
 #[cfg(feature = "mermaid")]
 pub mod mermaid {
     use super::{Export, Result};
-    use crate::igraph::{IntermediateAutomaton, Node, Transition};
+    use crate::igraph::{IntermediateGraph, Node, Transition};
     use std::{
         fmt::{Debug, Display},
         hash::Hash,
@@ -31,7 +31,7 @@ pub mod mermaid {
     /// Blanket implementation for the [`Mermaid`] format.
     impl super::Format for Mermaid {}
 
-    impl<S, T> Export<Mermaid> for IntermediateAutomaton<S, T>
+    impl<S, T> Export<Mermaid> for IntermediateGraph<S, T>
     where
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
@@ -60,9 +60,7 @@ pub mod mermaid {
             Ok(())
         }
     }
-    // TODO: divide the export into two categories
-    // TODO: Transition<T>, Node<S>
-    // TODO: S, Transition<T>, Node<S>
+
     impl<S, T> Export<Mermaid> for (&Transition<T>, &Node<S>)
     where
         S: Hash + Eq + Debug + Clone + Display,
@@ -140,7 +138,7 @@ pub mod mermaid {
 // #[cfg(feature = "plantuml")]
 pub mod plantuml {
     use super::{Export, Result};
-    use crate::igraph::{IntermediateAutomaton, Node, Transition};
+    use crate::igraph::{IntermediateGraph, Node, Transition};
     use std::{
         fmt::{Debug, Display},
         hash::Hash,
@@ -151,7 +149,7 @@ pub mod plantuml {
 
     impl super::Format for PlantUml {}
 
-    impl<S, T> Export<PlantUml> for IntermediateAutomaton<S, T>
+    impl<S, T> Export<PlantUml> for IntermediateGraph<S, T>
     where
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
@@ -277,7 +275,7 @@ pub mod plantuml {
 #[cfg(feature = "dot")]
 pub mod dot {
     use super::{Export, Result};
-    use crate::igraph::{IntermediateAutomaton, Node, Transition};
+    use crate::igraph::{IntermediateGraph, Node, Transition};
     use std::{
         fmt::{Debug, Display},
         hash::Hash,

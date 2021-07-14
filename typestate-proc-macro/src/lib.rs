@@ -4,7 +4,7 @@ mod visitors;
 use crate::{
     igraph::{
         validate::{GenericAutomaton, NonProductiveStates, NonUsefulStates, Validate},
-        IntermediateAutomaton,
+        IntermediateGraph,
     },
     visitors::state::AUTOMATA_ATTR_IDENT,
 };
@@ -388,7 +388,7 @@ struct StateMachineInfo {
     /// Extracted from functions with a signature like `(State) -> ()`.
     final_states: HashMap<Ident, HashSet<Ident>>,
 
-    pub intermediate_automaton: IntermediateAutomaton<Ident, Ident>,
+    pub intermediate_automaton: IntermediateGraph<Ident, Ident>,
 }
 
 impl StateMachineInfo {
@@ -396,7 +396,7 @@ impl StateMachineInfo {
     fn new() -> Self {
         Self {
             automaton_ident: None,
-            intermediate_automaton: IntermediateAutomaton::new(),
+            intermediate_automaton: IntermediateGraph::new(),
             det_states: HashMap::new(),
             non_det_transitions: HashMap::new(),
             used_non_det_transitions: HashSet::new(),

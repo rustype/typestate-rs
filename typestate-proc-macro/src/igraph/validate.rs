@@ -1,6 +1,6 @@
 // TODO document module
 
-use super::{IntermediateAutomaton, Transition};
+use super::{IntermediateGraph, Transition};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::{Debug, Display},
@@ -86,12 +86,12 @@ where
     }
 }
 
-impl<S, T> From<IntermediateAutomaton<S, T>> for GenericAutomaton<S, T>
+impl<S, T> From<IntermediateGraph<S, T>> for GenericAutomaton<S, T>
 where
     S: Hash + Eq + Debug + Clone + Display,
     T: Hash + Eq + Debug + Clone + Display,
 {
-    fn from(i: IntermediateAutomaton<S, T>) -> Self {
+    fn from(i: IntermediateGraph<S, T>) -> Self {
         let mut s = Self {
             states: i.states,
             ..GenericAutomaton::default()
