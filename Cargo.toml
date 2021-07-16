@@ -1,6 +1,6 @@
 [package]
 name = "typestate"
-version = "0.8.0-rc8"
+version = "0.8.0"
 edition = "2018"
 authors = ["José Duarte <jmg.duarte@campus.fct.unl.pt>"]
 description = "A proc macro DSL for typestates"
@@ -28,7 +28,7 @@ trybuild = { version = "1.0", features = ["diff"] }
 rustversion = "1.0"
 
 [dependencies.typestate-proc-macro]
-version = "0.8.0-rc8"
+version = "0.8.0"
 path = "typestate-proc-macro"
 package = "typestate-proc-macro"
 
