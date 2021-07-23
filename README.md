@@ -13,6 +13,17 @@ typestate = "0.8.0"
 
 *Compiler support: requires rustc 1.42+*
 
+- [Introduction](#introduction)
+  - [Typestates in Rust](#typestates-in-rust)
+- [Basic Guide](#basic-guide)
+- [Advanced Guide](#advanced-guide)
+  - [Self-transitioning functions](#self-transitioning-functions)
+  - [Non-deterministic transitions](#non-deterministic-transitions)
+- [Attributes](#attributes)
+- [Features](#features)
+- [Typestate Visualization](#typestate-visualization)
+- [Publications](#publications)
+
 ## Introduction
 
 Are you frustrated with `IllegalStateException`s in Java?
@@ -244,3 +255,7 @@ The cargo features you can enable:
 | -------- | ---------------------------------------------------- | ---------------------------------------------------- |
 | DOT      | ![`examples/light_bulb.rs`](assets/DotLightBulb.svg) | ![`examples/smart_bulb.rs`](assets/DotSmartBulb.svg) |
 | PlantUML | ![`examples/light_bulb.rs`](assets/UmlLightBulb.svg) | ![`examples/smart_bulb.rs`](assets/UmlSmartBulb.svg) |
+
+## Publications
+
+- [Retrofitting Typestates into Rust (SBLP'21)](paper/sblp21.pdf)
