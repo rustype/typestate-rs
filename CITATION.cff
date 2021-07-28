@@ -1,10 +1,13 @@
 cff-version: 1.1.0
 message: "If you use this library in your project, please cite it as below."
 authors:
-  - family-names: Duarte
-    given-names: José
-  - family-names: Ravara
-    given-names: António
+  - family-names: "Duarte"
+    given-names: "José"
+  - family-names: "Ravara"
+    given-names: "António"
     orcid: https://orcid.org/0000-0001-8074-0380
 title: "Retrofitting Typestates into Rust"
 doi: 10.1145/3475061.3475082
+version: 0.8.0
+release-date: 2021-07-16
+url: "https://github.com/rustype/typestate-rs/"
