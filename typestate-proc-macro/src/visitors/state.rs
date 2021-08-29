@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{StateMachineInfo, TypestateError, generated_attr};
+use crate::{generated_attr, StateMachineInfo, TypestateError};
 
 use parse::Parser;
 use syn::{
@@ -99,6 +99,8 @@ pub(crate) struct SealedPattern {
     trait_ident: Option<Ident>, // late init
     /// Idents for the sealed elements.
     state_idents: Vec<Ident>,
+
+    states: Vec<ItemStruct>,
 }
 
 // TODO rework this as an ExpandX trait
@@ -114,7 +116,6 @@ impl From<SealedPattern> for Vec<Item> {
 
         let generated_attr = generated_attr();
 
-        let states = &sealed_pattern.state_idents;
         let mut ret = vec![
             // Sealed trait
             ::syn::parse_quote! {
@@ -144,10 +145,13 @@ impl From<SealedPattern> for Vec<Item> {
         ];
 
         // Sealed trait impls
+        let states = &sealed_pattern.states;
         ret.extend(states.iter().map(|each_state| {
+            let struct_ident = &each_state.ident;
+            let (impl_generics, type_generics, where_clause) = each_state.generics.split_for_impl();
             ::syn::parse_quote! {
                 #generated_attr
-                impl #private_mod_ident::#private_mod_trait for #each_state {}
+                impl #impl_generics #private_mod_ident::#private_mod_trait for #struct_ident #type_generics #where_clause {}
             }
         }));
 
@@ -212,11 +216,15 @@ impl<'sm> VisitMut for StateVisitor<'sm> {
             }
             Some(TypestateAttr::State) => {
                 // BOOK: intermediate_automaton.add_state
-                self.state_machine_info.intermediate_automaton.add_state(it_struct.ident.clone());
+                self.state_machine_info
+                    .intermediate_automaton
+                    .add_state(it_struct.ident.clone());
 
                 // TODO: remove the call below
                 self.state_machine_info.add_state(it_struct.clone().into());
                 self.sealed_trait.state_idents.push(it_struct.ident.clone());
+                // TODO: simplify the sealed trait struct to just have a vec of item structs
+                self.sealed_trait.states.push(it_struct.clone());
                 if let Some(ident) = &self.constructor_ident {
                     self.constructors
                         .expand_state_constructors(ident, it_struct);
