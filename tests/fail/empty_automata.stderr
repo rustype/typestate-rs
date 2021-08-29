@@ -4,7 +4,7 @@ error: Missing initial state. To declare an initial state you can use a function
 3 | #[typestate]
   | ^^^^^^^^^^^^
   |
-  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the attribute macro `typestate` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: Missing final state. To declare a final state you can use a function with signature like `fn f(self) -> T` where `T` is not a declared state.
  --> $DIR/empty_automata.rs:3:1
@@ -12,4 +12,4 @@ error: Missing final state. To declare a final state you can use a function with
 3 | #[typestate]
   | ^^^^^^^^^^^^
   |
-  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the attribute macro `typestate` (in Nightly builds, run with -Z macro-backtrace for more info)
