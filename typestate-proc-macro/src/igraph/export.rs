@@ -135,7 +135,7 @@ pub mod mermaid {
 }
 
 /// The PlantUML format module, containing the marker type and implementation for the respective export trait.
-// #[cfg(feature = "plantuml")]
+#[cfg(feature = "plantuml")]
 pub mod plantuml {
     use super::{Export, Result};
     use crate::igraph::{IntermediateGraph, Node, Transition};
@@ -295,7 +295,7 @@ pub mod dot {
     const DOT_SPECIAL_NODE: &str =
         r#"label="", fillcolor=black, fixedsize=true, height=0.25, style=filled"#;
 
-    impl<S, T> Export<Dot> for IntermediateAutomaton<S, T>
+    impl<S, T> Export<Dot> for IntermediateGraph<S, T>
     where
         S: Hash + Eq + Debug + Clone + Display,
         T: Hash + Eq + Debug + Clone + Display,
