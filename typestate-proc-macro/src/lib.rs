@@ -164,8 +164,6 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[cfg(any(feature = "dot", feature = "plantuml"))]
 fn export_diagram_files(state_machine_info: &StateMachineInfo) {
-    use igraph::export::Export;
-
     let folder_path = ::std::env::var_os("EXPORT_FOLDER")
         .and_then(|s| s.into_string().ok())
         .unwrap_or_else(|| "./".to_string());
@@ -173,6 +171,7 @@ fn export_diagram_files(state_machine_info: &StateMachineInfo) {
     #[cfg(feature = "dot")]
     {
         use igraph::export::dot::Dot;
+        use igraph::export::Export;
         use std::fs::File;
 
         let mut f = File::create(format!(
@@ -192,6 +191,7 @@ fn export_diagram_files(state_machine_info: &StateMachineInfo) {
     #[cfg(feature = "plantuml")]
     {
         use igraph::export::plantuml::PlantUml;
+        use igraph::export::Export;
         use std::fs::File;
 
         let mut f = File::create(format!(
