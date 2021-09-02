@@ -311,7 +311,8 @@ impl SignatureKind for Signature {
             ReturnType::Default => OutputKind::Unit,
             ReturnType::Type(_, ty) => match **ty {
                 Type::Path(ref path) => {
-                    if let Some(ident) = path.path.get_ident() {
+                    if let Some(ident) = path.path.segments.first() {
+                        let ident = &ident.ident;
                         if states.contains(ident) {
                             return OutputKind::State(ident.clone());
                         }
