@@ -3,15 +3,30 @@ use typestate_proc_macro::typestate;
 #[typestate]
 mod m {
     #[automaton]
-    struct Game {}
+    struct Player {}
 
     #[state]
-    struct Player<'name> {
+    struct Alive<'name> {
         name: &'name str
     }
 
-    trait Player {
-        fn start(name: &str) -> Player;
+    #[state]
+    struct Dead<'name> {
+        name: &'name str
+    }
+
+    enum PlayerLifeState {
+        Alive,
+        Dead,
+    }
+
+    trait Alive<'name> {
+        fn start(name: &str) -> Alive;
+        fn damage(self) -> PlayerLifeState;
+        fn suicide(self) -> Dead<'name>;
+    }
+
+    trait Dead {
         fn end(self);
     }
 }

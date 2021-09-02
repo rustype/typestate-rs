@@ -340,6 +340,7 @@ impl SignatureKind for Signature {
     fn expand_signature_state(&mut self, info: &StateMachineInfo) {
         let fn_out = &mut self.output;
         let det_states = &info.det_states;
+        let non_det_states = &info.non_det_transitions;
 
         if let ReturnType::Type(_, ty) = fn_out {
             if let Type::Path(ref mut path) = **ty {
@@ -347,6 +348,9 @@ impl SignatureKind for Signature {
                     if det_states.contains_key(ident) {
                         let automata_ident = info.get_automaton_ident();
                         path.path = ::syn::parse_quote!(#automata_ident<#ident>);
+                    } else if let Some(it_enum) = non_det_states.get(ident) {
+                        let generics = &it_enum.generics;
+                        path.path = ::syn::parse_quote!(#ident #generics);
                     }
                 }
             }
