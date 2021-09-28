@@ -123,7 +123,17 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
                     );
 
                 self.state_machine_info
-                    .insert_initial(return_ty_ident, fn_ident);
+                    .insert_initial(return_ty_ident.clone(), fn_ident);
+                // mark non det transition as used
+                if self
+                    .state_machine_info
+                    .non_det_transitions
+                    .contains_key(&return_ty_ident)
+                {
+                    self.state_machine_info
+                        .used_non_det_transitions
+                        .insert(return_ty_ident);
+                }
             }
             FnKind::Final => {
                 // add #[must_use]
