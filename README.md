@@ -13,6 +13,22 @@ typestate = "0.8.0"
 
 *Compiler support: requires rustc 1.42+*
 
+## Citing `typestate`
+If you find `typestate` useful in your work, we kindly request you cite the following paper:
+```
+@inproceedings{10.1145/3475061.3475082,
+    author = {Duarte, Jos\'{e} and Ravara, Ant\'{o}nio},
+    title = {Retrofitting Typestates into Rust},
+    year = {2021},
+    url = {https://doi.org/10.1145/3475061.3475082},
+    doi = {10.1145/3475061.3475082},
+    booktitle = {25th Brazilian Symposium on Programming Languages},
+    pages = {83–91},
+    numpages = {9},
+    series = {SBLP'21}
+}
+```
+
 - [Introduction](#introduction)
   - [Typestates in Rust](#typestates-in-rust)
 - [Basic Guide](#basic-guide)
