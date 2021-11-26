@@ -71,7 +71,7 @@ fn main() {
 //     fn end(self) {}
 // }
 
-#[typestate(enumerate, state_constructors)]
+#[typestate(enumerate = "ETrafficLight", state_constructors = "new_state")]
 mod traffic_light {
     #[derive(Debug)]
     #[automaton]
@@ -99,7 +99,7 @@ mod traffic_light {
     }
 
     pub enum Either {
-        #[metadata(label="test")]
+        #[metadata(label = "test")]
         Yellow,
         Red,
     }
