@@ -69,8 +69,11 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     bail_if_any!(visitors::state::visit_states(
         &mut module,
         &mut state_machine_info,
-        args.state_constructors
-            .map(|name| format_ident!("{}", name)),
+        if !args.state_constructors.is_empty() {
+            Some(format_ident!("{}", args.state_constructors))
+        } else {
+            None
+        }
     ));
 
     // Visit non-deterministic transitions
@@ -133,14 +136,13 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     let states = ga.states.iter().collect::<Vec<_>>();
 
     // match the `Option<Ident>`
-    let mut enumerate_tokens = match args.enumerate {
-        Some(enum_name) => {
-            let mut res: Vec<Item> = vec![];
-            let enum_ident = &format_ident!("{}", &enum_name);
-            res.expand_enumerate(&automata_ident, enum_ident, &states);
-            res
-        }
-        None => vec![],
+    let mut enumerate_tokens = if !args.enumerate.is_empty() {
+        let mut res: Vec<Item> = vec![];
+        let enum_ident = &format_ident!("{}", &args.enumerate);
+        res.expand_enumerate(&automata_ident, enum_ident, &states);
+        res
+    } else {
+        vec![]
     };
 
     if let Some((_, v)) = &mut module.content {
@@ -267,15 +269,13 @@ impl ExpandEnumerate for Vec<Item> {
     }
 }
 
-// TODO check why -Dclippy::pedantic complains
 #[derive(Debug, FromMeta)]
 struct MacroAttributeArguments {
     /// Optional arguments.
-    /// Declares if an enumeration is to be generated and possibly gives it a name.
     #[darling(default)]
-    enumerate: Option<String>,
+    enumerate: String,
     #[darling(default)]
-    state_constructors: Option<String>,
+    state_constructors: String,
 }
 
 /// A value to `proc_macro2::TokenStream2` conversion.
@@ -322,7 +322,6 @@ impl Transition {
 #[derive(Debug, Clone)]
 struct StateMachineInfo {
     /// Main structure (aka Automata ?)
-    // TODO: convert to ident
     automaton_ident: Option<ItemStruct>, // late init
 
     /// Deterministic states (`struct`s)

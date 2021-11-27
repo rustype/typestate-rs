@@ -1,5 +1,3 @@
-// this stable means like "the latest stable"
-// minimum ensured so far is 1.51
 #[rustversion::stable]
 #[test]
 fn compile() {
