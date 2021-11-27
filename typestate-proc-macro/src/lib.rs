@@ -61,12 +61,6 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    let state_constructors_ident = match args.state_constructors {
-        TOption::Some(string) => Some(format_ident!("{}", string)),
-        TOption::Default => Some(format_ident!("new_state")),
-        TOption::None => None,
-    };
-
     // parse the input as a mod
     let mut module: ItemMod = parse_macro_input!(input);
 
@@ -75,7 +69,8 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     bail_if_any!(visitors::state::visit_states(
         &mut module,
         &mut state_machine_info,
-        state_constructors_ident,
+        args.state_constructors
+            .map(|name| format_ident!("{}", name)),
     ));
 
     // Visit non-deterministic transitions
@@ -137,18 +132,12 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let states = ga.states.iter().collect::<Vec<_>>();
 
-    // check the option triplet and convert it into a normal `Option<T>`
-    let enumerate_ident = match args.enumerate {
-        TOption::Some(string) => Some(format_ident!("{}", string)),
-        TOption::Default => Some(format_ident!("E{}", &automata_ident.ident)),
-        TOption::None => None,
-    };
-
     // match the `Option<Ident>`
-    let mut enumerate_tokens = match enumerate_ident {
-        Some(enumerate_ident) => {
+    let mut enumerate_tokens = match args.enumerate {
+        Some(enum_name) => {
             let mut res: Vec<Item> = vec![];
-            res.expand_enumerate(&automata_ident.ident, &enumerate_ident, &states);
+            let enum_ident = &format_ident!("{}", &enum_name);
+            res.expand_enumerate(&automata_ident, enum_ident, &states);
             res
         }
         None => vec![],
@@ -210,20 +199,25 @@ fn export_diagram_files(state_machine_info: &StateMachineInfo) {
 }
 
 trait ExpandEnumerate {
-    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
+    fn expand_enumerate(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the [`ToString`] implentation for enumeration.
     /// Only available with `std` and when `enumerate` is used.
     fn expand_to_string(&mut self, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the enumeration containing all states.
     /// Only available when `enumerate` is used.
-    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
+    fn expand_enum(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the [`From`] implementation to convert from states to enumeration and back.
     /// Only available when `enumerate` is used.
-    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]);
+    fn expand_from(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]);
 }
 
 impl ExpandEnumerate for Vec<Item> {
-    fn expand_enumerate(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]) {
+    fn expand_enumerate(
+        &mut self,
+        automata: &ItemStruct,
+        automata_enum: &Ident,
+        states: &[&Ident],
+    ) {
         // expand the enumeration
         self.expand_enum(automata, automata_enum, states);
 
@@ -248,63 +242,28 @@ impl ExpandEnumerate for Vec<Item> {
         self.push(::syn::parse_quote!(#to_string));
     }
 
-    fn expand_from(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]) {
-        let from_tokens = states
-            .iter()
-            .map(|state| {
-                ::quote::quote! {
-                    impl ::core::convert::From<#automata<#state>> for #automata_enum {
-                        fn from(value: #automata<#state>) -> Self {
-                            Self::#state(value)
-                        }
+    fn expand_from(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]) {
+        let automata_ident = &automata.ident;
+        let from_tokens = states.iter().map(|state| {
+            ::syn::parse_quote! {
+                impl ::core::convert::From<#automata_ident<#state>> for #automata_enum {
+                    fn from(value: #automata_ident<#state>) -> Self {
+                        Self::#state(value)
                     }
                 }
-            })
-            .map(|tokens| ::syn::parse_quote!(#tokens));
+            }
+        });
         self.extend(from_tokens);
     }
 
-    fn expand_enum(&mut self, automata: &Ident, automata_enum: &Ident, states: &[&Ident]) {
-        let enum_tokens = ::quote::quote! {
-            pub enum #automata_enum {
-                #(#states(#automata<#states>),)*
+    fn expand_enum(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]) {
+        let automata_ident = &automata.ident;
+        let automata_vis = &automata.vis;
+        self.push(::syn::parse_quote! {
+            #automata_vis enum #automata_enum {
+                #(#states(#automata_ident<#states>),)*
             }
-        };
-        self.push(::syn::parse_quote!(#enum_tokens));
-    }
-}
-
-/// Option-like triplet. Used in argument parsing to differ between:
-/// - Missing value `#[]`
-/// - Concrete value `#[macro(attr = "value")]`
-/// - Present but not overwritten `#[macro(attr)]`
-#[derive(Debug)]
-enum TOption<T> {
-    Some(T),
-    Default,
-    None,
-}
-
-impl<T> Default for TOption<T> {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl FromMeta for TOption<String> {
-    /// If the input string is empty it returns `Ok(Default)`, otherwise it returns `Ok(Some(value))`.
-    fn from_string(value: &str) -> darling::Result<Self> {
-        if value.is_empty() {
-            // arg = ""
-            return Ok(Self::Default);
-        }
-        // arg = "..."
-        Ok(Self::Some(value.to_string()))
-    }
-
-    /// Returns `Ok(Default)`.
-    fn from_word() -> darling::Result<Self> {
-        Ok(Self::Default)
+        });
     }
 }
 
@@ -314,9 +273,9 @@ struct MacroAttributeArguments {
     /// Optional arguments.
     /// Declares if an enumeration is to be generated and possibly gives it a name.
     #[darling(default)]
-    enumerate: TOption<String>,
+    enumerate: Option<String>,
     #[darling(default)]
-    state_constructors: TOption<String>,
+    state_constructors: Option<String>,
 }
 
 /// A value to `proc_macro2::TokenStream2` conversion.

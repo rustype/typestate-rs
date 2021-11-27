@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{StateMachineInfo, TypestateError, generated_attr};
+use crate::{generated_attr, StateMachineInfo, TypestateError};
 
 use parse::Parser;
 use syn::{
@@ -212,7 +212,9 @@ impl<'sm> VisitMut for StateVisitor<'sm> {
             }
             Some(TypestateAttr::State) => {
                 // BOOK: intermediate_automaton.add_state
-                self.state_machine_info.intermediate_automaton.add_state(it_struct.ident.clone());
+                self.state_machine_info
+                    .intermediate_automaton
+                    .add_state(it_struct.ident.clone());
 
                 // TODO: remove the call below
                 self.state_machine_info.add_state(it_struct.clone().into());

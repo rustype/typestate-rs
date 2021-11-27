@@ -1,6 +1,6 @@
 use typestate_proc_macro::typestate;
 
-#[typestate(enumerate)]
+#[typestate(enumerate="ETrafficLight")]
 mod traffic_light {
     #[automaton]
     pub struct TrafficLight {
