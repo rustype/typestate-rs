@@ -1,8 +1,6 @@
 use typestate_proc_macro::typestate;
 
-#[typestate(
-    enumerate = ""
-)]
+#[typestate(enumerate = "")]
 mod m {
     #[automaton]
     struct S {}
