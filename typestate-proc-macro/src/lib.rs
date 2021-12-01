@@ -435,12 +435,6 @@ impl StateMachineInfo {
     }
 }
 
-impl Default for StateMachineInfo {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 enum TypestateError {
     MissingAutomata,
     NonProductiveState(Ident),
