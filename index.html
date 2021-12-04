@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Chapter 1 - The Typestate Book</title>
+        <title>Quick Intro - The Typestate Book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Chapter 1</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -134,18 +134,47 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="chapter-1"><a class="header" href="#chapter-1">Chapter 1</a></h1>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>Typestates allow you to define <em>safe</em> usage protocols for your objects.
+The compiler will help you on your journey and disallow errors on given states.
+You will no longer be able to try and read from closed streams.</p>
+<p><code>#[typestate]</code> builds on ideas from the <a href="https://github.com/fitzgen/state_machine_future"><code>state_machine_future</code></a> crate.</p>
+<h2 id="first-steps"><a class="header" href="#first-steps">First steps</a></h2>
+<p>Before you start your typestate development journey you need to declare your dependencies,
+you can start using the <code>typestate</code> crate by adding the following line to your <code>Cargo.toml</code> file.</p>
+<pre><code class="language-toml">typestate = &quot;0.8.0&quot;
+</code></pre>
+<h2 id="citing-typestate"><a class="header" href="#citing-typestate">Citing <code>typestate</code></a></h2>
+<p>If you find <code>typestate</code> useful in your work, we kindly request you cite the following paper:</p>
+<pre><code class="language-bibtex">@inproceedings{10.1145/3475061.3475082,
+    author = {Duarte, Jos\'{e} and Ravara, Ant\'{o}nio},
+    title = {Retrofitting Typestates into Rust},
+    year = {2021},
+    url = {https://doi.org/10.1145/3475061.3475082},
+    doi = {10.1145/3475061.3475082},
+    booktitle = {25th Brazilian Symposium on Programming Languages},
+    pages = {83–91},
+    numpages = {9},
+    series = {SBLP'21}
+}
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="next" href="chapter_2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="next" href="chapter_2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>

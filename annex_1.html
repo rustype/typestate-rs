@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title></title>
-        <base href="/">
+        <title>Optional Features - The Typestate Book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -76,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html" class="active"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,19 +134,82 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="optional-features"><a class="header" href="#optional-features">Optional Features</a></h1>
+<p>The <code>typestate</code> macro provides several <code>cargo</code> features, 
+mostly focused on the visualization of your typestate's automata.</p>
+<h2 id="mermaid-diagrams"><a class="header" href="#mermaid-diagrams">Mermaid Diagrams</a></h2>
+<p><code>mermaid-docs</code> will embed <a href="https://mermaid-js.github.io/mermaid/#/">Mermaid.js</a> diagrams in your documentation. </p>
+<p>This feature is activated by default, regarless, see below how you can explicitly activate it.</p>
+<p>In the terminal, for each run:</p>
+<pre><code class="language-bash">cargo doc --features mermaid-docs
+</code></pre>
+<p>Or by declaring it in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;mermaid-docs&quot; ] }
+</code></pre>
+<h2 id="dot-diagrams"><a class="header" href="#dot-diagrams">DOT Diagrams</a></h2>
+<p><code>export-dot</code> - will generate a <code>.dot</code> file, describing your typestate's state machine.
+You can customize certain <code>.dot</code> parameters through the following environment variables:</p>
+<ul>
+<li><code>DOT_PAD</code> - specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.</li>
+<li><code>DOT_NODESEP</code> - <code>nodesep</code> specifies the minimum space between two adjacent nodes in the same rank, in inches.</li>
+<li><code>DOT_RANKSEP</code> - sets the desired rank separation, in inches.</li>
+<li><code>EXPORT_FOLDER</code> - declare the target folder for exported files.</li>
+</ul>
+<p>This feature is not activated by default, see below how you can activate it.</p>
+<p>In the terminal, for each run:</p>
+<pre><code class="language-bash">cargo doc --features export-dot
+</code></pre>
+<p>Or by declaring it in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;export-dot&quot; ] }
+</code></pre>
+<blockquote>
+<p>For more information on DOT configuration, I recommend you read through <a href="https://graphviz.org/doc/info/attrs.html">DOT documentation</a>.</p>
+</blockquote>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<p>These examples are present in the <code>examples/</code> folder in the repository's root.</p>
+<table><thead><tr><th><code>LightBulb</code></th><th><code>SmartBulb</code></th></tr></thead><tbody>
+<tr><td><img src="static/DotLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="static/DotSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
+</tbody></table>
+<h2 id="plantuml-diagrams"><a class="header" href="#plantuml-diagrams">PlantUML Diagrams</a></h2>
+<p><code>export-plantuml</code> will generate a PlantUML state diagram (<code>.uml</code> file) of your state machine.
+Like the previous feature, you can also customize this one through the following environment variables:</p>
+<ul>
+<li><code>PLANTUML_NODESEP</code> - <code>nodesep</code> specifies the minimum space between two adjacent nodes in the same rank.</li>
+<li><code>PLANTUML_RANKSEP</code> - Sets the desired rank separation.</li>
+<li><code>EXPORT_FOLDER</code> - Declare the target folder for exported files.</li>
+</ul>
+<p>This feature is not activated by default, see below how you can activate it.</p>
+<p>In the terminal, for each run:</p>
+<pre><code class="language-bash">cargo doc --features export-plantuml
+</code></pre>
+<p>Or by declaring it in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;export-plantuml&quot; ] }
+</code></pre>
+<blockquote>
+<p>For more information on PlantUML configuration, I recommend you read through <a href="https://crashedmind.github.io/PlantUMLHitchhikersGuide/layout/layout.html#nodesep-and-ranksep">PlantUML Hitchhiker's Guide</a>.</p>
+</blockquote>
+<h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
+<p>These examples are present in the <code>examples/</code> folder in the repository's root.</p>
+<table><thead><tr><th><code>LightBulb</code></th><th><code>SmartBulb</code></th></tr></thead><tbody>
+<tr><td><img src="static/UmlLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="static/UmlSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
+</tbody></table>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="chapter_4.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="chapter_4.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
             </nav>
 
         </div>

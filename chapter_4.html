@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title></title>
-        <base href="/">
+        <title>Advanced Guide - The Typestate Book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -76,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html" class="active"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,19 +134,78 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="advanced-guide"><a class="header" href="#advanced-guide">Advanced Guide</a></h1>
+<p>There are some features which may be helpful when describing a typestate.
+There are two main features that weren't discussed yet.</p>
+<h2 id="self-transitioning-functions"><a class="header" href="#self-transitioning-functions">Self-transitioning functions</a></h2>
+<p>Putting it simply, states may require to mutate themselves without transitioning, or maybe we require a simple getter.
+To declare methods for that purpose, we can use functions that take references (mutable or not) to <code>self</code>.</p>
+<p>Consider the following example where we have a flag that can be up or not.
+We have two functions, one checks if the flag is up, the other, sets the flag up.</p>
+<pre><code class="language-rust noplaypen">#[state] struct Flag {
+    up: bool
+}
+
+impl Flag {
+    fn is_up(&amp;self) -&gt; bool;
+    fn set_up(&amp;mut self);
+}
+</code></pre>
+<p>As these functions do not change the typestate state,
+they transition back to the current state.</p>
+<h2 id="non-deterministic-transitions"><a class="header" href="#non-deterministic-transitions">Non-deterministic transitions</a></h2>
+<p>Consider that a typestate relies on an external component that can fail, to model that, one would use <code>Result&lt;T&gt;</code>.
+However, we need our typestate to transition between known states, so we declare two things:</p>
+<ul>
+<li>An <code>Error</code> state along with the other states.</li>
+<li>An <code>enum</code> to represent the bifurcation of states.</li>
+</ul>
+<pre><code class="language-rust noplaypen">#[state] struct Error {
+    message: String
+}
+
+enum OperationResult {
+    State, Error
+}
+</code></pre>
+<p>Inside the enumeration there can only be other valid states and only <code>Unit</code> style variants are supported.</p>
+<h2 id="attributes"><a class="header" href="#attributes">Attributes</a></h2>
+<p>This is the list of attributes that can be used along <code>#[typestate]</code>:</p>
+<ul>
+<li><code>#[typestate]</code>: the main attribute macro, without attribute parameters.</li>
+<li><code>#[typestate(enumerate = &quot;...&quot;)]</code>: this option makes the macro generate an additional <code>enum</code>,
+the <code>enum</code> enables working with variables and structures &quot;generic&quot; to the state.
+<ul>
+<li>The parameter can be declared <em>with</em> or <em>without</em> a string literal, if declared with the string,
+that string will be used as identifier to the <code>enum</code>.</li>
+<li>If the parameter is used with an <em>empty string</em> or <em>without</em> a string, the default behavior is to prepend an <code>E</code> to the</li>
+</ul>
+</li>
+<li><code>#[typestate(state_constructors = &quot;...&quot;)</code>: this option generates basic constructors for states with fields.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="chapter_3.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="annex_1.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="chapter_3.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="annex_1.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>

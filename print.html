@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Chapter 1</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,7 +135,287 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="chapter-1"><a class="header" href="#chapter-1">Chapter 1</a></h1>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>Typestates allow you to define <em>safe</em> usage protocols for your objects.
+The compiler will help you on your journey and disallow errors on given states.
+You will no longer be able to try and read from closed streams.</p>
+<p><code>#[typestate]</code> builds on ideas from the <a href="https://github.com/fitzgen/state_machine_future"><code>state_machine_future</code></a> crate.</p>
+<h2 id="first-steps"><a class="header" href="#first-steps">First steps</a></h2>
+<p>Before you start your typestate development journey you need to declare your dependencies,
+you can start using the <code>typestate</code> crate by adding the following line to your <code>Cargo.toml</code> file.</p>
+<pre><code class="language-toml">typestate = &quot;0.8.0&quot;
+</code></pre>
+<h2 id="citing-typestate"><a class="header" href="#citing-typestate">Citing <code>typestate</code></a></h2>
+<p>If you find <code>typestate</code> useful in your work, we kindly request you cite the following paper:</p>
+<pre><code class="language-bibtex">@inproceedings{10.1145/3475061.3475082,
+    author = {Duarte, Jos\'{e} and Ravara, Ant\'{o}nio},
+    title = {Retrofitting Typestates into Rust},
+    year = {2021},
+    url = {https://doi.org/10.1145/3475061.3475082},
+    doi = {10.1145/3475061.3475082},
+    booktitle = {25th Brazilian Symposium on Programming Languages},
+    pages = {83–91},
+    numpages = {9},
+    series = {SBLP'21}
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="what-are-typestates"><a class="header" href="#what-are-typestates">What are typestates?</a></h1>
+<p>In a nutshell, typestates are finite state machines described at the type-level.
+They aim to tame stateful computations by allowing the compiler to reason about the state of the program.</p>
+<p>Consider the following Java example:</p>
+<pre><code class="language-java">public class ScannerFail {
+    void main(String... args) {
+        Scanner s = new Scanner(System.in);
+        s.close();
+        s.nextLine();
+    }
+}
+</code></pre>
+<p>The example will compile and run, however it will crash during runtime, throwing an <code>IllegalStateException</code>, 
+this happens because we tried to read a line after closing the <code>Scanner</code>.</p>
+<p>If you thought: &quot;<em>The compiler should have told me!</em>&quot; - then, typestates are for you!</p>
+<p>In a typestated language, <code>Scanner</code> would have its state be a first-class citizen of the code.
+Consider the following example in <em>typestated-Java</em>:</p>
+<pre><code class="language-java">public class ScannerFail {
+    void main(String... args) {
+        Scanner[Open] s = new Scanner(System.in);
+        // s now has type Scanner[Closed]
+        s = s.close();
+        // compilation error: Scanner[Closed] does not have a nextLine method
+        s.nextLine();
+    }
+}
+</code></pre>
+<p>As made evident by the comments, the example would not compile because the <code>Scanner</code> 
+transitions to the <code>Closed</code> state after the <code>.close()</code> call.</p>
+<h2 id="typestates-in-rust"><a class="header" href="#typestates-in-rust">Typestates in Rust</a></h2>
+<p>Typestates are not a new concept to Rust.
+There are several blog posts on the subject
+[<a href="https://yoric.github.io/post/rust-typestate/">1</a>,
+<a href="http://cliffle.com/blog/rust-typestate/">2</a>,
+<a href="https://rustype.github.io/notes/notes/rust-typestate-series/rust-typestate-index">3</a>]
+as well as a <a href="https://docs.rust-embedded.org/book/static-guarantees/typestate-programming.html">chapter</a> in <em>The Embedded Rust Book</em>.</p>
+<p>In short, we can write typestates by hand, we add some generics here and there,
+declare them as a &quot;<em>state</em>&quot; and in the end we can keep living our lives with our new state machine.</p>
+<p>This approach however is <em>error-prone</em> and <em>verbose</em> (especially with bigger automata).
+It also provides <em>no</em> guarantees about the automata, unless of course, you designed and tested the design previously.</p>
+<p>As programmers, we want to automate this cumbersome job and to do so, we use Rust's powerful procedural macros!</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="basic-guide-to-typestates"><a class="header" href="#basic-guide-to-typestates">Basic Guide to Typestates</a></h1>
+<p>Consider we are tasked with building the firmware for a traffic light,
+we can turn it on and off and cycle between Green, Yellow and Red.</p>
+<p>We first declare a module with the <code>#[typestate]</code> macro attached to it.</p>
+<pre><code class="language-rust noplaypen">#[typestate]
+mod traffic_light {}
+</code></pre>
+<p>This of course does nothing, in fact it will provide you an error,
+saying that we haven't declared an <em>automaton</em>.</p>
+<p>And so, our next task is to do that.
+Inside our <code>traffic_light</code> module we declare a structure annotated with <code>#[automaton]</code>.</p>
+<pre><code class="language-rust noplaypen">#[automaton]
+pub struct TrafficLight;
+</code></pre>
+<p>Our next step is to declare the states.
+We declare three empty structures annotated with <code>&quot;[state]</code>.</p>
+<pre><code class="language-rust noplaypen">#[state] pub struct Green;
+#[state] pub struct Yellow;
+#[state] pub struct Red;
+</code></pre>
+<p>So far so good, however some errors should appear, regarding the lack of initial and final states.</p>
+<p>To declare initial and final states we need to see them as describable by transitions.
+Whenever an object is created, the method that created leaves the object in the <em>initial</em> state.
+Equally, whenever a method consumes an object and does not return it (or a similar version of it),
+it made the object reach the <em>final</em> state.</p>
+<p>With this in mind we can lay down the following rules:</p>
+<ul>
+<li>Functions that <em>do not</em> take a valid state (i.e. <code>self</code>) and return a valid state, describe an initial state.</li>
+<li>Functions that take a valid state (i.e. <code>self</code>) and <em>do not</em> return a valid state, describe a final state.</li>
+</ul>
+<p>So we write the following function signatures:</p>
+<pre><code class="language-rust noplaypen">fn turn_on() -&gt; Red;
+fn turn_off(self);
+</code></pre>
+<p>However, these are <em>free</em> functions, meaning that <code>self</code> relates to nothing.
+To attach them to a state we wrap them around a <code>trait</code> with the name of the state they are supposed to be attached to.
+So our previous example becomes:</p>
+<pre><code class="language-rust noplaypen">trait Red {
+    fn turn_on() -&gt; Red;
+    fn turn_off(self);
+}
+</code></pre>
+<p><em>Before we go further, a quick review:</em></p>
+<blockquote>
+<ul>
+<li>The module is annotated with <code>#[typestate]</code> enabling the DSL.</li>
+<li>To declare the main automaton we attach <code>#[automaton]</code> to a structure.</li>
+<li>The states are declared by attaching <code>#[state]</code>.</li>
+<li>State functions are declared through traits that share the same name.</li>
+<li>Initial and final states are declared by functions with a &quot;special&quot; signature.</li>
+</ul>
+</blockquote>
+<p>Finally, we need to address how states transition between each other.
+An astute reader might have inferred that we can consume one state and return another,
+such reader would be 100% correct.</p>
+<p>For example, to transition between the <code>Red</code> state and the <code>Green</code> we do:</p>
+<pre><code class="language-rust noplaypen">trait Red {
+    fn to_green(self) -&gt; Green;
+}
+</code></pre>
+<p>Building on this we can finish the other states:</p>
+<pre><code class="language-rust noplaypen">pub trait Green {
+    fn to_yellow(self) -&gt; Yellow;
+}
+
+pub trait Yellow {
+    fn to_red(self) -&gt; Red;
+}
+
+pub trait Red {
+    fn to_green(self) -&gt; Green;
+    fn turn_on() -&gt; Red;
+    fn turn_off(self);
+}
+</code></pre>
+<p>And the full code becomes:</p>
+<pre><code class="language-rust noplaypen">#[typestate]
+mod traffic_light {
+    #[automaton]
+    pub struct TrafficLight {
+        pub cycles: u64,
+    }
+
+    #[state] pub struct Green;
+    #[state] pub struct Yellow;
+    #[state] pub struct Red;
+
+    pub trait Green {
+        fn to_yellow(self) -&gt; Yellow;
+    }
+
+    pub trait Yellow {
+        fn to_red(self) -&gt; Red;
+    }
+
+    pub trait Red {
+        fn to_green(self) -&gt; Green;
+        fn turn_on() -&gt; Red;
+        fn turn_off(self);
+    }
+}
+</code></pre>
+<p>The code above will generate:</p>
+<ul>
+<li>Expand the main structure with a <code>state: State</code> field.</li>
+<li>A sealed trait which disallows states from being added <em>externally</em>.</li>
+<li>Traits for each state, providing the described functions.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="advanced-guide"><a class="header" href="#advanced-guide">Advanced Guide</a></h1>
+<p>There are some features which may be helpful when describing a typestate.
+There are two main features that weren't discussed yet.</p>
+<h2 id="self-transitioning-functions"><a class="header" href="#self-transitioning-functions">Self-transitioning functions</a></h2>
+<p>Putting it simply, states may require to mutate themselves without transitioning, or maybe we require a simple getter.
+To declare methods for that purpose, we can use functions that take references (mutable or not) to <code>self</code>.</p>
+<p>Consider the following example where we have a flag that can be up or not.
+We have two functions, one checks if the flag is up, the other, sets the flag up.</p>
+<pre><code class="language-rust noplaypen">#[state] struct Flag {
+    up: bool
+}
+
+impl Flag {
+    fn is_up(&amp;self) -&gt; bool;
+    fn set_up(&amp;mut self);
+}
+</code></pre>
+<p>As these functions do not change the typestate state,
+they transition back to the current state.</p>
+<h2 id="non-deterministic-transitions"><a class="header" href="#non-deterministic-transitions">Non-deterministic transitions</a></h2>
+<p>Consider that a typestate relies on an external component that can fail, to model that, one would use <code>Result&lt;T&gt;</code>.
+However, we need our typestate to transition between known states, so we declare two things:</p>
+<ul>
+<li>An <code>Error</code> state along with the other states.</li>
+<li>An <code>enum</code> to represent the bifurcation of states.</li>
+</ul>
+<pre><code class="language-rust noplaypen">#[state] struct Error {
+    message: String
+}
+
+enum OperationResult {
+    State, Error
+}
+</code></pre>
+<p>Inside the enumeration there can only be other valid states and only <code>Unit</code> style variants are supported.</p>
+<h2 id="attributes"><a class="header" href="#attributes">Attributes</a></h2>
+<p>This is the list of attributes that can be used along <code>#[typestate]</code>:</p>
+<ul>
+<li><code>#[typestate]</code>: the main attribute macro, without attribute parameters.</li>
+<li><code>#[typestate(enumerate = &quot;...&quot;)]</code>: this option makes the macro generate an additional <code>enum</code>,
+the <code>enum</code> enables working with variables and structures &quot;generic&quot; to the state.
+<ul>
+<li>The parameter can be declared <em>with</em> or <em>without</em> a string literal, if declared with the string,
+that string will be used as identifier to the <code>enum</code>.</li>
+<li>If the parameter is used with an <em>empty string</em> or <em>without</em> a string, the default behavior is to prepend an <code>E</code> to the</li>
+</ul>
+</li>
+<li><code>#[typestate(state_constructors = &quot;...&quot;)</code>: this option generates basic constructors for states with fields.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="optional-features"><a class="header" href="#optional-features">Optional Features</a></h1>
+<p>The <code>typestate</code> macro provides several <code>cargo</code> features, 
+mostly focused on the visualization of your typestate's automata.</p>
+<h2 id="mermaid-diagrams"><a class="header" href="#mermaid-diagrams">Mermaid Diagrams</a></h2>
+<p><code>mermaid-docs</code> will embed <a href="https://mermaid-js.github.io/mermaid/#/">Mermaid.js</a> diagrams in your documentation. </p>
+<p>This feature is activated by default, regarless, see below how you can explicitly activate it.</p>
+<p>In the terminal, for each run:</p>
+<pre><code class="language-bash">cargo doc --features mermaid-docs
+</code></pre>
+<p>Or by declaring it in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;mermaid-docs&quot; ] }
+</code></pre>
+<h2 id="dot-diagrams"><a class="header" href="#dot-diagrams">DOT Diagrams</a></h2>
+<p><code>export-dot</code> - will generate a <code>.dot</code> file, describing your typestate's state machine.
+You can customize certain <code>.dot</code> parameters through the following environment variables:</p>
+<ul>
+<li><code>DOT_PAD</code> - specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.</li>
+<li><code>DOT_NODESEP</code> - <code>nodesep</code> specifies the minimum space between two adjacent nodes in the same rank, in inches.</li>
+<li><code>DOT_RANKSEP</code> - sets the desired rank separation, in inches.</li>
+<li><code>EXPORT_FOLDER</code> - declare the target folder for exported files.</li>
+</ul>
+<p>This feature is not activated by default, see below how you can activate it.</p>
+<p>In the terminal, for each run:</p>
+<pre><code class="language-bash">cargo doc --features export-dot
+</code></pre>
+<p>Or by declaring it in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;export-dot&quot; ] }
+</code></pre>
+<blockquote>
+<p>For more information on DOT configuration, I recommend you read through <a href="https://graphviz.org/doc/info/attrs.html">DOT documentation</a>.</p>
+</blockquote>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<p>These examples are present in the <code>examples/</code> folder in the repository's root.</p>
+<table><thead><tr><th><code>LightBulb</code></th><th><code>SmartBulb</code></th></tr></thead><tbody>
+<tr><td><img src="static/DotLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="static/DotSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
+</tbody></table>
+<h2 id="plantuml-diagrams"><a class="header" href="#plantuml-diagrams">PlantUML Diagrams</a></h2>
+<p><code>export-plantuml</code> will generate a PlantUML state diagram (<code>.uml</code> file) of your state machine.
+Like the previous feature, you can also customize this one through the following environment variables:</p>
+<ul>
+<li><code>PLANTUML_NODESEP</code> - <code>nodesep</code> specifies the minimum space between two adjacent nodes in the same rank.</li>
+<li><code>PLANTUML_RANKSEP</code> - Sets the desired rank separation.</li>
+<li><code>EXPORT_FOLDER</code> - Declare the target folder for exported files.</li>
+</ul>
+<p>This feature is not activated by default, see below how you can activate it.</p>
+<p>In the terminal, for each run:</p>
+<pre><code class="language-bash">cargo doc --features export-plantuml
+</code></pre>
+<p>Or by declaring it in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;export-plantuml&quot; ] }
+</code></pre>
+<blockquote>
+<p>For more information on PlantUML configuration, I recommend you read through <a href="https://crashedmind.github.io/PlantUMLHitchhikersGuide/layout/layout.html#nodesep-and-ranksep">PlantUML Hitchhiker's Guide</a>.</p>
+</blockquote>
+<h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
+<p>These examples are present in the <code>examples/</code> folder in the repository's root.</p>
+<table><thead><tr><th><code>LightBulb</code></th><th><code>SmartBulb</code></th></tr></thead><tbody>
+<tr><td><img src="static/UmlLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="static/UmlSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
+</tbody></table>
 
                     </main>
 

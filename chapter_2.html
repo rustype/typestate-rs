@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title></title>
-        <base href="/">
+        <title>What are typestates? - The Typestate Book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -76,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html" class="active"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,19 +134,70 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="what-are-typestates"><a class="header" href="#what-are-typestates">What are typestates?</a></h1>
+<p>In a nutshell, typestates are finite state machines described at the type-level.
+They aim to tame stateful computations by allowing the compiler to reason about the state of the program.</p>
+<p>Consider the following Java example:</p>
+<pre><code class="language-java">public class ScannerFail {
+    void main(String... args) {
+        Scanner s = new Scanner(System.in);
+        s.close();
+        s.nextLine();
+    }
+}
+</code></pre>
+<p>The example will compile and run, however it will crash during runtime, throwing an <code>IllegalStateException</code>, 
+this happens because we tried to read a line after closing the <code>Scanner</code>.</p>
+<p>If you thought: &quot;<em>The compiler should have told me!</em>&quot; - then, typestates are for you!</p>
+<p>In a typestated language, <code>Scanner</code> would have its state be a first-class citizen of the code.
+Consider the following example in <em>typestated-Java</em>:</p>
+<pre><code class="language-java">public class ScannerFail {
+    void main(String... args) {
+        Scanner[Open] s = new Scanner(System.in);
+        // s now has type Scanner[Closed]
+        s = s.close();
+        // compilation error: Scanner[Closed] does not have a nextLine method
+        s.nextLine();
+    }
+}
+</code></pre>
+<p>As made evident by the comments, the example would not compile because the <code>Scanner</code> 
+transitions to the <code>Closed</code> state after the <code>.close()</code> call.</p>
+<h2 id="typestates-in-rust"><a class="header" href="#typestates-in-rust">Typestates in Rust</a></h2>
+<p>Typestates are not a new concept to Rust.
+There are several blog posts on the subject
+[<a href="https://yoric.github.io/post/rust-typestate/">1</a>,
+<a href="http://cliffle.com/blog/rust-typestate/">2</a>,
+<a href="https://rustype.github.io/notes/notes/rust-typestate-series/rust-typestate-index">3</a>]
+as well as a <a href="https://docs.rust-embedded.org/book/static-guarantees/typestate-programming.html">chapter</a> in <em>The Embedded Rust Book</em>.</p>
+<p>In short, we can write typestates by hand, we add some generics here and there,
+declare them as a &quot;<em>state</em>&quot; and in the end we can keep living our lives with our new state machine.</p>
+<p>This approach however is <em>error-prone</em> and <em>verbose</em> (especially with bigger automata).
+It also provides <em>no</em> guarantees about the automata, unless of course, you designed and tested the design previously.</p>
+<p>As programmers, we want to automate this cumbersome job and to do so, we use Rust's powerful procedural macros!</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="chapter_1.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="chapter_3.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="chapter_1.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="chapter_3.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>

@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title></title>
-        <base href="/">
+        <title>Basic Guide to Typestates - The Typestate Book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -76,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html" class="active"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,19 +134,137 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="basic-guide-to-typestates"><a class="header" href="#basic-guide-to-typestates">Basic Guide to Typestates</a></h1>
+<p>Consider we are tasked with building the firmware for a traffic light,
+we can turn it on and off and cycle between Green, Yellow and Red.</p>
+<p>We first declare a module with the <code>#[typestate]</code> macro attached to it.</p>
+<pre><code class="language-rust noplaypen">#[typestate]
+mod traffic_light {}
+</code></pre>
+<p>This of course does nothing, in fact it will provide you an error,
+saying that we haven't declared an <em>automaton</em>.</p>
+<p>And so, our next task is to do that.
+Inside our <code>traffic_light</code> module we declare a structure annotated with <code>#[automaton]</code>.</p>
+<pre><code class="language-rust noplaypen">#[automaton]
+pub struct TrafficLight;
+</code></pre>
+<p>Our next step is to declare the states.
+We declare three empty structures annotated with <code>&quot;[state]</code>.</p>
+<pre><code class="language-rust noplaypen">#[state] pub struct Green;
+#[state] pub struct Yellow;
+#[state] pub struct Red;
+</code></pre>
+<p>So far so good, however some errors should appear, regarding the lack of initial and final states.</p>
+<p>To declare initial and final states we need to see them as describable by transitions.
+Whenever an object is created, the method that created leaves the object in the <em>initial</em> state.
+Equally, whenever a method consumes an object and does not return it (or a similar version of it),
+it made the object reach the <em>final</em> state.</p>
+<p>With this in mind we can lay down the following rules:</p>
+<ul>
+<li>Functions that <em>do not</em> take a valid state (i.e. <code>self</code>) and return a valid state, describe an initial state.</li>
+<li>Functions that take a valid state (i.e. <code>self</code>) and <em>do not</em> return a valid state, describe a final state.</li>
+</ul>
+<p>So we write the following function signatures:</p>
+<pre><code class="language-rust noplaypen">fn turn_on() -&gt; Red;
+fn turn_off(self);
+</code></pre>
+<p>However, these are <em>free</em> functions, meaning that <code>self</code> relates to nothing.
+To attach them to a state we wrap them around a <code>trait</code> with the name of the state they are supposed to be attached to.
+So our previous example becomes:</p>
+<pre><code class="language-rust noplaypen">trait Red {
+    fn turn_on() -&gt; Red;
+    fn turn_off(self);
+}
+</code></pre>
+<p><em>Before we go further, a quick review:</em></p>
+<blockquote>
+<ul>
+<li>The module is annotated with <code>#[typestate]</code> enabling the DSL.</li>
+<li>To declare the main automaton we attach <code>#[automaton]</code> to a structure.</li>
+<li>The states are declared by attaching <code>#[state]</code>.</li>
+<li>State functions are declared through traits that share the same name.</li>
+<li>Initial and final states are declared by functions with a &quot;special&quot; signature.</li>
+</ul>
+</blockquote>
+<p>Finally, we need to address how states transition between each other.
+An astute reader might have inferred that we can consume one state and return another,
+such reader would be 100% correct.</p>
+<p>For example, to transition between the <code>Red</code> state and the <code>Green</code> we do:</p>
+<pre><code class="language-rust noplaypen">trait Red {
+    fn to_green(self) -&gt; Green;
+}
+</code></pre>
+<p>Building on this we can finish the other states:</p>
+<pre><code class="language-rust noplaypen">pub trait Green {
+    fn to_yellow(self) -&gt; Yellow;
+}
+
+pub trait Yellow {
+    fn to_red(self) -&gt; Red;
+}
+
+pub trait Red {
+    fn to_green(self) -&gt; Green;
+    fn turn_on() -&gt; Red;
+    fn turn_off(self);
+}
+</code></pre>
+<p>And the full code becomes:</p>
+<pre><code class="language-rust noplaypen">#[typestate]
+mod traffic_light {
+    #[automaton]
+    pub struct TrafficLight {
+        pub cycles: u64,
+    }
+
+    #[state] pub struct Green;
+    #[state] pub struct Yellow;
+    #[state] pub struct Red;
+
+    pub trait Green {
+        fn to_yellow(self) -&gt; Yellow;
+    }
+
+    pub trait Yellow {
+        fn to_red(self) -&gt; Red;
+    }
+
+    pub trait Red {
+        fn to_green(self) -&gt; Green;
+        fn turn_on() -&gt; Red;
+        fn turn_off(self);
+    }
+}
+</code></pre>
+<p>The code above will generate:</p>
+<ul>
+<li>Expand the main structure with a <code>state: State</code> field.</li>
+<li>A sealed trait which disallows states from being added <em>externally</em>.</li>
+<li>Traits for each state, providing the described functions.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="chapter_2.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="chapter_4.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="chapter_2.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="chapter_4.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
