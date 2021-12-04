@@ -20,3 +20,7 @@ fmt-check:
 
 clippy:
     cargo clippy --tests -- -Dclippy::all
+
+# book
+serve:
+    mdbook serve typestate-book/ --open
