@@ -1,5 +1,11 @@
 # Introduction
 
+Typestates allow you to define *safe* usage protocols for your objects.
+The compiler will help you on your journey and disallow errors on given states.
+You will no longer be able to try and read from closed streams.
+
+`#[typestate]` builds on ideas from the [`state_machine_future`](https://github.com/fitzgen/state_machine_future) crate.
+
 ## First steps
 
 Before you start your typestate development journey you need to declare your dependencies,
@@ -9,42 +15,20 @@ you can start using the `typestate` crate by adding the following line to your `
 typestate = "0.8.0"
 ```
 
-## What are typestates?
+## Citing `typestate`
 
-In a nutshell, typestates are finite state machines described at the type-level.
-They aim to tame stateful computations by allowing the compiler to reason about the state of the program.
+If you find `typestate` useful in your work, we kindly request you cite the following paper:
 
-Consider the following Java example:
-
-```java
-public class ScannerFail {
-    void main(String... args) {
-        Scanner s = new Scanner(System.in);
-        s.close();
-        s.nextLine();
-    }
+```bibtex
+@inproceedings{10.1145/3475061.3475082,
+    author = {Duarte, Jos\'{e} and Ravara, Ant\'{o}nio},
+    title = {Retrofitting Typestates into Rust},
+    year = {2021},
+    url = {https://doi.org/10.1145/3475061.3475082},
+    doi = {10.1145/3475061.3475082},
+    booktitle = {25th Brazilian Symposium on Programming Languages},
+    pages = {83–91},
+    numpages = {9},
+    series = {SBLP'21}
 }
 ```
-
-The example will compile and run, however it will crash during runtime, throwing an `IllegalStateException`, 
-this happens because we tried to read a line after closing the `Scanner`.
-
-If you thought: "*The compiler should have told me!*" - then, typestates are for you!
-
-In a typestated language, `Scanner` would have its state be a first-class citizen of the code.
-Consider the following example in *typestated-Java*:
-
-```java
-public class ScannerFail {
-    void main(String... args) {
-        Scanner[Open] s = new Scanner(System.in);
-        // s now has type Scanner[Closed]
-        s = s.close();
-        // compilation error: Scanner[Closed] does not have a nextLine method
-        s.nextLine();  
-    }
-}
-```
-
-As made evident by the comments, the example would not compile because the `Scanner` 
-transitions to the `Closed` state after the `.close()` call.
