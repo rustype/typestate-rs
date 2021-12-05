@@ -176,50 +176,41 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[cfg(any(feature = "dot", feature = "plantuml"))]
 fn export_diagram_files(state_machine_info: &StateMachineInfo) {
-    let folder_path = ::std::env::var_os("EXPORT_FOLDER")
-        .and_then(|s| s.into_string().ok())
-        .unwrap_or_else(|| "./".to_string());
+    use crate::igraph::export;
 
     #[cfg(feature = "dot")]
     {
         use igraph::export::dot::Dot;
-        use igraph::export::Export;
-        use std::fs::File;
-
-        let mut f = File::create(format!(
-            "{}{}.dot",
-            folder_path,
-            state_machine_info.automaton_ident.clone().unwrap().ident
-        ))
+        export::export(
+            &state_machine_info
+                .automaton_ident
+                .clone()
+                .unwrap()
+                .ident
+                .to_string(),
+            &state_machine_info.intermediate_automaton,
+            Dot,
+        )
         .unwrap();
-
-        state_machine_info
-            .intermediate_automaton
-            .clone()
-            .export(&mut f, Dot)
-            .unwrap();
     }
 
     #[cfg(feature = "plantuml")]
     {
         use igraph::export::plantuml::PlantUml;
-        use igraph::export::Export;
-        use std::fs::File;
-
-        let mut f = File::create(format!(
-            "{}{}.uml",
-            folder_path,
-            state_machine_info.automaton_ident.clone().unwrap().ident
-        ))
+        export::export(
+            &state_machine_info
+                .automaton_ident
+                .clone()
+                .unwrap()
+                .ident
+                .to_string(),
+            &state_machine_info.intermediate_automaton,
+            PlantUml,
+        )
         .unwrap();
-
-        state_machine_info
-            .intermediate_automaton
-            .clone()
-            .export(&mut f, PlantUml)
-            .unwrap();
     }
 }
+
 
 trait ExpandEnumerate {
     fn expand_enumerate(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]);
