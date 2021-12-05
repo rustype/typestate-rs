@@ -36,6 +36,27 @@ fn generated_attr() -> TokenStream2 {
     ::quote::quote!(#[::typestate::#crate_ident::#generated_ident])
 }
 
+trait IsGeneratedAttr {
+    fn is_generated_attr(&self) -> bool;
+}
+
+impl IsGeneratedAttr for syn::Attribute {
+    fn is_generated_attr(&self) -> bool {
+        let segments = &self.path.segments.iter().collect::<Vec<_>>();
+        if segments.len() == 2 {
+            // support ::typestate_proc_macro::generated
+            segments[0].ident == CRATE_NAME && segments[1].ident == GENERATED_ATTR_IDENT
+        } else if segments.len() == 3 {
+            // support ::typestate::typestate_proc_macro::generated
+            segments[0].ident == "typestate"
+                && segments[1].ident == CRATE_NAME
+                && segments[2].ident == GENERATED_ATTR_IDENT
+        } else {
+            false
+        }
+    }
+}
+
 /// See the module documentation for a full featured tutorial on how to use `#[typestate]`.
 #[allow(clippy::too_many_lines)] // TODO handle this
 #[proc_macro_attribute]
