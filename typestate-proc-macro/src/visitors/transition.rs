@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use crate::{StateMachineInfo, Transition, TypestateError, CRATE_NAME, GENERATED_ATTR_IDENT};
+use crate::{StateMachineInfo, Transition, TypestateError, IsGeneratedAttr};
+use syn::Attribute;
 use syn::{
     visit_mut::VisitMut, Error, FnArg, Ident, ItemMod, ItemTrait, Receiver, ReturnType, Signature,
     TraitItemMethod, Type,
@@ -65,21 +66,7 @@ impl<'sm> VisitMut for TransitionVisitor<'sm> {
         let attributes = &i.attrs;
         // check if there is a `#[generated]` attribute
         // if there is, do not process this trait
-        if attributes.iter().any(|attr| {
-            let segments = &attr.path.segments;
-            let segments = segments.iter().collect::<Vec<_>>();
-            if segments.len() == 2 {
-                // support ::typestate_proc_macro::generated
-                segments[0].ident == CRATE_NAME && segments[1].ident == GENERATED_ATTR_IDENT
-            } else if segments.len() == 3 {
-                // support ::typestate::typestate_proc_macro::generated
-                segments[0].ident == "typestate"
-                    && segments[1].ident == CRATE_NAME
-                    && segments[2].ident == GENERATED_ATTR_IDENT
-            } else {
-                false
-            }
-        }) {
+        if attributes.iter().any(Attribute::is_generated_attr) {
             return;
         }
 
