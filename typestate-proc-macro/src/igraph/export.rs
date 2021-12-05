@@ -5,7 +5,10 @@
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 /// Blanket trait for [`Export`] implementations.
-pub trait Format {}
+pub trait Format {
+    /// The current format file extension.
+    fn file_extension<'a>() -> &'a str;
+}
 
 /// Used to declare output formats for the [`IntermediateAutomaton`].
 pub trait Export<F: Format> {
@@ -28,7 +31,11 @@ pub mod mermaid {
     pub struct Mermaid;
 
     /// Blanket implementation for the [`Mermaid`] format.
-    impl super::Format for Mermaid {}
+    impl super::Format for Mermaid {
+        fn file_extension<'a>() -> &'a str {
+            ".mermaid"
+        }
+    }
 
     impl<S, T> Export<Mermaid> for IntermediateGraph<S, T>
     where
@@ -146,7 +153,11 @@ pub mod plantuml {
     #[derive(Clone, Copy)]
     pub struct PlantUml;
 
-    impl super::Format for PlantUml {}
+    impl super::Format for PlantUml {
+        fn file_extension<'a>() -> &'a str {
+            ".uml"
+        }
+    }
 
     impl<S, T> Export<PlantUml> for IntermediateGraph<S, T>
     where
@@ -289,7 +300,11 @@ pub mod dot {
     #[derive(Clone, Copy)]
     pub struct Dot;
 
-    impl super::Format for Dot {}
+    impl super::Format for Dot {
+        fn file_extension<'a>() -> &'a str {
+            ".dot"
+        }
+    }
 
     const DOT_SPECIAL_NODE: &str =
         r#"label="", fillcolor=black, fixedsize=true, height=0.25, style=filled"#;
@@ -388,4 +403,34 @@ pub mod dot {
             Ok(())
         }
     }
+}
+
+#[cfg(any(feature = "dot", feature = "plantuml"))]
+use {
+    super::IntermediateGraph,
+    std::fs::File,
+    syn::Ident
+};
+
+#[cfg(any(feature = "dot", feature = "plantuml"))]
+pub(crate) fn export<F: Format>(
+    file_name: &str,
+    igraph: &IntermediateGraph<Ident, Ident>,
+    format: F,
+) -> Result
+where
+    IntermediateGraph<Ident, Ident>: Export<F>,
+{
+    let folder_path = ::std::env::var_os("EXPORT_FOLDER")
+        .and_then(|s| s.into_string().ok())
+        .unwrap_or_else(|| "./".to_string());
+    let mut f = File::create(format!(
+        "{}{}{}",
+        folder_path,
+        file_name,
+        F::file_extension(),
+    ))?;
+
+    igraph.export(&mut f, format)?;
+    Ok(())
 }
