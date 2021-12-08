@@ -211,7 +211,6 @@ fn export_diagram_files(state_machine_info: &StateMachineInfo) {
     }
 }
 
-
 trait ExpandEnumerate {
     fn expand_enumerate(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]);
     /// Expand the [`ToString`] implentation for enumeration.

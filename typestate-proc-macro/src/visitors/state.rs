@@ -93,69 +93,6 @@ impl<'sm> StateVisitor<'sm> {
     }
 }
 
-#[derive(Default)]
-pub(crate) struct SealedPattern {
-    /// Ident for the sealed pattern public trait
-    trait_ident: Option<Ident>, // late init
-    /// Idents for the sealed elements.
-    state_idents: Vec<Ident>,
-}
-
-// TODO rework this as an ExpandX trait
-impl From<SealedPattern> for Vec<Item> {
-    /// Convert the [`SealedTrait`] into a vector of Item.
-    /// This enables the addition of new items to the main module.
-    fn from(sealed_pattern: SealedPattern) -> Self {
-        let trait_ident = sealed_pattern.trait_ident.expect("missing `.trait_ident`");
-        let private_mod_ident = ::quote::format_ident!("__private");
-        // or `Private` or `Sealed` or `format_ident!("{}Sealed", …)`
-        // take into account that `trait_ident` may have already been used
-        let private_mod_trait = &trait_ident;
-
-        let generated_attr = generated_attr();
-
-        let states = &sealed_pattern.state_idents;
-        let mut ret = vec![
-            // Sealed trait
-            ::syn::parse_quote! {
-                #generated_attr
-                #[doc(hidden)]
-                /* private */ mod #private_mod_ident {
-                    /* to avoid the nested item being processed */
-                    #generated_attr
-                    pub trait #private_mod_trait {}
-                }
-            },
-            // State trait
-            ::syn::parse_quote! {
-                #generated_attr
-                pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
-            },
-            // Blanket impl of state trait from sealed implementors
-            // This frees us from having to provide concrete impls for each type.
-            ::syn::parse_quote! {
-                #generated_attr
-                impl<__T : ?::core::marker::Sized> #trait_ident
-                    for __T
-                where
-                    __T : #private_mod_ident::#private_mod_trait,
-                {}
-            },
-        ];
-
-        // Sealed trait impls
-        ret.extend(states.iter().map(|each_state| {
-            ::syn::parse_quote! {
-                #generated_attr
-                impl #private_mod_ident::#private_mod_trait for #each_state {}
-            }
-        }));
-
-        // TODO: this can probably be turned into a single parse_quote!
-        ret
-    }
-}
-
 impl<'sm> VisitMut for StateVisitor<'sm> {
     fn visit_item_struct_mut(&mut self, it_struct: &mut ItemStruct) {
         let attributes = &mut it_struct.attrs;
@@ -211,14 +148,13 @@ impl<'sm> VisitMut for StateVisitor<'sm> {
                 }
             }
             Some(TypestateAttr::State) => {
-                // BOOK: intermediate_automaton.add_state
                 self.state_machine_info
                     .intermediate_automaton
                     .add_state(it_struct.ident.clone());
 
                 // TODO: remove the call below
                 self.state_machine_info.add_state(it_struct.clone().into());
-                self.sealed_trait.state_idents.push(it_struct.ident.clone());
+                self.sealed_trait.states.push(it_struct.clone());
                 if let Some(ident) = &self.constructor_ident {
                     self.constructors
                         .expand_state_constructors(ident, it_struct);
@@ -331,4 +267,69 @@ impl TryFrom<&Path> for TypestateAttr {
 enum Attr {
     Retain,
     Discard,
+}
+
+#[derive(Default)]
+pub(crate) struct SealedPattern {
+    /// Ident for the sealed pattern public trait
+    trait_ident: Option<Ident>, // late init
+    /// Item structs for the states.
+    states: Vec<ItemStruct>,
+}
+
+// TODO rework this as an ExpandX trait
+impl From<SealedPattern> for Vec<Item> {
+    /// Convert the [`SealedTrait`] into a vector of Item.
+    /// This enables the addition of new items to the main module.
+    fn from(sealed_pattern: SealedPattern) -> Self {
+        let trait_ident = sealed_pattern.trait_ident.expect("missing `.trait_ident`");
+        let private_mod_ident = ::quote::format_ident!("__private");
+        // or `Private` or `Sealed` or `format_ident!("{}Sealed", …)`
+        // take into account that `trait_ident` may have already been used
+        let private_mod_trait = &trait_ident;
+
+        let generated_attr = generated_attr();
+
+        let mut ret = vec![
+            // Sealed trait
+            ::syn::parse_quote! {
+                #generated_attr
+                #[doc(hidden)]
+                /* private */ mod #private_mod_ident {
+                    /* to avoid the nested item being processed */
+                    #generated_attr
+                    pub trait #private_mod_trait {}
+                }
+            },
+            // State trait
+            ::syn::parse_quote! {
+                #generated_attr
+                pub trait #trait_ident: #private_mod_ident::#private_mod_trait {}
+            },
+            // Blanket impl of state trait from sealed implementors
+            // This frees us from having to provide concrete impls for each type.
+            ::syn::parse_quote! {
+                #generated_attr
+                impl<__T : ?::core::marker::Sized> #trait_ident
+                    for __T
+                where
+                    __T : #private_mod_ident::#private_mod_trait,
+                {}
+            },
+        ];
+
+        let states = &sealed_pattern.states;
+
+        // Sealed trait impls
+        ret.extend(states.iter().map(|each_state| {
+            let struct_ident = &each_state.ident;
+            let (impl_generics, type_generics, where_clause) = each_state.generics.split_for_impl();
+            ::syn::parse_quote! {
+                #generated_attr
+                impl #impl_generics #private_mod_ident::#private_mod_trait for #struct_ident #type_generics #where_clause {}
+            }
+        }));
+
+        ret
+    }
 }
