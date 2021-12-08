@@ -1,5 +1,7 @@
+use std::collections::HashSet;
+
 use darling::FromMeta;
-use syn::{visit_mut::VisitMut, Error, Fields, Ident, ItemEnum, ItemMod, Variant};
+use syn::{visit_mut::VisitMut, Error, Fields, Generics, Ident, ItemEnum, ItemMod, Variant};
 
 use crate::{
     igraph::{Metadata, StateNode},
@@ -31,6 +33,7 @@ pub(crate) fn visit_non_deterministic(
 
 struct DecisionVisitor<'sm> {
     state_machine_info: &'sm mut StateMachineInfo,
+    decision_generics: HashSet<Generics>,
     errors: Vec<Error>,
 }
 
@@ -38,12 +41,14 @@ impl<'sm> DecisionVisitor<'sm> {
     fn new(state_machine_info: &'sm mut StateMachineInfo) -> Self {
         Self {
             state_machine_info,
+            decision_generics: HashSet::new(),
             errors: vec![],
         }
     }
 
     fn visit_variant_mut(&mut self, variant: &mut Variant) -> Option<StateNode<Ident>> {
         if let Fields::Unit = &variant.fields {
+            let det_states = &self.state_machine_info.det_states;
             let ident = &variant.ident;
             // check if the current ident is a valid state or another decision node
             if self
@@ -52,9 +57,9 @@ impl<'sm> DecisionVisitor<'sm> {
                 .contains_key(ident)
             {
                 self.push_unsupported_state_error(ident);
-            } else if self.state_machine_info.det_states.contains_key(ident) {
+            } else if let Some(it_struct) = det_states.get(ident) {
                 let mut state = StateNode::new(Some(ident.clone()));
-
+                let mut errors = vec![];
                 variant.attrs.retain(|attr| {
                     if attr.path.is_ident("metadata") {
                         match attr.parse_meta() {
@@ -62,22 +67,24 @@ impl<'sm> DecisionVisitor<'sm> {
                                 Ok(metadata) => state.update_metadata(metadata),
                                 Err(err) => {
                                     // TODO fix this hack
-                                    // HACK
-                                    self.errors.push(Error::new_spanned(attr, err.to_string()))
+                                    errors.push(Error::new_spanned(attr, err.to_string()))
                                 }
                             },
-                            Err(err) => self.errors.push(err),
+                            Err(err) => errors.push(err),
                         }
                         false
                     } else {
                         true
                     }
                 });
+                self.errors.append(&mut errors);
 
                 let automata_ident = self.state_machine_info.get_automaton_ident();
+                let generics = &it_struct.generics;
+                self.decision_generics.insert(generics.clone());
                 variant.fields = Fields::Unnamed(::syn::parse_quote!(
                     /* Variant */ (
-                        #automata_ident<#ident>
+                        #automata_ident<#ident #generics>
                     )
                 ));
 

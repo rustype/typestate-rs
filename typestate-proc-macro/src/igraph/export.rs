@@ -421,11 +421,7 @@ pub mod dot {
 }
 
 #[cfg(any(feature = "dot", feature = "plantuml"))]
-use {
-    super::IntermediateGraph,
-    std::fs::File,
-    syn::Ident
-};
+use {super::IntermediateGraph, std::fs::File, syn::Ident};
 
 #[cfg(any(feature = "dot", feature = "plantuml"))]
 pub(crate) fn export<F: Format>(
