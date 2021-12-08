@@ -1,4 +1,19 @@
-// TODO: document module
+//! The `export` module contains the code which "compiles"
+//! typestate graphs into formats other tools understand.
+//!
+//! Currently, the following formats are supported:
+//! - `DOT`
+//! - `PlantUML`
+//! - `MermaidJS`
+//!
+//! To add a new format you will need to create a new `struct`
+//! representing the format, implement `Format` for it and then
+//! implement `Export` for `IntermediateGraph` where the generic type
+//! `Export` takes, is your format.
+//!
+//! ```rust,ignore
+//! impl Export<YourFormat> for IntermediateGraph<S, T> { ... }
+//! ```
 
 /// Type alias for `()` or [`std::error::Error`].
 #[allow(dead_code)]
