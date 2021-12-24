@@ -420,10 +420,18 @@ pub mod dot {
     }
 }
 
-#[cfg(any(feature = "export-dot", feature = "export-plantuml"))]
+#[cfg(any(
+    feature = "export-dot",
+    feature = "export-plantuml",
+    feature = "export-mermaid"
+))]
 use {super::IntermediateGraph, std::fs::File, syn::Ident};
 
-#[cfg(any(feature = "export-dot", feature = "export-plantuml"))]
+#[cfg(any(
+    feature = "export-dot",
+    feature = "export-plantuml",
+    feature = "export-mermaid"
+))]
 pub(crate) fn export<F: Format>(
     file_name: &str,
     igraph: &IntermediateGraph<Ident, Ident>,

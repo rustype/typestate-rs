@@ -18,9 +18,9 @@ default = ["std"]
 std = []
 
 # file export utilities
-dot = []
-plantuml = []
-mermaid = []
+export-dot = []
+export-plantuml = []
+export-mermaid = []
 
 # documentation export utilities
 docs-mermaid = []

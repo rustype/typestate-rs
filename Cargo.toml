@@ -20,9 +20,9 @@ default = ["std", "docs-mermaid"]
 std = ["typestate-proc-macro/std"]
 
 # features to export diagrams
-export-dot = ["typestate-proc-macro/dot"]
-export-plantuml = ["typestate-proc-macro/plantuml"]
-export-mermaid = ["typestate-proc-macro/mermaid"]
+export-dot = ["typestate-proc-macro/export-dot"]
+export-plantuml = ["typestate-proc-macro/export-plantuml"]
+export-mermaid = ["typestate-proc-macro/export-mermaid"]
 
 # export mermaid state machines inside the docs
 docs-mermaid = ["typestate-proc-macro/docs-mermaid", "aquamarine"]
