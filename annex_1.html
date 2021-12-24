@@ -135,16 +135,16 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="optional-features"><a class="header" href="#optional-features">Optional Features</a></h1>
-<p>The <code>typestate</code> macro provides several <code>cargo</code> features, 
+<p>The <code>typestate</code> macro provides several <code>cargo</code> features,
 mostly focused on the visualization of your typestate's automata.</p>
 <h2 id="mermaid-diagrams"><a class="header" href="#mermaid-diagrams">Mermaid Diagrams</a></h2>
-<p><code>mermaid-docs</code> will embed <a href="https://mermaid-js.github.io/mermaid/#/">Mermaid.js</a> diagrams in your documentation. </p>
+<p><code>docs-mermaid</code> will embed <a href="https://mermaid-js.github.io/mermaid/#/">Mermaid.js</a> diagrams in your documentation.</p>
 <p>This feature is activated by default, regarless, see below how you can explicitly activate it.</p>
 <p>In the terminal, for each run:</p>
-<pre><code class="language-bash">cargo doc --features mermaid-docs
+<pre><code class="language-bash">cargo doc --features docs-mermaid
 </code></pre>
 <p>Or by declaring it in <code>Cargo.toml</code>:</p>
-<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;mermaid-docs&quot; ] }
+<pre><code class="language-toml">typestate = { version = &quot;0.8.0&quot;, features = [ &quot;docs-mermaid&quot; ] }
 </code></pre>
 <h2 id="dot-diagrams"><a class="header" href="#dot-diagrams">DOT Diagrams</a></h2>
 <p><code>export-dot</code> - will generate a <code>.dot</code> file, describing your typestate's state machine.
