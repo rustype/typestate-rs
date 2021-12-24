@@ -109,10 +109,10 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
         &mut state_machine_info
     ));
 
-    #[cfg(any(feature = "dot", feature = "plantuml"))]
+    #[cfg(any(feature = "export-dot", feature = "export-plantuml"))]
     export_diagram_files(&state_machine_info);
 
-    #[cfg(feature = "mermaid")]
+    #[cfg(feature = "docs-mermaid")]
     {
         use igraph::export::{mermaid::Mermaid, Export};
         // NOTE: hacky bypass to avoid rewriting the ::Write
@@ -174,11 +174,11 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     module.into_token_stream().into()
 }
 
-#[cfg(any(feature = "dot", feature = "plantuml"))]
+#[cfg(any(feature = "export-dot", feature = "export-plantuml"))]
 fn export_diagram_files(state_machine_info: &StateMachineInfo) {
     use crate::igraph::export;
 
-    #[cfg(feature = "dot")]
+    #[cfg(feature = "export-dot")]
     {
         use igraph::export::dot::Dot;
         export::export(
@@ -194,7 +194,7 @@ fn export_diagram_files(state_machine_info: &StateMachineInfo) {
         .unwrap();
     }
 
-    #[cfg(feature = "plantuml")]
+    #[cfg(feature = "export-plantuml")]
     {
         use igraph::export::plantuml::PlantUml;
         export::export(

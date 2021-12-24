@@ -1,22 +1,22 @@
 # Optional Features
 
-The `typestate` macro provides several `cargo` features, 
+The `typestate` macro provides several `cargo` features,
 mostly focused on the visualization of your typestate's automata.
 
 ## Mermaid Diagrams
 
-`mermaid-docs` will embed [Mermaid.js](https://mermaid-js.github.io/mermaid/#/) diagrams in your documentation. 
+`docs-mermaid` will embed [Mermaid.js](https://mermaid-js.github.io/mermaid/#/) diagrams in your documentation.
 
 This feature is activated by default, regarless, see below how you can explicitly activate it.
 
 In the terminal, for each run:
 ```bash
-cargo doc --features mermaid-docs
+cargo doc --features docs-mermaid
 ```
 
 Or by declaring it in `Cargo.toml`:
 ```toml
-typestate = { version = "0.8.0", features = [ "mermaid-docs" ] }
+typestate = { version = "0.8.0", features = [ "docs-mermaid" ] }
 ```
 
 ## DOT Diagrams

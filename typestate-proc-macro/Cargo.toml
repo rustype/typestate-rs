@@ -13,10 +13,17 @@ autotests = false
 
 [features]
 default = ["std"]
+
+# to deprecate in the future
 std = []
+
+# file export utilities
 dot = []
 plantuml = []
 mermaid = []
+
+# documentation export utilities
+docs-mermaid = []
 
 [lib]
 proc-macro = true
