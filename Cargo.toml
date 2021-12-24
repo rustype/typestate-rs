@@ -13,11 +13,19 @@ repository = "https://github.com/rustype/typestate-rs"
 autotests = false
 
 [features]
-default = ["std", "mermaid-docs"]
+default = ["std", "docs-mermaid"]
+
+# should probably deprecate this feature
+# until someone needs it, it only adds complexity
 std = ["typestate-proc-macro/std"]
+
+# features to export diagrams
 export-dot = ["typestate-proc-macro/dot"]
 export-plantuml = ["typestate-proc-macro/plantuml"]
-mermaid-docs = ["typestate-proc-macro/mermaid", "aquamarine"]
+export-mermaid = ["typestate-proc-macro/mermaid"]
+
+# export mermaid state machines inside the docs
+docs-mermaid = ["typestate-proc-macro/docs-mermaid", "aquamarine"]
 
 [[test]]
 name = "tests"

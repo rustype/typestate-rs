@@ -224,6 +224,6 @@ pub use ::typestate_proc_macro::typestate;
 
 #[doc(hidden)]
 pub mod __private__ {
-    #[cfg(feature = "mermaid-docs")]
+    #[cfg(feature = "docs-mermaid")]
     pub use ::aquamarine;
 }

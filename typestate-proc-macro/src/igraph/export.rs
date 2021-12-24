@@ -32,7 +32,7 @@ pub trait Export<F: Format> {
 }
 
 /// The Mermaid format module, containing the marker type and implementation for the respective export trait.
-#[cfg(feature = "mermaid")]
+#[cfg(feature = "docs-mermaid")]
 pub mod mermaid {
     use super::{Export, Result};
     use crate::igraph::{IntermediateGraph, Node, Transition};
@@ -156,7 +156,7 @@ pub mod mermaid {
 }
 
 /// The PlantUML format module, containing the marker type and implementation for the respective export trait.
-#[cfg(feature = "plantuml")]
+#[cfg(feature = "export-plantuml")]
 pub mod plantuml {
     use super::{Export, Result};
     use crate::igraph::{IntermediateGraph, Node, Transition};
@@ -297,7 +297,7 @@ pub mod plantuml {
 }
 
 /// The DOT format module, containing the marker type and implementation for the respective export trait.
-#[cfg(feature = "dot")]
+#[cfg(feature = "export-dot")]
 pub mod dot {
     use super::{Export, Result};
     use crate::igraph::{IntermediateGraph, Node, Transition};
@@ -420,10 +420,10 @@ pub mod dot {
     }
 }
 
-#[cfg(any(feature = "dot", feature = "plantuml"))]
+#[cfg(any(feature = "export-dot", feature = "export-plantuml"))]
 use {super::IntermediateGraph, std::fs::File, syn::Ident};
 
-#[cfg(any(feature = "dot", feature = "plantuml"))]
+#[cfg(any(feature = "export-dot", feature = "export-plantuml"))]
 pub(crate) fn export<F: Format>(
     file_name: &str,
     igraph: &IntermediateGraph<Ident, Ident>,
