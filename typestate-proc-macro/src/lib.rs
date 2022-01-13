@@ -18,7 +18,7 @@ use std::{
 };
 use syn::{
     parse_macro_input, Attribute, AttributeArgs, Error, Ident, Item, ItemEnum, ItemMod, ItemStruct,
-    ItemTrait, Variant,
+    ItemTrait, Variant
 };
 
 const CRATE_NAME: &str = "typestate_proc_macro";
@@ -57,6 +57,7 @@ impl IsGeneratedAttr for syn::Attribute {
     }
 }
 
+
 /// See the module documentation for a full featured tutorial on how to use `#[typestate]`.
 #[allow(clippy::too_many_lines)] // TODO handle this
 #[proc_macro_attribute]
@@ -75,6 +76,7 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Parse attribute arguments
     let attr_args: AttributeArgs = parse_macro_input!(args);
+
     let args = match MacroAttributeArguments::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => {
@@ -84,6 +86,20 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // parse the input as a mod
     let mut module: ItemMod = parse_macro_input!(input);
+
+    // eprint!("{:#?}", module);
+
+    if let Some((_, content)) = &module.content {
+        if content.is_empty() {
+            return quote::quote!(const _: () = {
+                #[deprecated(note = "Empty module detected.")]
+                #[allow(nonstandard_style)]
+                enum compile_warning {}
+
+                let _: compile_warning;
+            };).into_token_stream().into();
+        }
+    }
 
     let mut state_machine_info = StateMachineInfo::new();
 
