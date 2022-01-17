@@ -48,7 +48,7 @@ pub mod mermaid {
     /// Blanket implementation for the [`Mermaid`] format.
     impl super::Format for Mermaid {
         fn file_extension<'a>() -> &'a str {
-            ".mermaid"
+            "mermaid"
         }
     }
 
@@ -170,7 +170,7 @@ pub mod plantuml {
 
     impl super::Format for PlantUml {
         fn file_extension<'a>() -> &'a str {
-            ".uml"
+            "uml"
         }
     }
 
@@ -317,7 +317,7 @@ pub mod dot {
 
     impl super::Format for Dot {
         fn file_extension<'a>() -> &'a str {
-            ".dot"
+            "dot"
         }
     }
 
@@ -425,7 +425,15 @@ pub mod dot {
     feature = "export-plantuml",
     feature = "export-mermaid"
 ))]
-use {super::IntermediateGraph, std::fs::File, syn::Ident};
+use {
+    super::IntermediateGraph,
+    std::{
+        env,
+        fs::{create_dir_all, File},
+        path::Path,
+    },
+    syn::Ident,
+};
 
 #[cfg(any(
     feature = "export-dot",
@@ -440,16 +448,15 @@ pub(crate) fn export<F: Format>(
 where
     IntermediateGraph<Ident, Ident>: Export<F>,
 {
-    let folder_path = ::std::env::var_os("EXPORT_FOLDER")
-        .and_then(|s| s.into_string().ok())
-        .unwrap_or_else(|| "./".to_string());
-    let mut f = File::create(format!(
-        "{}{}{}",
-        folder_path,
-        file_name,
-        F::file_extension(),
-    ))?;
+    let folder = {
+        let cwd = env::current_dir()?;
+        env::var_os("EXPORT_FOLDER").map_or_else(|| cwd, |dir| Path::new(&dir).to_path_buf())
+    };
+    if !folder.exists() {
+        create_dir_all(&folder)?;
+    }
 
+    let mut f = File::create(folder.join(file_name).with_extension(F::file_extension()))?;
     igraph.export(&mut f, format)?;
     Ok(())
 }
