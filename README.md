@@ -42,4 +42,5 @@ If you find `typestate` useful in your work, we kindly request you cite the foll
 
 ## Publications
 
-- [Retrofitting Typestates into Rust (SBLP'21)](paper/sblp21.pdf)
+- [Retrofitting Typestates into Rust (MSc Thesis)](articles/thesis.pdf)
+- [Retrofitting Typestates into Rust (SBLP'21)](articles/sblp21.pdf)
