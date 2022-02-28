@@ -16,7 +16,9 @@ mod smart_bulb {
     }
 
     #[state]
-    struct On;
+    struct On {
+        color: [u8; 3]
+    }
     trait On {
         fn turn_off(self) -> Off;
         fn get_color(&self);
