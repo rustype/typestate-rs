@@ -41,14 +41,3 @@ enum OperationResult {
 ```
 
 Inside the enumeration there can only be other valid states and only `Unit` style variants are supported.
-
-## Attributes
-
-This is the list of attributes that can be used along `#[typestate]`:
-- `#[typestate]`: the main attribute macro, without attribute parameters.
-- `#[typestate(enumerate = "...")]`: this option makes the macro generate an additional `enum`,
-  the `enum` enables working with variables and structures "generic" to the state.
-  - The parameter can be declared *with* or *without* a string literal, if declared with the string,
-    that string will be used as identifier to the `enum`.
-  - If the parameter is used with an *empty string* or *without* a string, the default behavior is to prepend an `E` to the
-- `#[typestate(state_constructors = "...")`: this option generates basic constructors for states with fields.
