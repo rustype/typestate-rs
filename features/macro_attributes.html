@@ -3,33 +3,33 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Quick Intro - The Typestate Book</title>
+        <title>Macro Attributes - The Typestate Book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="icon" href="favicon.svg">
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
     </head>
     <body>
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html" class="active"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="features/features.html"><strong aria-hidden="true">5.</strong> Features</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="features/macro_attributes.html"><strong aria-hidden="true">5.1.</strong> Macro Attributes</a></li><li class="chapter-item expanded "><a href="features/compilation_flags.html"><strong aria-hidden="true">5.2.</strong> Compilation Flags</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="../chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="../chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="../chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="../features/features.html"><strong aria-hidden="true">5.</strong> Features</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../features/macro_attributes.html" class="active"><strong aria-hidden="true">5.1.</strong> Macro Attributes</a></li><li class="chapter-item expanded "><a href="../features/compilation_flags.html"><strong aria-hidden="true">5.2.</strong> Compilation Flags</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -107,7 +107,7 @@
                     <h1 class="menu-title">The Typestate Book</h1>
 
                     <div class="right-buttons">
-                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
                     </div>
@@ -134,36 +134,70 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>Typestates allow you to define <em>safe</em> usage protocols for your objects.
-The compiler will help you on your journey and disallow errors on given states.
-You will no longer be able to try and read from closed streams.</p>
-<p><code>#[typestate]</code> builds on ideas from the <a href="https://github.com/fitzgen/state_machine_future"><code>state_machine_future</code></a> crate.</p>
-<h2 id="first-steps"><a class="header" href="#first-steps">First steps</a></h2>
-<p>Before you start your typestate development journey you need to declare your dependencies,
-you can start using the <code>typestate</code> crate by adding the following line to your <code>Cargo.toml</code> file.</p>
-<pre><code class="language-toml">typestate = &quot;0.8.0&quot;
-</code></pre>
-<h2 id="citing-typestate"><a class="header" href="#citing-typestate">Citing <code>typestate</code></a></h2>
-<p>If you find <code>typestate</code> useful in your work, we kindly request you cite the following paper:</p>
-<pre><code class="language-bibtex">@inproceedings{10.1145/3475061.3475082,
-    author = {Duarte, Jos\'{e} and Ravara, Ant\'{o}nio},
-    title = {Retrofitting Typestates into Rust},
-    year = {2021},
-    url = {https://doi.org/10.1145/3475061.3475082},
-    doi = {10.1145/3475061.3475082},
-    booktitle = {25th Brazilian Symposium on Programming Languages},
-    pages = {83–91},
-    numpages = {9},
-    series = {SBLP'21}
+                        <h1 id="macro-attributes"><a class="header" href="#macro-attributes">Macro Attributes</a></h1>
+<p>The <code>#[typestate]</code> macro exposes some extra features through attribute parameters.
+This chapter introduces them and provides simple examples.</p>
+<h2 id="enumerate"><a class="header" href="#enumerate"><code>enumerate</code></a></h2>
+<p>The <code>enumerate</code> parameter will generate an additional <code>enum</code> containing all states;
+this is useful when dealing with anything that requires a more &quot;general&quot; concept of state.</p>
+<p>Consider the file <a href="../examples/light_bulb.rs"><code>examples/light_bulb.rs</code></a>:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[typestate(enumerate = &quot;LightBulbStates&quot;)]
+mod light_bulb {
+    #[state] struct On;
+    #[state] struct Off;
+    // ...
 }
-</code></pre>
+<span class="boring">}
+</span></code></pre></pre>
+<p>Using the <code>enumerate</code> attribute will add the following <code>enum</code> to the expansion:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum LightBulbStates {
+    Off(LightBulb&lt;Off&gt;),
+    On(LightBulb&lt;On&gt;),
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="state_constructors"><a class="header" href="#state_constructors"><code>state_constructors</code></a></h2>
+<p>The <code>state_constructors</code> parameter will generate additional constructors
+for each state <em>with fields</em>; this is useful when declaring states inside the automaton.</p>
+<p>Consider the following example state:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[typestate(state_constructors = &quot;new_state&quot;)]
+mod light_bulb {
+    #[state] struct On {
+        color: [u8; 3]
+    }
+    // ...
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>When compiled, the following constructor is generated:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl On {
+    pub fn new_state(color: [u8; 3]) -&gt; Self {
+        Self { color }
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="next" href="chapter_2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="prev" href="../features/features.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../features/compilation_flags.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -172,7 +206,10 @@ you can start using the <code>typestate</code> crate by adding the following lin
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="next" href="chapter_2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="prev" href="../features/features.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../features/compilation_flags.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -182,12 +219,12 @@ you can start using the <code>typestate</code> crate by adding the following lin
         <script type="text/javascript">
             window.playground_copyable = true;
         </script>
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
     </body>

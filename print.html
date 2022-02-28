@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="annex_1.html"><strong aria-hidden="true">5.</strong> Optional Features</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Quick Intro</a></li><li class="chapter-item expanded "><a href="chapter_2.html"><strong aria-hidden="true">2.</strong> What are typestates?</a></li><li class="chapter-item expanded "><a href="chapter_3.html"><strong aria-hidden="true">3.</strong> Basic Guide to Typestates</a></li><li class="chapter-item expanded "><a href="chapter_4.html"><strong aria-hidden="true">4.</strong> Advanced Guide</a></li><li class="chapter-item expanded "><a href="features/features.html"><strong aria-hidden="true">5.</strong> Features</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="features/macro_attributes.html"><strong aria-hidden="true">5.1.</strong> Macro Attributes</a></li><li class="chapter-item expanded "><a href="features/compilation_flags.html"><strong aria-hidden="true">5.2.</strong> Compilation Flags</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -343,21 +343,63 @@ enum OperationResult {
 }
 </code></pre>
 <p>Inside the enumeration there can only be other valid states and only <code>Unit</code> style variants are supported.</p>
-<h2 id="attributes"><a class="header" href="#attributes">Attributes</a></h2>
-<p>This is the list of attributes that can be used along <code>#[typestate]</code>:</p>
-<ul>
-<li><code>#[typestate]</code>: the main attribute macro, without attribute parameters.</li>
-<li><code>#[typestate(enumerate = &quot;...&quot;)]</code>: this option makes the macro generate an additional <code>enum</code>,
-the <code>enum</code> enables working with variables and structures &quot;generic&quot; to the state.
-<ul>
-<li>The parameter can be declared <em>with</em> or <em>without</em> a string literal, if declared with the string,
-that string will be used as identifier to the <code>enum</code>.</li>
-<li>If the parameter is used with an <em>empty string</em> or <em>without</em> a string, the default behavior is to prepend an <code>E</code> to the</li>
-</ul>
-</li>
-<li><code>#[typestate(state_constructors = &quot;...&quot;)</code>: this option generates basic constructors for states with fields.</li>
-</ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="optional-features"><a class="header" href="#optional-features">Optional Features</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="features"><a class="header" href="#features">Features</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="macro-attributes"><a class="header" href="#macro-attributes">Macro Attributes</a></h1>
+<p>The <code>#[typestate]</code> macro exposes some extra features through attribute parameters.
+This chapter introduces them and provides simple examples.</p>
+<h2 id="enumerate"><a class="header" href="#enumerate"><code>enumerate</code></a></h2>
+<p>The <code>enumerate</code> parameter will generate an additional <code>enum</code> containing all states;
+this is useful when dealing with anything that requires a more &quot;general&quot; concept of state.</p>
+<p>Consider the file <a href="features/../examples/light_bulb.rs"><code>examples/light_bulb.rs</code></a>:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[typestate(enumerate = &quot;LightBulbStates&quot;)]
+mod light_bulb {
+    #[state] struct On;
+    #[state] struct Off;
+    // ...
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Using the <code>enumerate</code> attribute will add the following <code>enum</code> to the expansion:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum LightBulbStates {
+    Off(LightBulb&lt;Off&gt;),
+    On(LightBulb&lt;On&gt;),
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="state_constructors"><a class="header" href="#state_constructors"><code>state_constructors</code></a></h2>
+<p>The <code>state_constructors</code> parameter will generate additional constructors
+for each state <em>with fields</em>; this is useful when declaring states inside the automaton.</p>
+<p>Consider the following example state:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[typestate(state_constructors = &quot;new_state&quot;)]
+mod light_bulb {
+    #[state] struct On {
+        color: [u8; 3]
+    }
+    // ...
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>When compiled, the following constructor is generated:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl On {
+    pub fn new_state(color: [u8; 3]) -&gt; Self {
+        Self { color }
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="compilation-flags"><a class="header" href="#compilation-flags">Compilation Flags</a></h1>
 <p>The <code>typestate</code> macro provides several <code>cargo</code> features,
 mostly focused on the visualization of your typestate's automata.</p>
 <h2 id="mermaid-diagrams"><a class="header" href="#mermaid-diagrams">Mermaid Diagrams</a></h2>
@@ -391,7 +433,7 @@ You can customize certain <code>.dot</code> parameters through the following env
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <p>These examples are present in the <code>examples/</code> folder in the repository's root.</p>
 <table><thead><tr><th><code>LightBulb</code></th><th><code>SmartBulb</code></th></tr></thead><tbody>
-<tr><td><img src="static/DotLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="static/DotSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
+<tr><td><img src="features/../static/DotLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="features/../static/DotSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
 </tbody></table>
 <h2 id="plantuml-diagrams"><a class="header" href="#plantuml-diagrams">PlantUML Diagrams</a></h2>
 <p><code>export-plantuml</code> will generate a PlantUML state diagram (<code>.uml</code> file) of your state machine.
@@ -414,7 +456,7 @@ Like the previous feature, you can also customize this one through the following
 <h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
 <p>These examples are present in the <code>examples/</code> folder in the repository's root.</p>
 <table><thead><tr><th><code>LightBulb</code></th><th><code>SmartBulb</code></th></tr></thead><tbody>
-<tr><td><img src="static/UmlLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="static/UmlSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
+<tr><td><img src="features/../static/UmlLightBulb.svg" alt="examples/light_bulb.rs" /></td><td><img src="features/../static/UmlSmartBulb.svg" alt="examples/smart_bulb.rs" /></td></tr>
 </tbody></table>
 
                     </main>
