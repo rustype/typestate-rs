@@ -67,7 +67,7 @@ pub mod mermaid {
             }
 
             for choice in &self.choices {
-                writeln!(w, "state {} <<choice>>", choice)?;
+                writeln!(w, "state {} &lt;&lt;choice&gt;&gt;", choice)?;
             }
 
             for (src, v) in &self.delta {
