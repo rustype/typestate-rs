@@ -44,4 +44,7 @@ package = "typestate-proc-macro"
 aquamarine = { version = "^0.1.9", optional = true }
 
 [workspace]
-members = ["typestate-proc-macro"]
+members = [
+    "typestate-proc-macro",
+    "typestate-lite"
+]
