@@ -15,11 +15,11 @@ typestate = "0.8.0"
 
 ## Documentation
 
-If you're only interested in getting up and running with `typestate`, 
-the documentation might be more useful for you. 
+If you're only interested in getting up and running with `typestate`,
+the documentation might be more useful for you.
 You can consult it in <https://docs.rs/typestate/0.8.0/typestate/>
 
-If you're interested in learning more about the `typestate` crate, or typestates in Rust, 
+If you're interested in learning more about the `typestate` crate, or typestates in Rust,
 you can read *The Typestate Book* in <https://rustype.github.io/typestate-rs/>.
 
 ## Citing `typestate`
@@ -38,6 +38,20 @@ If you find `typestate` useful in your work, we kindly request you cite the foll
     numpages = {9},
     series = {SBLP'21}
 }
+```
+
+Alternatively, you can cite the extended version:
+
+```bibtex
+@article{10.1016/j.cola.2022.101154,
+    title = {Taming stateful computations in Rust with typestates},
+    journal = {Journal of Computer Languages},
+    pages = {101154},
+    year = {2022},
+    issn = {2590-1184},
+    doi = {10.1016/j.cola.2022.101154},
+    url = {https://doi.org/10.1016/j.cola.2022.101154},
+    author = {Duarte, Jos\'{e} and Ravara, Ant\'{o}nio},
 ```
 
 ## Publications
