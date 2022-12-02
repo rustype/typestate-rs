@@ -213,9 +213,9 @@
 //! The cargo features you can enable:
 //! - `debug_dot` will generate a `.dot` file of your state machine.
 //!   - This feature can be customized through the following environment variables (taken from the [DOT documentation](https://graphviz.org/doc/info/attrs.html)):
-//!     - `DOT_PAD` - Specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.
-//!     - `DOT_NODESEP` - In `dot`, `nodesep` specifies the minimum space between two adjacent nodes in the same rank, in inches.
-//!     - `DOT_RANKSEP` - In `dot`, sets the desired rank separation, in inches.
+//!     - `TYPESTATE_DOT_PAD` - Specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.
+//!     - `TYPESTATE_DOT_NODESEP` - In `dot`, `nodesep` specifies the minimum space between two adjacent nodes in the same rank, in inches.
+//!     - `TYPESTATE_DOT_RANKSEP` - In `dot`, sets the desired rank separation, in inches.
 //! - `debug_plantuml` will generate a PlantUML state diagram (`.uml` file) of your state machine.
 
 pub extern crate typestate_proc_macro;

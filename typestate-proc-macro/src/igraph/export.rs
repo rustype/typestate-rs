@@ -183,14 +183,14 @@ pub mod plantuml {
             writeln!(w, "@startuml")?;
             writeln!(w, "hide empty description")?;
 
-            if let Some(s) = ::std::env::var_os("PLANTUML_NODESEP") {
+            if let Some(s) = ::std::env::var_os("TYPESTATE_PLANTUML_NODESEP") {
                 w.write_fmt(format_args!(
                     "skinparam nodesep {}\n",
                     s.into_string().unwrap_or_else(|_| "30".to_string())
                 ))?;
             }
 
-            if let Some(s) = ::std::env::var_os("PLANTUML_RANKSEP") {
+            if let Some(s) = ::std::env::var_os("TYPESTATE_PLANTUML_RANKSEP") {
                 w.write_fmt(format_args!(
                     "skinparam ranksep {}\n",
                     s.into_string().unwrap_or_else(|_| "30".to_string())
@@ -334,9 +334,9 @@ pub mod dot {
 
             w.write_fmt(format_args!(
                 "  graph [pad=\"{}\", nodesep=\"{}\", ranksep=\"{}\"];\n",
-                var_or_default("DOT_PAD", "0.25"),
-                var_or_default("DOT_NODESEP", "0.75"),
-                var_or_default("DOT_RANKSEP", "1"),
+                var_or_default("TYPESTATE_DOT_PAD", "0.25"),
+                var_or_default("TYPESTATE_DOT_NODESEP", "0.75"),
+                var_or_default("TYPESTATE_DOT_RANKSEP", "1"),
             ))?;
 
             writeln!(w, "  _initial_ [{}, shape=circle];", DOT_SPECIAL_NODE)?;
@@ -450,7 +450,7 @@ where
 {
     let folder = {
         let cwd = env::current_dir()?;
-        env::var_os("EXPORT_FOLDER").map_or_else(|| cwd, |dir| Path::new(&dir).to_path_buf())
+        env::var_os("TYPESTATE_EXPORT_FOLDER").map_or_else(|| cwd, |dir| Path::new(&dir).to_path_buf())
     };
     if !folder.exists() {
         create_dir_all(&folder)?;
