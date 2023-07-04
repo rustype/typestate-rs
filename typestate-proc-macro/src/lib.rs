@@ -180,7 +180,12 @@ pub fn typestate(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut enumerate_tokens = if !args.enumerate.is_empty() {
         let mut res: Vec<Item> = vec![];
         let enum_ident = &format_ident!("{}", &args.enumerate);
-        res.expand_enumerate(&automata_ident, enum_ident, &states);
+        res.expand_enumerate(
+            &automata_ident,
+            enum_ident,
+            &states,
+            &state_machine_info.non_det_transitions,
+        );
         res
     } else {
         vec![]
@@ -252,7 +257,13 @@ fn export_diagram_files(state_machine_info: &StateMachineInfo) {
 }
 
 trait ExpandEnumerate {
-    fn expand_enumerate(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]);
+    fn expand_enumerate(
+        &mut self,
+        automata: &ItemStruct,
+        automata_enum: &Ident,
+        states: &[&Ident],
+        non_det_transitions: &HashMap<Ident, ItemEnum>,
+    );
     /// Expand the [`ToString`] implentation for enumeration.
     /// Only available with `std` and when `enumerate` is used.
     fn expand_to_string(&mut self, automata_enum: &Ident, states: &[&Ident]);
@@ -262,6 +273,14 @@ trait ExpandEnumerate {
     /// Expand the [`From`] implementation to convert from states to enumeration and back.
     /// Only available when `enumerate` is used.
     fn expand_from(&mut self, automata: &ItemStruct, automata_enum: &Ident, states: &[&Ident]);
+    /// Expand the [`From`] implementations to convert from non-deterministic transitions to enumeration.
+    /// Only available when `enumerate` is used.
+    fn expand_non_det_from(
+        &mut self,
+        automata: &ItemStruct,
+        automata_enum: &Ident,
+        non_det_transitions: &HashMap<Ident, ItemEnum>,
+    );
 }
 
 impl ExpandEnumerate for Vec<Item> {
@@ -270,12 +289,14 @@ impl ExpandEnumerate for Vec<Item> {
         automata: &ItemStruct,
         automata_enum: &Ident,
         states: &[&Ident],
+        non_det_transitions: &HashMap<Ident, ItemEnum>,
     ) {
         // expand the enumeration
         self.expand_enum(automata, automata_enum, states);
 
         // expand conversion traits: `From`
         self.expand_from(automata, automata_enum, states);
+        self.expand_non_det_from(automata, automata_enum, non_det_transitions);
 
         // if std is present, generate `to_string` implementations
         #[cfg(feature = "std")]
@@ -306,6 +327,29 @@ impl ExpandEnumerate for Vec<Item> {
                 }
             }
         });
+        self.extend(from_tokens);
+    }
+
+    fn expand_non_det_from(
+        &mut self,
+        automata: &ItemStruct,
+        automata_enum: &Ident,
+        non_det_transitions: &HashMap<Ident, ItemEnum>,
+    ) {
+        let from_tokens = non_det_transitions
+            .iter()
+            .map(|(transition_enum, states_variants)| {
+                let states = states_variants.variants.iter().map(|variant| variant.ident.clone());
+                ::syn::parse_quote! {
+                    impl ::core::convert::From<#transition_enum> for #automata_enum {
+                        fn from(value: #transition_enum) -> Self {
+                            match value {
+                                #(#transition_enum::#states(state) => Self::#states(state)),*
+                            }
+                        }
+                    }
+                }
+            });
         self.extend(from_tokens);
     }
 
