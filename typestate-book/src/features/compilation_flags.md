@@ -24,10 +24,10 @@ typestate = { version = "0.8.0", features = [ "docs-mermaid" ] }
 `export-dot` - will generate a `.dot` file, describing your typestate's state machine.
 You can customize certain `.dot` parameters through the following environment variables:
 
-- `DOT_PAD` - specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.
-- `DOT_NODESEP` - `nodesep` specifies the minimum space between two adjacent nodes in the same rank, in inches.
-- `DOT_RANKSEP` - sets the desired rank separation, in inches.
-- `EXPORT_FOLDER` - declare the target folder for exported files.
+- `TYPESTATE_DOT_PAD` - specifies how much, in inches, to extend the drawing area around the minimal area needed to draw the graph.
+- `TYPESTATE_DOT_NODESEP` - `nodesep` specifies the minimum space between two adjacent nodes in the same rank, in inches.
+- `TYPESTATE_DOT_RANKSEP` - sets the desired rank separation, in inches.
+- `TYPESTATE_EXPORT_FOLDER` - declare the target folder for exported files.
 
 This feature is not activated by default, see below how you can activate it.
 
@@ -56,9 +56,9 @@ These examples are present in the `examples/` folder in the repository's root.
 `export-plantuml` will generate a PlantUML state diagram (`.uml` file) of your state machine.
 Like the previous feature, you can also customize this one through the following environment variables:
 
-- `PLANTUML_NODESEP` - `nodesep` specifies the minimum space between two adjacent nodes in the same rank.
-- `PLANTUML_RANKSEP` - Sets the desired rank separation.
-- `EXPORT_FOLDER` - Declare the target folder for exported files.
+- `TYPESTATE_PLANTUML_NODESEP` - `nodesep` specifies the minimum space between two adjacent nodes in the same rank.
+- `TYPESTATE_PLANTUML_RANKSEP` - Sets the desired rank separation.
+- `TYPESTATE_EXPORT_FOLDER` - Declare the target folder for exported files.
 
 This feature is not activated by default, see below how you can activate it.
 
